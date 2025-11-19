@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useMemo, useState } from 'react';
 
 type Vehicle = {
@@ -23,6 +24,9 @@ type Vehicle = {
   price_9hr?: number | null;
   price_10hr?: number | null;
   image_main?: string | null;
+  image_2?: string | null;
+  image_3?: string | null;
+  gallery_all?: string | null;
   is_transfer?: boolean | null;
   active?: boolean | null;
 };
@@ -66,6 +70,24 @@ function formatPriceSummary(v: Vehicle): string {
   return `$${hourly.toFixed(0)}+`;
 }
 
+function getImages(v: Vehicle): string[] {
+  const parts: string[] = [];
+
+  if (v.image_main) parts.push(v.image_main);
+  if (v.image_2) parts.push(v.image_2);
+  if (v.image_3) parts.push(v.image_3);
+
+  if (v.gallery_all) {
+    const extras = v.gallery_all
+      .split('|')
+      .map((img) => img.trim())
+      .filter(Boolean);
+    parts.push(...extras);
+  }
+
+  return Array.from(new Set(parts));
+}
+
 export default function HomePage() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -77,6 +99,11 @@ export default function HomePage() {
     shuttles: true,
     others: false,
   });
+  const [photoViewer, setPhotoViewer] = useState<{
+    title: string;
+    images: string[];
+    index: number;
+  } | null>(null);
 
   async function handleSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -140,25 +167,121 @@ export default function HomePage() {
     fontSize: 14,
   };
 
+  const openPhotoViewer = (title: string, images: string[], startIndex = 0) => {
+    setPhotoViewer({ title, images, index: startIndex });
+  };
+
+  const closePhotoViewer = () => setPhotoViewer(null);
+
+  const showPrev = () => {
+    setPhotoViewer((current) => {
+      if (!current || current.images.length <= 1) return current;
+      return {
+        ...current,
+        index: (current.index - 1 + current.images.length) % current.images.length,
+      };
+    });
+  };
+
+  const showNext = () => {
+    setPhotoViewer((current) => {
+      if (!current || current.images.length <= 1) return current;
+      return {
+        ...current,
+        index: (current.index + 1) % current.images.length,
+      };
+    });
+  };
+
   const renderColumn = (title: string, list: Vehicle[]) => (
     <div>
       <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>{title}</h2>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, ...columnStyle }}>
-        {list.map((v) => (
-          <div key={v.id} style={cardStyle}>
-            <div style={{ fontWeight: 600 }}>{v.vehicle_title}</div>
-            <div style={{ fontSize: 12, color: '#6b7280' }}>
-              {v.city || 'City not set'}
-              {v.capacity ? ` • ${v.capacity} passengers` : ''}
-            </div>
-            {v.short_description && (
-              <div style={{ marginTop: 4, fontSize: 12, color: '#4b5563' }}>
-                {v.short_description}
+        {list.map((v) => {
+          const images = getImages(v);
+
+          return (
+            <div key={v.id} style={cardStyle}>
+              <div style={{ display: 'flex', gap: 12 }}>
+                {images.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => openPhotoViewer(v.vehicle_title, images)}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      padding: 0,
+                      cursor: 'pointer',
+                    }}
+                    aria-label={`View photos for ${v.vehicle_title}`}
+                  >
+                    <Image
+                      src={images[0]}
+                      alt={v.vehicle_title}
+                      width={88}
+                      height={72}
+                      unoptimized
+                      style={{
+                        width: 88,
+                        height: 72,
+                        objectFit: 'cover',
+                        borderRadius: 6,
+                        border: '1px solid #e5e7eb',
+                      }}
+                    />
+                  </button>
+                ) : (
+                  <div
+                    style={{
+                      width: 88,
+                      height: 72,
+                      borderRadius: 6,
+                      border: '1px dashed #d1d5db',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 11,
+                      color: '#9ca3af',
+                    }}
+                  >
+                    No photo
+                  </div>
+                )}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600 }}>{v.vehicle_title}</div>
+                  <div style={{ fontSize: 12, color: '#6b7280' }}>
+                    {v.city || 'City not set'}
+                    {v.capacity ? ` • ${v.capacity} passengers` : ''}
+                  </div>
+                  {v.short_description && (
+                    <div style={{ marginTop: 4, fontSize: 12, color: '#4b5563' }}>
+                      {v.short_description}
+                    </div>
+                  )}
+                  <div style={{ marginTop: 6, fontWeight: 600 }}>{formatPriceSummary(v)}</div>
+                  {images.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => openPhotoViewer(v.vehicle_title, images)}
+                      style={{
+                        marginTop: 6,
+                        background: '#111827',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 4,
+                        padding: '4px 8px',
+                        fontSize: 12,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      View {images.length} photo{images.length > 1 ? 's' : ''}
+                    </button>
+                  )}
+                </div>
               </div>
-            )}
-            <div style={{ marginTop: 6, fontWeight: 600 }}>{formatPriceSummary(v)}</div>
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -289,6 +412,116 @@ export default function HomePage() {
                 All primary categories are hidden—enable “Other” or another checkbox to see matches.
               </div>
             )}
+        </div>
+      )}
+
+      {photoViewer && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15,23,42,0.75)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              position: 'relative',
+              background: 'white',
+              borderRadius: 12,
+              padding: 16,
+              width: '90%',
+              maxWidth: 900,
+              boxShadow: '0 10px 30px rgba(15,23,42,0.4)',
+            }}
+          >
+            <button
+              type="button"
+              onClick={closePhotoViewer}
+              style={{
+                position: 'absolute',
+                top: 12,
+                right: 12,
+                background: 'transparent',
+                border: 'none',
+                fontSize: 18,
+                cursor: 'pointer',
+              }}
+              aria-label="Close photo viewer"
+            >
+              ×
+            </button>
+            <div style={{ textAlign: 'center', marginBottom: 12, fontWeight: 600 }}>
+              {photoViewer.title}
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                justifyContent: 'center',
+              }}
+            >
+              {photoViewer.images.length > 1 && (
+                <button
+                  type="button"
+                  onClick={showPrev}
+                  style={{
+                    border: 'none',
+                    background: '#111827',
+                    color: 'white',
+                    borderRadius: 999,
+                    width: 40,
+                    height: 40,
+                    cursor: 'pointer',
+                  }}
+                  aria-label="Previous photo"
+                >
+                  ‹
+                </button>
+              )}
+              <Image
+                src={photoViewer.images[photoViewer.index]}
+                alt={photoViewer.title}
+                width={760}
+                height={460}
+                unoptimized
+                style={{
+                  width: '100%',
+                  maxHeight: '70vh',
+                  objectFit: 'contain',
+                  borderRadius: 8,
+                  border: '1px solid #e5e7eb',
+                }}
+              />
+              {photoViewer.images.length > 1 && (
+                <button
+                  type="button"
+                  onClick={showNext}
+                  style={{
+                    border: 'none',
+                    background: '#111827',
+                    color: 'white',
+                    borderRadius: 999,
+                    width: 40,
+                    height: 40,
+                    cursor: 'pointer',
+                  }}
+                  aria-label="Next photo"
+                >
+                  ›
+                </button>
+              )}
+            </div>
+            {photoViewer.images.length > 1 && (
+              <div style={{ marginTop: 12, textAlign: 'center', fontSize: 12, color: '#6b7280' }}>
+                Photo {photoViewer.index + 1} of {photoViewer.images.length}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </main>
