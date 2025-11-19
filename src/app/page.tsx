@@ -9,8 +9,11 @@ type Vehicle = {
   short_description: string | null;
   capacity: number | null;
   city: string | null;
-  zip: string;
+  zip?: string | null;
+  zips_raw: string | null;
   custom_instructions: string | null;
+  is_transfer: boolean | null;
+  active: boolean | null;
 
   price_3hr: number | null;
   price_4hr: number | null;
@@ -106,7 +109,7 @@ function getImages(v: Vehicle): string[] {
 }
 
 export default function HomePage() {
-  const [zip, setZip] = useState('');
+  const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -117,21 +120,22 @@ export default function HomePage() {
     e.preventDefault();
     setError(null);
     setVehicles([]);
-    if (!zip.trim()) {
-      setError('Please enter a ZIP code.');
+    if (!query.trim()) {
+      setError('Please enter a ZIP or city.');
       return;
     }
 
     setLoading(true);
     try {
-      const res = await fetch(`/api/vehicles?zip=${encodeURIComponent(zip)}`);
+      const res = await fetch(`/api/vehicles?q=${encodeURIComponent(query)}`);
       if (!res.ok) {
         throw new Error(`API error: ${res.status}`);
       }
-      const data = await res.json();
-      setVehicles(data);
-      if (!data.length) {
-        setError('No vehicles found for that ZIP.');
+      const data: { vehicles?: Vehicle[] } = await res.json();
+      const fetchedVehicles = data.vehicles ?? [];
+      setVehicles(fetchedVehicles);
+      if (!fetchedVehicles.length) {
+        setError('No vehicles found for that area.');
       }
     } catch (err) {
       console.error(err);
@@ -152,7 +156,7 @@ export default function HomePage() {
     >
       <h1 style={{ fontSize: 32, marginBottom: 8 }}>Bus2Ride Vehicle Finder</h1>
       <p style={{ marginBottom: 20 }}>
-        This is your internal test page. Enter a ZIP code to see exactly what the chatbot will see.
+  This is your internal test page. Enter a ZIP/postal code or city to see exactly what the chatbot will see.
       </p>
 
       <form
@@ -161,9 +165,9 @@ export default function HomePage() {
       >
         <input
           type="text"
-          value={zip}
-          onChange={(e) => setZip(e.target.value)}
-          placeholder="Enter ZIP (e.g. 85249)"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Enter ZIP/postal or city (e.g. 85249, R2C, Phoenix)"
           style={{
             flex: '1 1 180px',
             padding: '8px 12px',
@@ -344,8 +348,9 @@ export default function HomePage() {
                   marginBottom: 4,
                 }}
               >
-                {v.city || 'City unknown'} • ZIP {v.zip}{' '}
-                {v.capacity ? `• ${v.capacity} passengers` : ''}
+                {v.city || 'City unknown'}
+                {v.zip || v.zips_raw ? ` • Service area: ${v.zip ?? v.zips_raw}` : ''}
+                {v.capacity ? ` • ${v.capacity} passengers` : ''}
               </div>
               {v.short_description && (
                 <p style={{ marginTop: 6, fontSize: 14 }}>{v.short_description}</p>
