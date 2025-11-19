@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 type Vehicle = {
   id: string;
@@ -31,9 +31,22 @@ type Vehicle = {
   active?: boolean | null;
 };
 
-type VehicleType = 'party-bus' | 'limo' | 'shuttle' | 'other';
+type VehicleType = 'party-bus' | 'limo' | 'shuttle' | 'car' | 'transfer';
+
+const PRICE_FIELDS: Array<{ hours: number; key: keyof Vehicle }> = [
+  { hours: 3, key: 'price_3hr' },
+  { hours: 4, key: 'price_4hr' },
+  { hours: 5, key: 'price_5hr' },
+  { hours: 6, key: 'price_6hr' },
+  { hours: 7, key: 'price_7hr' },
+  { hours: 8, key: 'price_8hr' },
+  { hours: 9, key: 'price_9hr' },
+  { hours: 10, key: 'price_10hr' },
+];
 
 function getVehicleType(v: Vehicle): VehicleType {
+  if (v.is_transfer) return 'transfer';
+
   const haystack = [
     v.vehicle_title,
     v.categories,
@@ -49,25 +62,24 @@ function getVehicleType(v: Vehicle): VehicleType {
   if (haystack.match(/limo|limousine|stretch/)) return 'limo';
   if (haystack.match(/shuttle|mini ?bus|sprinter/)) return 'shuttle';
 
-  return 'other';
+  if (
+    haystack.match(/sedan|suv|suburban|escalade|town ?car|chauffeur|black car/) ||
+    (typeof v.capacity === 'number' && v.capacity <= 14)
+  ) {
+    return 'car';
+  }
+
+  return 'car';
 }
 
-function formatPriceSummary(v: Vehicle): string {
-  const hourly =
-    v.price_4hr ??
-    v.price_5hr ??
-    v.price_3hr ??
-    v.price_6hr ??
-    v.price_7hr ??
-    v.price_8hr ??
-    v.price_9hr ??
-    v.price_10hr;
-
-  if (!hourly) return 'Call for pricing';
-
-  if (v.price_4hr) return `$${v.price_4hr.toFixed(0)} (4 hrs)`;
-  if (v.price_5hr) return `$${v.price_5hr.toFixed(0)} (5 hrs)`;
-  return `$${hourly.toFixed(0)}+`;
+function getPriceOptions(v: Vehicle) {
+  return PRICE_FIELDS.reduce<Array<{ hours: number; price: number }>>((acc, { hours, key }) => {
+    const value = v[key];
+    if (typeof value === 'number' && !Number.isNaN(value)) {
+      acc.push({ hours, price: value });
+    }
+    return acc;
+  }, []);
 }
 
 function getImages(v: Vehicle): string[] {
@@ -97,13 +109,16 @@ export default function HomePage() {
     partyBuses: true,
     limos: true,
     shuttles: true,
-    others: false,
+    cars: true,
+    transfers: false,
   });
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [photoViewer, setPhotoViewer] = useState<{
     title: string;
     images: string[];
     index: number;
   } | null>(null);
+  const [selectedHours, setSelectedHours] = useState<Record<string, number | null>>({});
 
   async function handleSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -134,22 +149,42 @@ export default function HomePage() {
     }
   }
 
-  const { partyBuses, limos, shuttles, others } = useMemo(() => {
+  const sortByCapacity = useCallback((list: Vehicle[]) => {
+    return [...list].sort((a, b) => {
+      const fallback = sortOrder === 'desc' ? -1 : Number.MAX_SAFE_INTEGER;
+      const capA = typeof a.capacity === 'number' ? a.capacity : fallback;
+      const capB = typeof b.capacity === 'number' ? b.capacity : fallback;
+      if (sortOrder === 'desc') {
+        return capB - capA;
+      }
+      return capA - capB;
+    });
+  }, [sortOrder]);
+
+  const { partyBuses, limos, shuttles, cars, transfers } = useMemo(() => {
     const partyBuses: Vehicle[] = [];
     const limos: Vehicle[] = [];
     const shuttles: Vehicle[] = [];
-    const others: Vehicle[] = [];
+    const cars: Vehicle[] = [];
+    const transfers: Vehicle[] = [];
 
     for (const v of vehicles) {
       const type = getVehicleType(v);
       if (type === 'party-bus') partyBuses.push(v);
       else if (type === 'limo') limos.push(v);
       else if (type === 'shuttle') shuttles.push(v);
-      else others.push(v);
+      else if (type === 'transfer') transfers.push(v);
+      else cars.push(v);
     }
 
-    return { partyBuses, limos, shuttles, others };
-  }, [vehicles]);
+    return {
+      partyBuses: sortByCapacity(partyBuses),
+      limos: sortByCapacity(limos),
+      shuttles: sortByCapacity(shuttles),
+      cars: sortByCapacity(cars),
+      transfers: sortByCapacity(transfers),
+    };
+  }, [vehicles, sortByCapacity]);
 
   const columnStyle = {
     borderRadius: 10,
@@ -193,12 +228,15 @@ export default function HomePage() {
     });
   };
 
-  const renderColumn = (title: string, list: Vehicle[]) => (
+  const renderColumn = (title: string, list: Vehicle[], category?: VehicleType) => (
     <div>
       <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>{title}</h2>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, ...columnStyle }}>
         {list.map((v) => {
           const images = getImages(v);
+          const priceOptions = getPriceOptions(v);
+          const selectedHour = selectedHours[v.id] ?? priceOptions[0]?.hours ?? null;
+          const activePrice = priceOptions.find((opt) => opt.hours === selectedHour) ?? null;
 
           return (
             <div key={v.id} style={cardStyle}>
@@ -258,7 +296,47 @@ export default function HomePage() {
                       {v.short_description}
                     </div>
                   )}
-                  <div style={{ marginTop: 6, fontWeight: 600 }}>{formatPriceSummary(v)}</div>
+                  <div style={{ marginTop: 10 }}>
+                    {priceOptions.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: 12, color: '#4b5563' }}>
+                          Choose duration
+                          <select
+                            style={{
+                              marginLeft: 8,
+                              padding: '2px 6px',
+                              borderRadius: 4,
+                              border: '1px solid #d1d5db',
+                              fontSize: 13,
+                            }}
+                            value={selectedHour !== null ? String(selectedHour) : ''}
+                            onChange={(e) =>
+                              setSelectedHours((prev) => ({
+                                ...prev,
+                                [v.id]: Number(e.target.value),
+                              }))
+                            }
+                          >
+                            {priceOptions.map((opt) => (
+                              <option key={`${v.id}-${opt.hours}`} value={String(opt.hours)}>
+                                {opt.hours} hrs
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        {activePrice ? (
+                          <div style={{ fontWeight: 600 }}>{`$${activePrice.price.toFixed(0)} (${activePrice.hours} hrs)`}</div>
+                        ) : (
+                          <div style={{ color: '#6b7280', fontSize: 13 }}>Select a duration to view pricing.</div>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ marginTop: 4, fontWeight: 600 }}>
+                        Call for pricing
+                        {category === 'transfer' ? ' (transfer quote required)' : ''}
+                      </div>
+                    )}
+                  </div>
                   {images.length > 0 && (
                     <button
                       type="button"
@@ -296,8 +374,9 @@ export default function HomePage() {
   const categoryOptions: Array<{ key: keyof typeof visibleCategories; label: string }> = [
     { key: 'partyBuses', label: 'Party buses' },
     { key: 'limos', label: 'Limos' },
-    { key: 'shuttles', label: 'Shuttles' },
-    { key: 'others', label: 'Other' },
+    { key: 'shuttles', label: 'Shuttle buses' },
+    { key: 'cars', label: 'Cars' },
+    { key: 'transfers', label: 'Transfers' },
   ];
 
   return (
@@ -382,6 +461,22 @@ export default function HomePage() {
             </label>
           ))}
         </div>
+        <div style={{ marginTop: 12, fontSize: 13, color: '#111827', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span>Sort by size:</span>
+          <select
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value as 'desc' | 'asc')}
+            style={{
+              border: '1px solid #d1d5db',
+              borderRadius: 4,
+              padding: '2px 8px',
+              fontSize: 13,
+            }}
+          >
+            <option value="desc">Largest → Smallest</option>
+            <option value="asc">Smallest → Largest</option>
+          </select>
+        </div>
       </section>
 
       {error && (
@@ -402,14 +497,17 @@ export default function HomePage() {
           }}
         >
           {visibleCategories.partyBuses && partyBuses.length > 0 &&
-            renderColumn('Party Buses', partyBuses)}
-          {visibleCategories.limos && limos.length > 0 && renderColumn('Limos', limos)}
-          {visibleCategories.shuttles && shuttles.length > 0 && renderColumn('Shuttles', shuttles)}
-          {visibleCategories.others && others.length > 0 && renderColumn('Other', others)}
-          {!partyBuses.length && !limos.length && !shuttles.length && others.length > 0 &&
-            !visibleCategories.others && (
+            renderColumn('Party Buses', partyBuses, 'party-bus')}
+          {visibleCategories.limos && limos.length > 0 && renderColumn('Limos', limos, 'limo')}
+          {visibleCategories.shuttles && shuttles.length > 0 &&
+            renderColumn('Shuttle Buses', shuttles, 'shuttle')}
+          {visibleCategories.cars && cars.length > 0 && renderColumn('Cars', cars, 'car')}
+          {visibleCategories.transfers && transfers.length > 0 &&
+            renderColumn('Transfers', transfers, 'transfer')}
+          {!partyBuses.length && !limos.length && !shuttles.length && cars.length > 0 &&
+            !visibleCategories.cars && (
               <div style={{ fontSize: 13, color: '#6b7280' }}>
-                All primary categories are hidden—enable “Other” or another checkbox to see matches.
+                All primary categories are hidden—enable “Cars” or another checkbox to see matches.
               </div>
             )}
         </div>
