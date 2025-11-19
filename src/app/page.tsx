@@ -235,7 +235,9 @@ export default function HomePage() {
         {list.map((v) => {
           const images = getImages(v);
           const priceOptions = getPriceOptions(v);
-          const selectedHour = selectedHours[v.id] ?? priceOptions[0]?.hours ?? null;
+          const fallbackHour =
+            priceOptions.find((opt) => opt.hours === 4)?.hours ?? priceOptions[0]?.hours ?? null;
+          const selectedHour = selectedHours[v.id] ?? fallbackHour ?? null;
           const activePrice = priceOptions.find((opt) => opt.hours === selectedHour) ?? null;
 
           return (
