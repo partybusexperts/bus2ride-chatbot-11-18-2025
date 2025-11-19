@@ -43,6 +43,12 @@ type Vehicle = {
 
 type VehicleType = 'party-bus' | 'limo' | 'shuttle' | 'car' | 'transfer';
 type RateType = 'standard' | 'prom' | 'before5pm';
+type PriceOption = { hours: number; price: number };
+type VehicleMeta = {
+  images: string[];
+  rateOptions: Record<RateType, PriceOption[]>;
+  availableRateTypes: RateType[];
+};
 
 const PRICE_FIELDS: Array<{ hours: number; key: keyof Vehicle }> = [
   { hours: 3, key: 'price_3hr' },
@@ -114,19 +120,13 @@ function getVehicleType(v: Vehicle): VehicleType {
 function getPriceOptions(v: Vehicle, rateType: RateType) {
   const fields = RATE_TYPE_FIELDS[rateType];
 
-  return fields.reduce<Array<{ hours: number; price: number }>>((acc, { hours, key }) => {
+  return fields.reduce<Array<PriceOption>>((acc, { hours, key }) => {
     const value = v[key];
     if (typeof value === 'number' && !Number.isNaN(value)) {
       acc.push({ hours, price: value });
     }
     return acc;
   }, []);
-}
-
-function getAvailableRateTypes(v: Vehicle): RateType[] {
-  return (['standard', 'prom', 'before5pm'] as RateType[]).filter((rate) => {
-    return getPriceOptions(v, rate).length > 0;
-  });
 }
 
 function getImages(v: Vehicle): string[] {
@@ -210,6 +210,26 @@ export default function HomePage() {
     });
   }, [sortOrder]);
 
+  const vehicleMeta = useMemo(() => {
+    const meta: Record<string, VehicleMeta> = {};
+    for (const v of vehicles) {
+      const rateOptions: Record<RateType, PriceOption[]> = {
+        standard: getPriceOptions(v, 'standard'),
+        prom: getPriceOptions(v, 'prom'),
+        before5pm: getPriceOptions(v, 'before5pm'),
+      };
+      const availableRateTypes = (Object.keys(rateOptions) as RateType[]).filter(
+        (rate) => rateOptions[rate].length > 0,
+      );
+      meta[v.id] = {
+        images: getImages(v),
+        rateOptions,
+        availableRateTypes,
+      };
+    }
+    return meta;
+  }, [vehicles]);
+
   const { partyBuses, limos, shuttles, cars, transfers } = useMemo(() => {
     const partyBuses: Vehicle[] = [];
     const limos: Vehicle[] = [];
@@ -282,8 +302,9 @@ export default function HomePage() {
       <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>{title}</h2>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, ...columnStyle }}>
         {list.map((v) => {
-          const images = getImages(v);
-          const availableRateTypes = getAvailableRateTypes(v);
+          const meta = vehicleMeta[v.id];
+          const images = meta?.images ?? getImages(v);
+          const availableRateTypes = meta?.availableRateTypes ?? [];
           const storedRateType = selectedRateTypes[v.id];
           const forcedRateType = globalRateType === 'auto' ? null : globalRateType;
           let activeRateType: RateType | null = null;
@@ -297,7 +318,7 @@ export default function HomePage() {
           } else {
             activeRateType = availableRateTypes[0] ?? null;
           }
-          const priceOptions = activeRateType ? getPriceOptions(v, activeRateType) : [];
+          const priceOptions = activeRateType && meta ? meta.rateOptions[activeRateType] : [];
           const fallbackHour =
             priceOptions.find((opt) => opt.hours === 4)?.hours ?? priceOptions[0]?.hours ?? null;
           const storedHour = selectedHours[v.id];
@@ -368,7 +389,7 @@ export default function HomePage() {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {availableRateTypes.length > 1 && (
                           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                            {availableRateTypes.map((rate) => {
+                            {availableRateTypes.map((rate: RateType) => {
                               const isActive = rate === activeRateType;
                               const isDisabled = globalRateType !== 'auto' && globalRateType !== rate;
                               return (
