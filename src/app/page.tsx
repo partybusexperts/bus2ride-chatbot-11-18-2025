@@ -167,6 +167,7 @@ export default function HomePage() {
   } | null>(null);
   const [selectedHours, setSelectedHours] = useState<Record<string, number | null>>({});
   const [selectedRateTypes, setSelectedRateTypes] = useState<Record<string, RateType>>({});
+  const [globalRateType, setGlobalRateType] = useState<RateType | 'auto'>('auto');
 
   async function handleSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -284,9 +285,18 @@ export default function HomePage() {
           const images = getImages(v);
           const availableRateTypes = getAvailableRateTypes(v);
           const storedRateType = selectedRateTypes[v.id];
-          const activeRateType = storedRateType && availableRateTypes.includes(storedRateType)
-            ? storedRateType
-            : availableRateTypes[0] ?? null;
+          const forcedRateType = globalRateType === 'auto' ? null : globalRateType;
+          let activeRateType: RateType | null = null;
+
+          if (forcedRateType) {
+            activeRateType = availableRateTypes.includes(forcedRateType)
+              ? forcedRateType
+              : availableRateTypes[0] ?? null;
+          } else if (storedRateType && availableRateTypes.includes(storedRateType)) {
+            activeRateType = storedRateType;
+          } else {
+            activeRateType = availableRateTypes[0] ?? null;
+          }
           const priceOptions = activeRateType ? getPriceOptions(v, activeRateType) : [];
           const fallbackHour =
             priceOptions.find((opt) => opt.hours === 4)?.hours ?? priceOptions[0]?.hours ?? null;
@@ -360,11 +370,13 @@ export default function HomePage() {
                           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                             {availableRateTypes.map((rate) => {
                               const isActive = rate === activeRateType;
+                              const isDisabled = globalRateType !== 'auto' && globalRateType !== rate;
                               return (
                                 <button
                                   key={`${v.id}-${rate}`}
                                   type="button"
                                   onClick={() => {
+                                    if (globalRateType !== 'auto') return;
                                     setSelectedRateTypes((prev) => ({
                                       ...prev,
                                       [v.id]: rate,
@@ -381,13 +393,20 @@ export default function HomePage() {
                                     fontSize: 12,
                                     background: isActive ? '#111827' : 'white',
                                     color: isActive ? 'white' : '#111827',
-                                    cursor: 'pointer',
+                                    cursor: globalRateType === 'auto' ? 'pointer' : 'not-allowed',
+                                    opacity: isDisabled ? 0.6 : 1,
                                   }}
+                                  disabled={globalRateType !== 'auto'}
                                 >
                                   {RATE_TYPE_LABELS[rate]}
                                 </button>
                               );
                             })}
+                          </div>
+                        )}
+                        {forcedRateType && !availableRateTypes.includes(forcedRateType) && (
+                          <div style={{ fontSize: 12, color: '#b45309' }}>
+                            {RATE_TYPE_LABELS[forcedRateType]} pricing not available for this vehicle—showing {RATE_TYPE_LABELS[activeRateType]}.
                           </div>
                         )}
                         <label style={{ fontSize: 12, color: '#4b5563' }}>
@@ -552,21 +571,58 @@ export default function HomePage() {
             </label>
           ))}
         </div>
-        <div style={{ marginTop: 12, fontSize: 13, color: '#111827', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span>Sort by size:</span>
-          <select
-            value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value as 'desc' | 'asc')}
-            style={{
-              border: '1px solid #d1d5db',
-              borderRadius: 4,
-              padding: '2px 8px',
-              fontSize: 13,
-            }}
-          >
-            <option value="desc">Largest → Smallest</option>
-            <option value="asc">Smallest → Largest</option>
-          </select>
+        <div style={{
+          marginTop: 12,
+          fontSize: 13,
+          color: '#111827',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 16,
+          alignItems: 'center',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span>Sort by size:</span>
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as 'desc' | 'asc')}
+              style={{
+                border: '1px solid #d1d5db',
+                borderRadius: 4,
+                padding: '2px 8px',
+                fontSize: 13,
+              }}
+            >
+              <option value="desc">Largest → Smallest</option>
+              <option value="asc">Smallest → Largest</option>
+            </select>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span>Rate type:</span>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {(['auto', 'standard', 'prom', 'before5pm'] as Array<'auto' | RateType>).map((option) => {
+                const isActive = globalRateType === option;
+                const label = option === 'auto' ? 'Auto' : RATE_TYPE_LABELS[option];
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setGlobalRateType(option)}
+                    style={{
+                      border: '1px solid #d1d5db',
+                      borderRadius: 999,
+                      padding: '2px 10px',
+                      fontSize: 12,
+                      background: isActive ? '#111827' : 'white',
+                      color: isActive ? 'white' : '#111827',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </section>
 
