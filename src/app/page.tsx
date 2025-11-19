@@ -71,6 +71,12 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [visibleCategories, setVisibleCategories] = useState({
+    partyBuses: true,
+    limos: true,
+    shuttles: true,
+    others: false,
+  });
 
   async function handleSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -157,6 +163,20 @@ export default function HomePage() {
     </div>
   );
 
+  const toggleCategory = (key: keyof typeof visibleCategories) => {
+    setVisibleCategories((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  const categoryOptions: Array<{ key: keyof typeof visibleCategories; label: string }> = [
+    { key: 'partyBuses', label: 'Party buses' },
+    { key: 'limos', label: 'Limos' },
+    { key: 'shuttles', label: 'Shuttles' },
+    { key: 'others', label: 'Other' },
+  ];
+
   return (
     <main
       style={{
@@ -218,6 +238,27 @@ export default function HomePage() {
         <p style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>
           We’ll group matches into Party Buses, Limos, and Shuttles so you can compare quickly.
         </p>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 12,
+            marginTop: 12,
+            fontSize: 13,
+            color: '#111827',
+          }}
+        >
+          {categoryOptions.map(({ key, label }) => (
+            <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input
+                type="checkbox"
+                checked={visibleCategories[key]}
+                onChange={() => toggleCategory(key)}
+              />
+              {label}
+            </label>
+          ))}
+        </div>
       </section>
 
       {error && (
@@ -237,11 +278,17 @@ export default function HomePage() {
             gap: 24,
           }}
         >
-          {partyBuses.length > 0 && renderColumn('Party Buses', partyBuses)}
-          {limos.length > 0 && renderColumn('Limos', limos)}
-          {shuttles.length > 0 && renderColumn('Shuttles', shuttles)}
-          {partyBuses.length === 0 && limos.length === 0 && shuttles.length === 0 &&
-            others.length > 0 && renderColumn('Other', others)}
+          {visibleCategories.partyBuses && partyBuses.length > 0 &&
+            renderColumn('Party Buses', partyBuses)}
+          {visibleCategories.limos && limos.length > 0 && renderColumn('Limos', limos)}
+          {visibleCategories.shuttles && shuttles.length > 0 && renderColumn('Shuttles', shuttles)}
+          {visibleCategories.others && others.length > 0 && renderColumn('Other', others)}
+          {!partyBuses.length && !limos.length && !shuttles.length && others.length > 0 &&
+            !visibleCategories.others && (
+              <div style={{ fontSize: 13, color: '#6b7280' }}>
+                All primary categories are hidden—enable “Other” or another checkbox to see matches.
+              </div>
+            )}
         </div>
       )}
     </main>
