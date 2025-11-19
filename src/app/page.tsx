@@ -23,6 +23,16 @@ type Vehicle = {
   price_8hr?: number | null;
   price_9hr?: number | null;
   price_10hr?: number | null;
+  prom_price_6hr?: number | null;
+  prom_price_7hr?: number | null;
+  prom_price_8hr?: number | null;
+  prom_price_9hr?: number | null;
+  prom_price_10hr?: number | null;
+  before5pm_3hr?: number | null;
+  before5pm_4hr?: number | null;
+  before5pm_5hr?: number | null;
+  before5pm_6hr?: number | null;
+  before5pm_7hr?: number | null;
   image_main?: string | null;
   image_2?: string | null;
   image_3?: string | null;
@@ -32,6 +42,7 @@ type Vehicle = {
 };
 
 type VehicleType = 'party-bus' | 'limo' | 'shuttle' | 'car' | 'transfer';
+type RateType = 'standard' | 'prom' | 'before5pm';
 
 const PRICE_FIELDS: Array<{ hours: number; key: keyof Vehicle }> = [
   { hours: 3, key: 'price_3hr' },
@@ -43,6 +54,34 @@ const PRICE_FIELDS: Array<{ hours: number; key: keyof Vehicle }> = [
   { hours: 9, key: 'price_9hr' },
   { hours: 10, key: 'price_10hr' },
 ];
+
+const PROM_FIELDS: Array<{ hours: number; key: keyof Vehicle }> = [
+  { hours: 6, key: 'prom_price_6hr' },
+  { hours: 7, key: 'prom_price_7hr' },
+  { hours: 8, key: 'prom_price_8hr' },
+  { hours: 9, key: 'prom_price_9hr' },
+  { hours: 10, key: 'prom_price_10hr' },
+];
+
+const BEFORE5PM_FIELDS: Array<{ hours: number; key: keyof Vehicle }> = [
+  { hours: 3, key: 'before5pm_3hr' },
+  { hours: 4, key: 'before5pm_4hr' },
+  { hours: 5, key: 'before5pm_5hr' },
+  { hours: 6, key: 'before5pm_6hr' },
+  { hours: 7, key: 'before5pm_7hr' },
+];
+
+const RATE_TYPE_FIELDS: Record<RateType, Array<{ hours: number; key: keyof Vehicle }>> = {
+  standard: PRICE_FIELDS,
+  prom: PROM_FIELDS,
+  before5pm: BEFORE5PM_FIELDS,
+};
+
+const RATE_TYPE_LABELS: Record<RateType, string> = {
+  standard: 'Standard',
+  prom: 'Prom',
+  before5pm: 'Before 5 PM',
+};
 
 function getVehicleType(v: Vehicle): VehicleType {
   if (v.is_transfer) return 'transfer';
@@ -72,14 +111,22 @@ function getVehicleType(v: Vehicle): VehicleType {
   return 'car';
 }
 
-function getPriceOptions(v: Vehicle) {
-  return PRICE_FIELDS.reduce<Array<{ hours: number; price: number }>>((acc, { hours, key }) => {
+function getPriceOptions(v: Vehicle, rateType: RateType) {
+  const fields = RATE_TYPE_FIELDS[rateType];
+
+  return fields.reduce<Array<{ hours: number; price: number }>>((acc, { hours, key }) => {
     const value = v[key];
     if (typeof value === 'number' && !Number.isNaN(value)) {
       acc.push({ hours, price: value });
     }
     return acc;
   }, []);
+}
+
+function getAvailableRateTypes(v: Vehicle): RateType[] {
+  return (['standard', 'prom', 'before5pm'] as RateType[]).filter((rate) => {
+    return getPriceOptions(v, rate).length > 0;
+  });
 }
 
 function getImages(v: Vehicle): string[] {
@@ -119,6 +166,7 @@ export default function HomePage() {
     index: number;
   } | null>(null);
   const [selectedHours, setSelectedHours] = useState<Record<string, number | null>>({});
+  const [selectedRateTypes, setSelectedRateTypes] = useState<Record<string, RateType>>({});
 
   async function handleSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -234,10 +282,17 @@ export default function HomePage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, ...columnStyle }}>
         {list.map((v) => {
           const images = getImages(v);
-          const priceOptions = getPriceOptions(v);
+          const availableRateTypes = getAvailableRateTypes(v);
+          const storedRateType = selectedRateTypes[v.id];
+          const activeRateType = storedRateType && availableRateTypes.includes(storedRateType)
+            ? storedRateType
+            : availableRateTypes[0] ?? null;
+          const priceOptions = activeRateType ? getPriceOptions(v, activeRateType) : [];
           const fallbackHour =
             priceOptions.find((opt) => opt.hours === 4)?.hours ?? priceOptions[0]?.hours ?? null;
-          const selectedHour = selectedHours[v.id] ?? fallbackHour ?? null;
+          const storedHour = selectedHours[v.id];
+          const hourIsValid = priceOptions.some((opt) => opt.hours === storedHour);
+          const selectedHour = hourIsValid ? storedHour : fallbackHour ?? null;
           const activePrice = priceOptions.find((opt) => opt.hours === selectedHour) ?? null;
 
           return (
@@ -299,10 +354,44 @@ export default function HomePage() {
                     </div>
                   )}
                   <div style={{ marginTop: 10 }}>
-                    {priceOptions.length > 0 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {priceOptions.length > 0 && activeRateType ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {availableRateTypes.length > 1 && (
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            {availableRateTypes.map((rate) => {
+                              const isActive = rate === activeRateType;
+                              return (
+                                <button
+                                  key={`${v.id}-${rate}`}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedRateTypes((prev) => ({
+                                      ...prev,
+                                      [v.id]: rate,
+                                    }));
+                                    setSelectedHours((prev) => ({
+                                      ...prev,
+                                      [v.id]: null,
+                                    }));
+                                  }}
+                                  style={{
+                                    border: '1px solid #d1d5db',
+                                    borderRadius: 999,
+                                    padding: '2px 10px',
+                                    fontSize: 12,
+                                    background: isActive ? '#111827' : 'white',
+                                    color: isActive ? 'white' : '#111827',
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  {RATE_TYPE_LABELS[rate]}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                         <label style={{ fontSize: 12, color: '#4b5563' }}>
-                          Choose duration
+                          {RATE_TYPE_LABELS[activeRateType]} hours
                           <select
                             style={{
                               marginLeft: 8,
@@ -320,7 +409,7 @@ export default function HomePage() {
                             }
                           >
                             {priceOptions.map((opt) => (
-                              <option key={`${v.id}-${opt.hours}`} value={String(opt.hours)}>
+                              <option key={`${v.id}-${activeRateType}-${opt.hours}`} value={String(opt.hours)}>
                                 {opt.hours} hrs
                               </option>
                             ))}
