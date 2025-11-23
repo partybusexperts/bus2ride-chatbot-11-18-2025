@@ -25,9 +25,11 @@ function ensureEnvLoaded() {
 	const contents = fs.readFileSync(envPath, 'utf8');
 	for (const line of contents.split(/\r?\n/)) {
 		if (!line || line.trim().startsWith('#') || !line.includes('=')) continue;
-		const [key, ...rest] = line.split('=');
-		if (!process.env[key] && key) {
-			process.env[key] = rest.join('=').trim();
+			const [key, ...rest] = line.split('=');
+			if (!process.env[key] && key) {
+				const raw = rest.join('=').trim();
+				const cleaned = raw.replace(/^['"](.*)['"]$/, '$1');
+				process.env[key] = cleaned;
 		}
 	}
 }
@@ -48,9 +50,9 @@ async function main() {
 	const limit = Number(process.argv[2] ?? '5');
 	const cityPrefix = process.argv[3];
 
-	let query = supabase
-		.from('vehicles_for_chatbot')
-		.select('id, vehicle_title, city, image_main, image_2, image_3')
+		let query = supabase
+			.from('vehicles_for_chatbot')
+			.select('id, vehicle_title, city, image_main, image_2, image_3, gallery_all')
 		.limit(Number.isFinite(limit) && limit > 0 ? limit : 5);
 
 	if (cityPrefix) {
@@ -70,7 +72,7 @@ async function main() {
 
 	for (const row of data) {
 		console.log(`\n${row.vehicle_title} (${row.city ?? 'City unknown'}) [${row.id}]`);
-		['image_main', 'image_2', 'image_3'].forEach((field) => {
+			['image_main', 'image_2', 'image_3'].forEach((field) => {
 			const value = row[field];
 			if (!value) {
 				console.log(`  ${field}: (empty)`);
@@ -83,8 +85,16 @@ async function main() {
 					return 'invalid-url';
 				}
 			})();
-			console.log(`  ${field}: ${value} [${host}]`);
+					console.log(`  ${field}: ${value} [${host}]`);
 		});
+
+				if (row.gallery_all) {
+					const galleryItems = row.gallery_all.split('|').filter(Boolean);
+					console.log(`  gallery_all count: ${galleryItems.length}`);
+					console.log(`  gallery_all sample: ${galleryItems.slice(0, 3).join(' | ')}`);
+				} else {
+					console.log('  gallery_all: (empty)');
+				}
 	}
 }
 
