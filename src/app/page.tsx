@@ -136,14 +136,6 @@ function getImages(v: Vehicle): string[] {
   if (v.image_2) parts.push(v.image_2);
   if (v.image_3) parts.push(v.image_3);
 
-  if (v.gallery_all) {
-    const extras = v.gallery_all
-      .split('|')
-      .map((img) => img.trim())
-      .filter(Boolean);
-    parts.push(...extras);
-  }
-
   return Array.from(new Set(parts));
 }
 
