@@ -375,7 +375,7 @@ export default function HomePage() {
   };
 
   const renderColumn = (title: string, list: Vehicle[], category?: VehicleType) => (
-    <div style={columnContainerStyle}>
+    <div style={{ ...columnContainerStyle, marginBottom: 20 }}>
       <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12, color: '#0f172a' }}>{title}</h2>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, ...columnStyle }}>
         {list.map((v) => {
@@ -621,18 +621,20 @@ export default function HomePage() {
                           position: 'absolute',
                           top: 'calc(100% + 12px)',
                           right: 0,
-                          width: 360,
-                          maxWidth: '90vw',
-                          borderRadius: 14,
-                          border: '1px solid rgba(15,23,42,0.08)',
+                          width: 320,
+                          maxWidth: '80vw',
+                          borderRadius: 18,
+                          border: '1px solid rgba(15,23,42,0.12)',
                           background: 'rgba(15,23,42,0.98)',
                           color: '#f8fafc',
-                          boxShadow: '0 18px 40px rgba(8,13,26,0.55)',
-                          padding: 14,
-                          zIndex: 20,
+                          boxShadow: '0 15px 35px rgba(8,13,26,0.45)',
+                          padding: 12,
+                          zIndex: 30,
                           display: 'flex',
                           flexDirection: 'column',
-                          gap: 10,
+                          gap: 8,
+                          transformOrigin: 'top right',
+                          animation: 'fadeSlide 160ms ease-out',
                         }}
                       >
                         <div style={{ fontWeight: 600, fontSize: 13, letterSpacing: 0.4 }}>
@@ -643,7 +645,7 @@ export default function HomePage() {
                             Hourly pricing not provided for this vehicle.
                           </div>
                         ) : (
-                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                             {popoverRateSections.map((rate) => {
                               const rateOptions = meta?.rateOptions[rate] ?? [];
                               const compactOptions = rateOptions.slice(0, 3);
@@ -652,10 +654,10 @@ export default function HomePage() {
                                 <div
                                   key={`${v.id}-popover-${rate}`}
                                   style={{
-                                    flex: '1 1 120px',
+                                    flex: '1 1 140px',
                                     background: 'rgba(255,255,255,0.08)',
                                     borderRadius: 10,
-                                    padding: '8px 10px',
+                                    padding: '6px 8px',
                                     backdropFilter: 'blur(6px)',
                                   }}
                                 >
@@ -674,7 +676,7 @@ export default function HomePage() {
                                     style={{
                                       display: 'grid',
                                       gridTemplateColumns: 'auto auto',
-                                      columnGap: 8,
+                                      columnGap: 6,
                                       rowGap: 2,
                                       fontSize: 12,
                                     }}
@@ -984,8 +986,8 @@ export default function HomePage() {
           style={{
             marginTop: 24,
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-            gap: 24,
+            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gap: 28,
           }}
         >
           {visibleCategories.partyBuses && partyBuses.length > 0 &&
