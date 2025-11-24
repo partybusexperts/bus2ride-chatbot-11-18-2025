@@ -1,7 +1,8 @@
 'use client';
 
 import Image from 'next/image';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import type { CSSProperties } from 'react';
 
 type Vehicle = {
   id: string;
@@ -161,7 +162,7 @@ export default function HomePage() {
   } | null>(null);
   const [selectedHours, setSelectedHours] = useState<Record<string, number | null>>({});
   const [selectedRateTypes, setSelectedRateTypes] = useState<Record<string, RateType>>({});
-  const [globalRateType, setGlobalRateType] = useState<RateType | 'auto'>('auto');
+  const [globalRateType, setGlobalRateType] = useState<RateType | null>(null);
   const [hoveredPricingId, setHoveredPricingId] = useState<string | null>(null);
 
   const before5pmEligible = useMemo(() => {
@@ -173,8 +174,8 @@ export default function HomePage() {
   }, [vehicles]);
 
   useEffect(() => {
-    if (!before5pmEligible && globalRateType === 'before5pm') {
-      setGlobalRateType('auto');
+    if (globalRateType === 'before5pm' && !before5pmEligible) {
+      setGlobalRateType(null);
     }
   }, [before5pmEligible, globalRateType]);
 
@@ -299,11 +300,11 @@ export default function HomePage() {
 
   useEffect(() => {
     if (globalRateType === 'before5pm' && (!before5pmEligible || !hasBefore5pmRates)) {
-      setGlobalRateType('auto');
+      setGlobalRateType(null);
     } else if (globalRateType === 'prom' && !hasPromRates) {
-      setGlobalRateType('auto');
+      setGlobalRateType(null);
     } else if (globalRateType === 'standard' && !hasStandardRates) {
-      setGlobalRateType('auto');
+      setGlobalRateType(null);
     }
   }, [globalRateType, before5pmEligible, hasBefore5pmRates, hasPromRates, hasStandardRates]);
 
@@ -320,13 +321,15 @@ export default function HomePage() {
     overflowY: 'auto' as const,
   };
 
-  const cardStyle = {
-    border: '1px solid #e5e7eb',
-    borderRadius: 8,
-    padding: 12,
-    background: 'white',
-    boxShadow: '0 1px 2px rgba(15,23,42,0.05)',
+  const cardStyle: CSSProperties = {
+    border: '1px solid rgba(15,23,42,0.08)',
+    borderRadius: 16,
+    padding: 16,
+    background: 'linear-gradient(145deg, #ffffff, #f8fafc)',
+    boxShadow: '0 25px 45px rgba(15,23,42,0.08)',
     fontSize: 14,
+    position: 'relative',
+    overflow: 'hidden',
   };
 
   const openPhotoViewer = (title: string, images: string[], startIndex = 0) => {
@@ -364,7 +367,7 @@ export default function HomePage() {
           const images = meta?.images ?? getImages(v);
           const availableRateTypes = meta?.availableRateTypes ?? [];
           const storedRateType = selectedRateTypes[v.id];
-          const forcedRateType = globalRateType === 'auto' ? null : globalRateType;
+          const forcedRateType = globalRateType;
           let activeRateType: RateType | null = null;
 
           if (forcedRateType) {
@@ -391,12 +394,22 @@ export default function HomePage() {
           const rateSummaryOrder: RateType[] = ['standard', 'prom', 'before5pm'];
           const popoverRateSections: RateType[] = rateSummaryOrder.filter((rate) => {
             if (rate === 'before5pm' && !before5pmEligible) return false;
-            return meta?.rateOptions[rate]?.length;
+            return (meta?.rateOptions[rate]?.length ?? 0) > 0;
           });
           const showPricingPopover = hoveredPricingId === v.id;
 
           return (
             <div key={v.id} style={cardStyle}>
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 4,
+                  background: 'linear-gradient(90deg, #2563eb, #14b8a6)',
+                }}
+              />
               <div style={{ display: 'flex', gap: 12 }}>
                 {images.length > 0 ? (
                   <button
@@ -466,13 +479,13 @@ export default function HomePage() {
                           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                             {availableRateTypes.map((rate: RateType) => {
                               const isActive = rate === activeRateType;
-                              const isDisabled = globalRateType !== 'auto' && globalRateType !== rate;
+                              const isDisabled = Boolean(forcedRateType);
                               return (
                                 <button
                                   key={`${v.id}-${rate}`}
                                   type="button"
                                   onClick={() => {
-                                    if (globalRateType !== 'auto') return;
+                                    if (forcedRateType) return;
                                     setSelectedRateTypes((prev) => ({
                                       ...prev,
                                       [v.id]: rate,
@@ -489,10 +502,10 @@ export default function HomePage() {
                                     fontSize: 12,
                                     background: isActive ? '#111827' : 'white',
                                     color: isActive ? 'white' : '#111827',
-                                    cursor: globalRateType === 'auto' ? 'pointer' : 'not-allowed',
+                                    cursor: forcedRateType ? 'not-allowed' : 'pointer',
                                     opacity: isDisabled ? 0.6 : 1,
                                   }}
-                                  disabled={globalRateType !== 'auto'}
+                                  disabled={isDisabled}
                                 >
                                   {RATE_TYPE_LABELS[rate]}
                                 </button>
@@ -567,57 +580,101 @@ export default function HomePage() {
                       <div
                         style={{
                           position: 'absolute',
-                          top: 'calc(100% + 6px)',
+                          top: 'calc(100% + 10px)',
                           right: 0,
-                          width: 260,
-                          borderRadius: 10,
-                          border: '1px solid #e5e7eb',
-                          background: 'white',
-                          boxShadow: '0 8px 25px rgba(15,23,42,0.15)',
-                          padding: 12,
+                          width: 420,
+                          maxWidth: '90vw',
+                          borderRadius: 14,
+                          border: '1px solid rgba(15,23,42,0.08)',
+                          background: 'rgba(15,23,42,0.98)',
+                          color: '#f8fafc',
+                          boxShadow: '0 18px 40px rgba(8,13,26,0.55)',
+                          padding: 14,
                           zIndex: 20,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 10,
+                          pointerEvents: 'none',
                         }}
                       >
-                        <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>
-                          Rate availability
+                        <div style={{ fontWeight: 600, fontSize: 13, letterSpacing: 0.4 }}>
+                          Rate snapshot
                         </div>
                         {popoverRateSections.length === 0 ? (
                           <div style={{ fontSize: 12, color: '#9ca3af' }}>
                             Hourly pricing not provided for this vehicle.
                           </div>
                         ) : (
-                          popoverRateSections.map((rate) => (
-                            <div key={`${v.id}-popover-${rate}`} style={{ marginBottom: 8 }}>
-                              <div style={{ fontSize: 12, fontWeight: 600 }}>
-                                {RATE_TYPE_LABELS[rate]}
-                              </div>
-                              <table style={{ width: '100%', fontSize: 12 }}>
-                                <tbody>
-                                  {meta?.rateOptions[rate]?.map((opt: PriceOption) => (
-                                    <tr key={`${rate}-${opt.hours}`}>
-                                      <td style={{ padding: '2px 0', color: '#4b5563' }}>{
-                                        opt.hours
-                                      } hrs</td>
-                                      <td style={{ padding: '2px 0', textAlign: 'right' }}>
-                                        ${opt.price.toFixed(0)}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          ))
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            {popoverRateSections.map((rate) => {
+                              const rateOptions = meta?.rateOptions[rate] ?? [];
+                              const compactOptions = rateOptions.slice(0, 3);
+                              const overflow = rateOptions.length - compactOptions.length;
+                              return (
+                                <div
+                                  key={`${v.id}-popover-${rate}`}
+                                  style={{
+                                    flex: '1 1 120px',
+                                    background: 'rgba(255,255,255,0.08)',
+                                    borderRadius: 10,
+                                    padding: '8px 10px',
+                                    backdropFilter: 'blur(6px)',
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      fontSize: 11,
+                                      letterSpacing: 0.5,
+                                      textTransform: 'uppercase',
+                                      color: '#cbd5f5',
+                                      marginBottom: 4,
+                                    }}
+                                  >
+                                    {RATE_TYPE_LABELS[rate]}
+                                  </div>
+                                  <div
+                                    style={{
+                                      display: 'grid',
+                                      gridTemplateColumns: 'auto auto',
+                                      columnGap: 8,
+                                      rowGap: 2,
+                                      fontSize: 12,
+                                    }}
+                                  >
+                                    {compactOptions.map((opt: PriceOption) => (
+                                      <Fragment key={`${rate}-${opt.hours}`}>
+                                        <span>{opt.hours}h</span>
+                                        <span
+                                          style={{ textAlign: 'right', fontWeight: 600 }}
+                                        >
+                                          ${opt.price.toFixed(0)}
+                                        </span>
+                                      </Fragment>
+                                    ))}
+                                    {overflow > 0 && (
+                                      <span style={{ gridColumn: '1 / span 2', fontSize: 11, color: '#9ca3af' }}>
+                                        +{overflow} more hrs
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         )}
                         <div
                           style={{
-                            borderTop: '1px solid #f3f4f6',
-                            paddingTop: 8,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
                             fontSize: 12,
+                            paddingTop: 4,
+                            borderTop: '1px solid rgba(255,255,255,0.08)',
                           }}
                         >
-                          Transfer:{' '}
+                          <span>Transfer</span>
                           {transferPrice !== null ? (
-                            <strong>${transferPrice.toFixed(0)}</strong>
+                            <strong style={{ fontSize: 13 }}>${transferPrice.toFixed(0)}</strong>
                           ) : (
                             <span style={{ color: '#9ca3af' }}>Not published</span>
                           )}
@@ -672,7 +729,7 @@ export default function HomePage() {
   ];
 
   const rateToggleOptions = useMemo(() => {
-    const options: Array<'auto' | RateType> = ['auto'];
+    const options: RateType[] = [];
     if (hasStandardRates) options.push('standard');
     if (hasPromRates) options.push('prom');
     if (before5pmEligible && hasBefore5pmRates) options.push('before5pm');
@@ -680,65 +737,100 @@ export default function HomePage() {
   }, [hasStandardRates, hasPromRates, before5pmEligible, hasBefore5pmRates]);
 
   return (
-    <main
+    <div
       style={{
-        maxWidth: 1100,
-        margin: '40px auto',
-        padding: '0 16px',
-        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #04050a, #0f172a 45%, #1e1b4b)',
+        padding: '50px 0 120px',
       }}
     >
-      <h1 style={{ fontSize: 32, marginBottom: 8 }}>Bus2Ride Vehicle Finder</h1>
-      <p style={{ marginBottom: 20 }}>
-  This is your internal test page. Enter a ZIP/postal code or city to see exactly what the chatbot will see.
-      </p>
-
-      <form
-        onSubmit={handleSearch}
-        style={{ marginBottom: 24, display: 'flex', gap: 8, flexWrap: 'wrap' }}
-      >
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Enter ZIP/postal or city (e.g. 85249, R2C, Phoenix)"
-          style={{
-            flex: '1 1 180px',
-            padding: '8px 12px',
-            fontSize: 16,
-            borderRadius: 4,
-            border: '1px solid #ccc',
-          }}
-        />
-        <button
-          type="submit"
-          style={{
-            padding: '8px 16px',
-            fontSize: 16,
-            borderRadius: 4,
-            border: 'none',
-            background: '#2563eb',
-            color: 'white',
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {loading ? 'Searching…' : 'Search'}
-        </button>
-      </form>
-
-      <section
+      <main
         style={{
-          border: '1px solid #e5e7eb',
-          borderRadius: 8,
-          padding: 12,
-          marginBottom: 20,
-          background: '#f9fafb',
+          maxWidth: 1100,
+          margin: '0 auto',
+          padding: '0 16px',
+          fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
         }}
       >
-        <div style={{ fontWeight: 600 }}>Results</div>
-        <p style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>
-          We’ll group matches into Party Buses, Limos, and Shuttles so you can compare quickly.
+        <section
+          style={{
+            borderRadius: 28,
+            padding: '28px 32px',
+            background: 'linear-gradient(130deg, #0f172a, #1e1b4b 60%, #312e81)',
+            color: '#f8fafc',
+            marginBottom: 24,
+            boxShadow: '0 30px 60px rgba(6,10,24,0.55)',
+          }}
+        >
+          <h1 style={{ fontSize: 34, marginBottom: 8, fontWeight: 700 }}>Bus2Ride Vehicle Finder</h1>
+          <p style={{ marginBottom: 16, fontSize: 15, color: 'rgba(226,232,240,0.85)' }}>
+            Plug in any ZIP/postal or city to preview the exact inventory, rates, and transfer coverage your chatbot presents to riders.
+          </p>
+          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 12, color: 'rgba(226,232,240,0.8)' }}>
+            <span>Hover a card for instant rate cards & transfer intel.</span>
+            <span>Toggle Standard / Prom / Before 5 PM globally or per vehicle.</span>
+          </div>
+        </section>
+
+        <div
+          style={{
+            background: 'white',
+            borderRadius: 22,
+            padding: '20px 24px',
+            boxShadow: '0 25px 60px rgba(15,23,42,0.15)',
+            marginBottom: 24,
+          }}
+        >
+          <form
+            onSubmit={handleSearch}
+            style={{ marginBottom: 0, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}
+          >
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Enter ZIP/postal or city (e.g. 85249, R2C, Phoenix)"
+              style={{
+                flex: '1 1 220px',
+                padding: '12px 16px',
+                fontSize: 16,
+                borderRadius: 999,
+                border: '1px solid #cbd5f5',
+                background: '#f8fafc',
+              }}
+            />
+            <button
+              type="submit"
+              style={{
+                padding: '12px 22px',
+                fontSize: 16,
+                borderRadius: 999,
+                border: 'none',
+                background: 'linear-gradient(120deg, #2563eb, #7c3aed)',
+                color: 'white',
+                cursor: 'pointer',
+                boxShadow: '0 12px 25px rgba(79,70,229,0.35)',
+                whiteSpace: 'nowrap',
+                fontWeight: 600,
+              }}
+            >
+              {loading ? 'Searching…' : 'Search'}
+            </button>
+          </form>
+        </div>
+      <section
+        style={{
+          border: '1px solid rgba(15,23,42,0.08)',
+          borderRadius: 24,
+          padding: '20px 24px',
+          marginBottom: 24,
+          background: 'rgba(255,255,255,0.9)',
+          boxShadow: '0 25px 45px rgba(15,23,42,0.12)',
+        }}
+      >
+        <div style={{ fontWeight: 700, fontSize: 18, color: '#111827' }}>Results dashboard</div>
+        <p style={{ fontSize: 13, color: '#4b5563', marginTop: 6 }}>
+          Filter categories, lock a rate card focus, then hover any vehicle for compressed pricing intel.
         </p>
         <div
           style={{
@@ -751,11 +843,26 @@ export default function HomePage() {
           }}
         >
           {categoryOptions.map(({ key, label }) => (
-            <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label
+              key={key}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '4px 10px',
+                borderRadius: 999,
+                border: '1px solid rgba(15,23,42,0.12)',
+                background: visibleCategories[key] ? '#111827' : 'white',
+                color: visibleCategories[key] ? 'white' : '#111827',
+                boxShadow: visibleCategories[key] ? '0 8px 18px rgba(17,24,39,0.2)' : 'none',
+                cursor: 'pointer',
+              }}
+            >
               <input
                 type="checkbox"
                 checked={visibleCategories[key]}
                 onChange={() => toggleCategory(key)}
+                style={{ accentColor: '#6366f1' }}
               />
               {label}
             </label>
@@ -786,32 +893,42 @@ export default function HomePage() {
               <option value="asc">Smallest → Largest</option>
             </select>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span>Rate type:</span>
-            <div style={{ display: 'flex', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <span>Rate focus:</span>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {rateToggleOptions.length === 0 && (
+                <span style={{ color: '#6b7280' }}>No published hourly pricing</span>
+              )}
               {rateToggleOptions.map((option) => {
                 const isActive = globalRateType === option;
-                const label = option === 'auto' ? 'Auto' : RATE_TYPE_LABELS[option];
+                const label = RATE_TYPE_LABELS[option];
                 return (
                   <button
                     key={option}
                     type="button"
-                    onClick={() => setGlobalRateType(option)}
+                    onClick={() =>
+                      setGlobalRateType((current) => (current === option ? null : option))
+                    }
                     style={{
-                      border: '1px solid #d1d5db',
+                      border: '1px solid #1f2937',
                       borderRadius: 999,
-                      padding: '2px 10px',
+                      padding: '4px 14px',
                       fontSize: 12,
-                      background: isActive ? '#111827' : 'white',
+                      background: isActive ? '#111827' : '#f3f4f6',
                       color: isActive ? 'white' : '#111827',
                       cursor: 'pointer',
+                      boxShadow: isActive ? '0 4px 12px rgba(15,23,42,0.35)' : 'none',
                     }}
                   >
                     {label}
+                    {isActive && <span style={{ marginLeft: 6, fontSize: 11 }}>×</span>}
                   </button>
                 );
               })}
             </div>
+            {rateToggleOptions.length > 0 && (
+              <span style={{ fontSize: 12, color: '#6b7280' }}>Tap the active pill again to clear.</span>
+            )}
           </div>
         </div>
       </section>
@@ -961,5 +1078,6 @@ export default function HomePage() {
       )}
 
     </main>
+    </div>
   );
 }
