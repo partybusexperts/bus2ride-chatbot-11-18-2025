@@ -94,8 +94,6 @@ const RATE_TYPE_LABELS: Record<RateType, string> = {
 const BEFORE5PM_CITIES = ['grand rapids', 'kalamazoo', 'battle creek'];
 
 function getVehicleType(v: Vehicle): VehicleType {
-  if (v.is_transfer) return 'transfer';
-
   const haystack = [
     v.vehicle_title,
     v.categories,
@@ -164,7 +162,7 @@ export default function HomePage() {
   const [selectedHours, setSelectedHours] = useState<Record<string, number | null>>({});
   const [selectedRateTypes, setSelectedRateTypes] = useState<Record<string, RateType>>({});
   const [globalRateType, setGlobalRateType] = useState<RateType | 'auto'>('auto');
-  const [pricingViewerId, setPricingViewerId] = useState<string | null>(null);
+  const [hoveredPricingId, setHoveredPricingId] = useState<string | null>(null);
 
   const before5pmEligible = useMemo(() => {
     if (!vehicles.length) return false;
@@ -181,10 +179,10 @@ export default function HomePage() {
   }, [before5pmEligible, globalRateType]);
 
   useEffect(() => {
-    if (pricingViewerId && !vehicles.some((vehicle) => vehicle.id === pricingViewerId)) {
-      setPricingViewerId(null);
+    if (hoveredPricingId && !vehicles.some((vehicle) => vehicle.id === hoveredPricingId)) {
+      setHoveredPricingId(null);
     }
-  }, [pricingViewerId, vehicles]);
+  }, [hoveredPricingId, vehicles]);
 
   async function handleSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -266,8 +264,11 @@ export default function HomePage() {
       if (type === 'party-bus') partyBuses.push(v);
       else if (type === 'limo') limos.push(v);
       else if (type === 'shuttle') shuttles.push(v);
-      else if (type === 'transfer') transfers.push(v);
       else cars.push(v);
+
+      if (v.is_transfer) {
+        transfers.push(v);
+      }
     }
 
     return {
@@ -278,6 +279,39 @@ export default function HomePage() {
       transfers: sortByCapacity(transfers),
     };
   }, [vehicles, sortByCapacity]);
+
+  const hasStandardRates = useMemo(
+    () => Object.values(vehicleMeta).some((meta) => meta.rateOptions.standard.length > 0),
+    [vehicleMeta],
+  );
+  const hasPromRates = useMemo(
+    () => Object.values(vehicleMeta).some((meta) => meta.rateOptions.prom.length > 0),
+    [vehicleMeta],
+  );
+  const hasBefore5pmRates = useMemo(
+    () => Object.values(vehicleMeta).some((meta) => meta.rateOptions.before5pm.length > 0),
+    [vehicleMeta],
+  );
+  const hasTransferPricing = useMemo(
+    () => vehicles.some((v) => typeof v.transfer_price === 'number' && !Number.isNaN(v.transfer_price)),
+    [vehicles],
+  );
+
+  useEffect(() => {
+    if (globalRateType === 'before5pm' && (!before5pmEligible || !hasBefore5pmRates)) {
+      setGlobalRateType('auto');
+    } else if (globalRateType === 'prom' && !hasPromRates) {
+      setGlobalRateType('auto');
+    } else if (globalRateType === 'standard' && !hasStandardRates) {
+      setGlobalRateType('auto');
+    }
+  }, [globalRateType, before5pmEligible, hasBefore5pmRates, hasPromRates, hasStandardRates]);
+
+  useEffect(() => {
+    if (!hasTransferPricing && visibleCategories.transfers) {
+      setVisibleCategories((prev) => ({ ...prev, transfers: false }));
+    }
+  }, [hasTransferPricing, visibleCategories.transfers]);
 
   const columnStyle = {
     borderRadius: 10,
@@ -300,12 +334,6 @@ export default function HomePage() {
   };
 
   const closePhotoViewer = () => setPhotoViewer(null);
-
-  const openPricingViewer = (vehicleId: string) => {
-    setPricingViewerId(vehicleId);
-  };
-
-  const closePricingViewer = () => setPricingViewerId(null);
 
   const showPrev = () => {
     setPhotoViewer((current) => {
@@ -360,30 +388,12 @@ export default function HomePage() {
             (typeof v.transfer_price === 'number' && !Number.isNaN(v.transfer_price)
               ? v.transfer_price
               : null);
-          const badgeItems: Array<{ key: string; label: string; available: boolean }> = [
-            {
-              key: 'standard',
-              label: RATE_TYPE_LABELS.standard,
-              available: availableRateTypes.includes('standard'),
-            },
-            {
-              key: 'prom',
-              label: RATE_TYPE_LABELS.prom,
-              available: availableRateTypes.includes('prom'),
-            },
-          ];
-          if (before5pmEligible) {
-            badgeItems.push({
-              key: 'before5pm',
-              label: RATE_TYPE_LABELS.before5pm,
-              available: availableRateTypes.includes('before5pm'),
-            });
-          }
-          badgeItems.push({
-            key: 'transfer',
-            label: 'Transfer',
-            available: transferPrice !== null,
+          const rateSummaryOrder: RateType[] = ['standard', 'prom', 'before5pm'];
+          const popoverRateSections: RateType[] = rateSummaryOrder.filter((rate) => {
+            if (rate === 'before5pm' && !before5pmEligible) return false;
+            return meta?.rateOptions[rate]?.length;
           });
+          const showPricingPopover = hoveredPricingId === v.id;
 
           return (
             <div key={v.id} style={cardStyle}>
@@ -443,25 +453,13 @@ export default function HomePage() {
                       {v.short_description}
                     </div>
                   )}
-                  <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {badgeItems.map((badge) => (
-                      <span
-                        key={`${v.id}-${badge.key}`}
-                        style={{
-                          fontSize: 11,
-                          padding: '2px 8px',
-                          borderRadius: 999,
-                          border: '1px solid',
-                          borderColor: badge.available ? '#34d399' : '#e5e7eb',
-                          background: badge.available ? '#ecfdf5' : '#f9fafb',
-                          color: badge.available ? '#065f46' : '#9ca3af',
-                        }}
-                      >
-                        {badge.label}
-                      </span>
-                    ))}
-                  </div>
-                  <div style={{ marginTop: 10 }}>
+                  <div
+                    style={{ marginTop: 10, position: 'relative' }}
+                    onMouseEnter={() => setHoveredPricingId(v.id)}
+                    onMouseLeave={() =>
+                      setHoveredPricingId((current) => (current === v.id ? null : current))
+                    }
+                  >
                     {priceOptions.length > 0 && activeRateType ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {availableRateTypes.length > 1 && (
@@ -565,22 +563,67 @@ export default function HomePage() {
                         </div>
                       )
                     )}
-                    <button
-                      type="button"
-                      onClick={() => openPricingViewer(v.id)}
-                      style={{
-                        marginTop: 8,
-                        background: 'white',
-                        color: '#111827',
-                        border: '1px solid #d1d5db',
-                        borderRadius: 4,
-                        padding: '4px 8px',
-                        fontSize: 12,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      View pricing summary
-                    </button>
+                    {showPricingPopover && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 'calc(100% + 6px)',
+                          right: 0,
+                          width: 260,
+                          borderRadius: 10,
+                          border: '1px solid #e5e7eb',
+                          background: 'white',
+                          boxShadow: '0 8px 25px rgba(15,23,42,0.15)',
+                          padding: 12,
+                          zIndex: 20,
+                        }}
+                      >
+                        <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>
+                          Rate availability
+                        </div>
+                        {popoverRateSections.length === 0 ? (
+                          <div style={{ fontSize: 12, color: '#9ca3af' }}>
+                            Hourly pricing not provided for this vehicle.
+                          </div>
+                        ) : (
+                          popoverRateSections.map((rate) => (
+                            <div key={`${v.id}-popover-${rate}`} style={{ marginBottom: 8 }}>
+                              <div style={{ fontSize: 12, fontWeight: 600 }}>
+                                {RATE_TYPE_LABELS[rate]}
+                              </div>
+                              <table style={{ width: '100%', fontSize: 12 }}>
+                                <tbody>
+                                  {meta?.rateOptions[rate]?.map((opt: PriceOption) => (
+                                    <tr key={`${rate}-${opt.hours}`}>
+                                      <td style={{ padding: '2px 0', color: '#4b5563' }}>{
+                                        opt.hours
+                                      } hrs</td>
+                                      <td style={{ padding: '2px 0', textAlign: 'right' }}>
+                                        ${opt.price.toFixed(0)}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          ))
+                        )}
+                        <div
+                          style={{
+                            borderTop: '1px solid #f3f4f6',
+                            paddingTop: 8,
+                            fontSize: 12,
+                          }}
+                        >
+                          Transfer:{' '}
+                          {transferPrice !== null ? (
+                            <strong>${transferPrice.toFixed(0)}</strong>
+                          ) : (
+                            <span style={{ color: '#9ca3af' }}>Not published</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   {images.length > 0 && (
                     <button
@@ -616,26 +659,25 @@ export default function HomePage() {
     }));
   };
 
-  const categoryOptions: Array<{ key: keyof typeof visibleCategories; label: string }> = [
+  const categoryOptions: Array<{
+    key: keyof typeof visibleCategories;
+    label: string;
+    disabled?: boolean;
+  }> = [
     { key: 'partyBuses', label: 'Party buses' },
     { key: 'limos', label: 'Limos' },
     { key: 'shuttles', label: 'Shuttle buses' },
     { key: 'cars', label: 'Cars' },
-    { key: 'transfers', label: 'Transfers' },
+    { key: 'transfers', label: 'Transfers', disabled: !hasTransferPricing },
   ];
 
-  const rateToggleOptions: Array<'auto' | RateType> = before5pmEligible
-    ? ['auto', 'standard', 'prom', 'before5pm']
-    : ['auto', 'standard', 'prom'];
-
-  const pricingModalRateTypes: RateType[] = before5pmEligible
-    ? ['standard', 'prom', 'before5pm']
-    : ['standard', 'prom'];
-
-  const pricingVehicle = pricingViewerId
-    ? vehicles.find((vehicle) => vehicle.id === pricingViewerId)
-    : null;
-  const pricingMeta = pricingVehicle ? vehicleMeta[pricingVehicle.id] : null;
+  const rateToggleOptions = useMemo(() => {
+    const options: Array<'auto' | RateType> = ['auto'];
+    if (hasStandardRates) options.push('standard');
+    if (hasPromRates) options.push('prom');
+    if (before5pmEligible && hasBefore5pmRates) options.push('before5pm');
+    return options;
+  }, [hasStandardRates, hasPromRates, before5pmEligible, hasBefore5pmRates]);
 
   return (
     <main
@@ -918,114 +960,6 @@ export default function HomePage() {
         </div>
       )}
 
-      {pricingVehicle && pricingMeta && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(15,23,42,0.6)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 1000,
-          }}
-        >
-          <div
-            style={{
-              position: 'relative',
-              background: 'white',
-              borderRadius: 12,
-              padding: 20,
-              width: '90%',
-              maxWidth: 640,
-              maxHeight: '85vh',
-              overflowY: 'auto',
-              boxShadow: '0 12px 35px rgba(15,23,42,0.35)',
-            }}
-          >
-            <button
-              type="button"
-              onClick={closePricingViewer}
-              style={{
-                position: 'absolute',
-                top: 12,
-                right: 12,
-                background: 'transparent',
-                border: 'none',
-                fontSize: 18,
-                cursor: 'pointer',
-              }}
-              aria-label="Close pricing details"
-            >
-              ×
-            </button>
-            <div style={{ fontWeight: 600, fontSize: 18 }}>{pricingVehicle.vehicle_title}</div>
-            <p style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>
-              Quick overview of which rate cards we can quote. Sales agents can double-check prom or
-              transfer availability at a glance.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
-              {pricingModalRateTypes.map((rate) => {
-                const options = pricingMeta.rateOptions[rate];
-                return (
-                  <div
-                    key={`${pricingVehicle.id}-${rate}`}
-                    style={{
-                      border: '1px solid #e5e7eb',
-                      borderRadius: 8,
-                      padding: 12,
-                      background: '#f9fafb',
-                    }}
-                  >
-                    <div style={{ fontWeight: 600, marginBottom: 6 }}>{RATE_TYPE_LABELS[rate]}</div>
-                    {options.length > 0 ? (
-                      <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
-                        <tbody>
-                          {options.map((opt) => (
-                            <tr key={`${rate}-${opt.hours}`}>
-                              <td style={{ padding: '2px 0', color: '#4b5563' }}>{opt.hours} hrs</td>
-                              <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 600 }}>
-                                ${opt.price.toFixed(0)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    ) : (
-                      <div style={{ fontSize: 13, color: '#9ca3af' }}>Not available for this vehicle.</div>
-                    )}
-                  </div>
-                );
-              })}
-              <div
-                style={{
-                  border: '1px solid #fde68a',
-                  borderRadius: 8,
-                  padding: 12,
-                  background: '#fffbeb',
-                }}
-              >
-                <div style={{ fontWeight: 600, marginBottom: 6 }}>Transfer (one-way)</div>
-                {pricingMeta.transferPrice !== null ? (
-                  <div style={{ fontSize: 14 }}>
-                    Flat rate{' '}
-                    <span style={{ fontWeight: 600 }}>${pricingMeta.transferPrice.toFixed(0)}</span>
-                  </div>
-                ) : (
-                  <div style={{ fontSize: 13, color: '#a16207' }}>
-                    Transfer pricing not published—call dispatch for a quote.
-                  </div>
-                )}
-              </div>
-            </div>
-            {before5pmEligible && (
-              <div style={{ marginTop: 12, fontSize: 12, color: '#6b7280' }}>
-                Before 5 PM pricing only applies to Grand Rapids, Kalamazoo, and Battle Creek searches.
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </main>
   );
 }
