@@ -37,6 +37,7 @@ type VehicleRecord = {
   before5pm_5hr: number | null;
   before5pm_6hr: number | null;
   before5pm_7hr: number | null;
+  transfer_price: number | null;
   categories: string | null;
   category_slugs: string | null;
   tags: string | null;
@@ -114,6 +115,7 @@ export async function GET(req: Request) {
             before5pm_5hr,
             before5pm_6hr,
             before5pm_7hr,
+            transfer_price,
             categories,
             category_slugs,
             tags,
@@ -173,6 +175,7 @@ export async function GET(req: Request) {
           before5pm_5hr,
           before5pm_6hr,
           before5pm_7hr,
+          transfer_price,
           categories,
           category_slugs,
           tags,

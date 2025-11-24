@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type Vehicle = {
   id: string;
@@ -33,6 +33,7 @@ type Vehicle = {
   before5pm_5hr?: number | null;
   before5pm_6hr?: number | null;
   before5pm_7hr?: number | null;
+  transfer_price?: number | null;
   image_main?: string | null;
   image_2?: string | null;
   image_3?: string | null;
@@ -48,6 +49,7 @@ type VehicleMeta = {
   images: string[];
   rateOptions: Record<RateType, PriceOption[]>;
   availableRateTypes: RateType[];
+  transferPrice: number | null;
 };
 
 const PRICE_FIELDS: Array<{ hours: number; key: keyof Vehicle }> = [
@@ -88,6 +90,8 @@ const RATE_TYPE_LABELS: Record<RateType, string> = {
   prom: 'Prom',
   before5pm: 'Before 5 PM',
 };
+
+const BEFORE5PM_CITIES = ['grand rapids', 'kalamazoo', 'battle creek'];
 
 function getVehicleType(v: Vehicle): VehicleType {
   if (v.is_transfer) return 'transfer';
@@ -160,6 +164,27 @@ export default function HomePage() {
   const [selectedHours, setSelectedHours] = useState<Record<string, number | null>>({});
   const [selectedRateTypes, setSelectedRateTypes] = useState<Record<string, RateType>>({});
   const [globalRateType, setGlobalRateType] = useState<RateType | 'auto'>('auto');
+  const [pricingViewerId, setPricingViewerId] = useState<string | null>(null);
+
+  const before5pmEligible = useMemo(() => {
+    if (!vehicles.length) return false;
+    return vehicles.some((v) => {
+      const city = (v.city ?? '').toLowerCase();
+      return BEFORE5PM_CITIES.some((allowed) => city.includes(allowed));
+    });
+  }, [vehicles]);
+
+  useEffect(() => {
+    if (!before5pmEligible && globalRateType === 'before5pm') {
+      setGlobalRateType('auto');
+    }
+  }, [before5pmEligible, globalRateType]);
+
+  useEffect(() => {
+    if (pricingViewerId && !vehicles.some((vehicle) => vehicle.id === pricingViewerId)) {
+      setPricingViewerId(null);
+    }
+  }, [pricingViewerId, vehicles]);
 
   async function handleSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -210,17 +235,24 @@ export default function HomePage() {
         prom: getPriceOptions(v, 'prom'),
         before5pm: getPriceOptions(v, 'before5pm'),
       };
-      const availableRateTypes = (Object.keys(rateOptions) as RateType[]).filter(
-        (rate) => rateOptions[rate].length > 0,
-      );
+      const availableRateTypes = (Object.keys(rateOptions) as RateType[]).filter((rate) => {
+        if (rate === 'before5pm' && !before5pmEligible) return false;
+        return rateOptions[rate].length > 0;
+      });
+      const transferPrice =
+        typeof v.transfer_price === 'number' && !Number.isNaN(v.transfer_price)
+          ? v.transfer_price
+          : null;
+
       meta[v.id] = {
         images: getImages(v),
         rateOptions,
         availableRateTypes,
+        transferPrice,
       };
     }
     return meta;
-  }, [vehicles]);
+  }, [vehicles, before5pmEligible]);
 
   const { partyBuses, limos, shuttles, cars, transfers } = useMemo(() => {
     const partyBuses: Vehicle[] = [];
@@ -268,6 +300,12 @@ export default function HomePage() {
   };
 
   const closePhotoViewer = () => setPhotoViewer(null);
+
+  const openPricingViewer = (vehicleId: string) => {
+    setPricingViewerId(vehicleId);
+  };
+
+  const closePricingViewer = () => setPricingViewerId(null);
 
   const showPrev = () => {
     setPhotoViewer((current) => {
@@ -317,6 +355,35 @@ export default function HomePage() {
           const hourIsValid = priceOptions.some((opt) => opt.hours === storedHour);
           const selectedHour = hourIsValid ? storedHour : fallbackHour ?? null;
           const activePrice = priceOptions.find((opt) => opt.hours === selectedHour) ?? null;
+          const transferPrice =
+            meta?.transferPrice ??
+            (typeof v.transfer_price === 'number' && !Number.isNaN(v.transfer_price)
+              ? v.transfer_price
+              : null);
+          const badgeItems: Array<{ key: string; label: string; available: boolean }> = [
+            {
+              key: 'standard',
+              label: RATE_TYPE_LABELS.standard,
+              available: availableRateTypes.includes('standard'),
+            },
+            {
+              key: 'prom',
+              label: RATE_TYPE_LABELS.prom,
+              available: availableRateTypes.includes('prom'),
+            },
+          ];
+          if (before5pmEligible) {
+            badgeItems.push({
+              key: 'before5pm',
+              label: RATE_TYPE_LABELS.before5pm,
+              available: availableRateTypes.includes('before5pm'),
+            });
+          }
+          badgeItems.push({
+            key: 'transfer',
+            label: 'Transfer',
+            available: transferPrice !== null,
+          });
 
           return (
             <div key={v.id} style={cardStyle}>
@@ -376,6 +443,24 @@ export default function HomePage() {
                       {v.short_description}
                     </div>
                   )}
+                  <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {badgeItems.map((badge) => (
+                      <span
+                        key={`${v.id}-${badge.key}`}
+                        style={{
+                          fontSize: 11,
+                          padding: '2px 8px',
+                          borderRadius: 999,
+                          border: '1px solid',
+                          borderColor: badge.available ? '#34d399' : '#e5e7eb',
+                          background: badge.available ? '#ecfdf5' : '#f9fafb',
+                          color: badge.available ? '#065f46' : '#9ca3af',
+                        }}
+                      >
+                        {badge.label}
+                      </span>
+                    ))}
+                  </div>
                   <div style={{ marginTop: 10 }}>
                     {priceOptions.length > 0 && activeRateType ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -455,10 +540,47 @@ export default function HomePage() {
                       </div>
                     ) : (
                       <div style={{ marginTop: 4, fontWeight: 600 }}>
-                        Call for pricing
-                        {category === 'transfer' ? ' (transfer quote required)' : ''}
+                        {category === 'transfer'
+                          ? 'Hourly pricing not provided—use transfer rate or call dispatch.'
+                          : 'Call for pricing'}
                       </div>
                     )}
+                    {transferPrice !== null ? (
+                      <div
+                        style={{
+                          marginTop: 8,
+                          padding: '8px 10px',
+                          borderRadius: 6,
+                          background: '#fef3c7',
+                          border: '1px solid #fde68a',
+                          fontSize: 13,
+                        }}
+                      >
+                        Transfer (one-way): <strong>${transferPrice.toFixed(0)}</strong>
+                      </div>
+                    ) : (
+                      category === 'transfer' && (
+                        <div style={{ marginTop: 8, fontSize: 12, color: '#a16207' }}>
+                          Transfer rate not published—call for quote.
+                        </div>
+                      )
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => openPricingViewer(v.id)}
+                      style={{
+                        marginTop: 8,
+                        background: 'white',
+                        color: '#111827',
+                        border: '1px solid #d1d5db',
+                        borderRadius: 4,
+                        padding: '4px 8px',
+                        fontSize: 12,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      View pricing summary
+                    </button>
                   </div>
                   {images.length > 0 && (
                     <button
@@ -501,6 +623,19 @@ export default function HomePage() {
     { key: 'cars', label: 'Cars' },
     { key: 'transfers', label: 'Transfers' },
   ];
+
+  const rateToggleOptions: Array<'auto' | RateType> = before5pmEligible
+    ? ['auto', 'standard', 'prom', 'before5pm']
+    : ['auto', 'standard', 'prom'];
+
+  const pricingModalRateTypes: RateType[] = before5pmEligible
+    ? ['standard', 'prom', 'before5pm']
+    : ['standard', 'prom'];
+
+  const pricingVehicle = pricingViewerId
+    ? vehicles.find((vehicle) => vehicle.id === pricingViewerId)
+    : null;
+  const pricingMeta = pricingVehicle ? vehicleMeta[pricingVehicle.id] : null;
 
   return (
     <main
@@ -612,7 +747,7 @@ export default function HomePage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span>Rate type:</span>
             <div style={{ display: 'flex', gap: 6 }}>
-              {(['auto', 'standard', 'prom', 'before5pm'] as Array<'auto' | RateType>).map((option) => {
+              {rateToggleOptions.map((option) => {
                 const isActive = globalRateType === option;
                 const label = option === 'auto' ? 'Auto' : RATE_TYPE_LABELS[option];
                 return (
@@ -777,6 +912,115 @@ export default function HomePage() {
             {photoViewer.images.length > 1 && (
               <div style={{ marginTop: 12, textAlign: 'center', fontSize: 12, color: '#6b7280' }}>
                 Photo {photoViewer.index + 1} of {photoViewer.images.length}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {pricingVehicle && pricingMeta && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15,23,42,0.6)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              position: 'relative',
+              background: 'white',
+              borderRadius: 12,
+              padding: 20,
+              width: '90%',
+              maxWidth: 640,
+              maxHeight: '85vh',
+              overflowY: 'auto',
+              boxShadow: '0 12px 35px rgba(15,23,42,0.35)',
+            }}
+          >
+            <button
+              type="button"
+              onClick={closePricingViewer}
+              style={{
+                position: 'absolute',
+                top: 12,
+                right: 12,
+                background: 'transparent',
+                border: 'none',
+                fontSize: 18,
+                cursor: 'pointer',
+              }}
+              aria-label="Close pricing details"
+            >
+              ×
+            </button>
+            <div style={{ fontWeight: 600, fontSize: 18 }}>{pricingVehicle.vehicle_title}</div>
+            <p style={{ fontSize: 13, color: '#4b5563', marginTop: 4 }}>
+              Quick overview of which rate cards we can quote. Sales agents can double-check prom or
+              transfer availability at a glance.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
+              {pricingModalRateTypes.map((rate) => {
+                const options = pricingMeta.rateOptions[rate];
+                return (
+                  <div
+                    key={`${pricingVehicle.id}-${rate}`}
+                    style={{
+                      border: '1px solid #e5e7eb',
+                      borderRadius: 8,
+                      padding: 12,
+                      background: '#f9fafb',
+                    }}
+                  >
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>{RATE_TYPE_LABELS[rate]}</div>
+                    {options.length > 0 ? (
+                      <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
+                        <tbody>
+                          {options.map((opt) => (
+                            <tr key={`${rate}-${opt.hours}`}>
+                              <td style={{ padding: '2px 0', color: '#4b5563' }}>{opt.hours} hrs</td>
+                              <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 600 }}>
+                                ${opt.price.toFixed(0)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <div style={{ fontSize: 13, color: '#9ca3af' }}>Not available for this vehicle.</div>
+                    )}
+                  </div>
+                );
+              })}
+              <div
+                style={{
+                  border: '1px solid #fde68a',
+                  borderRadius: 8,
+                  padding: 12,
+                  background: '#fffbeb',
+                }}
+              >
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>Transfer (one-way)</div>
+                {pricingMeta.transferPrice !== null ? (
+                  <div style={{ fontSize: 14 }}>
+                    Flat rate{' '}
+                    <span style={{ fontWeight: 600 }}>${pricingMeta.transferPrice.toFixed(0)}</span>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 13, color: '#a16207' }}>
+                    Transfer pricing not published—call dispatch for a quote.
+                  </div>
+                )}
+              </div>
+            </div>
+            {before5pmEligible && (
+              <div style={{ marginTop: 12, fontSize: 12, color: '#6b7280' }}>
+                Before 5 PM pricing only applies to Grand Rapids, Kalamazoo, and Battle Creek searches.
               </div>
             )}
           </div>
