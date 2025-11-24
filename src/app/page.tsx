@@ -361,6 +361,26 @@ export default function HomePage() {
     flex: 1,
   };
 
+  const instructionBlockStyle: CSSProperties = {
+    marginTop: 10,
+    padding: '10px 12px',
+    borderRadius: 12,
+    border: '1px solid rgba(249,115,22,0.6)',
+    background: 'rgba(249,115,22,0.12)',
+    color: '#7c2d12',
+    fontSize: 13,
+    fontWeight: 600,
+    animation: 'instructionPulse 2.4s ease-in-out infinite',
+  };
+
+  const instructionListStyle: CSSProperties = {
+    margin: '6px 0 0',
+    paddingLeft: 18,
+    fontSize: 13,
+    fontWeight: 500,
+    lineHeight: 1.4,
+  };
+
   const cardStyle: CSSProperties = {
     border: '1px solid rgba(15,23,42,0.08)',
     borderRadius: 16,
@@ -416,6 +436,10 @@ export default function HomePage() {
           const storedRateType = selectedRateTypes[v.id];
           const forcedRateType = globalRateType;
           let activeRateType: RateType | null = null;
+          const instructionLines = (v.custom_instructions ?? '')
+            .split(/\r?\n|•|;/)
+            .map((line) => line.trim())
+            .filter(Boolean);
 
           if (forcedRateType) {
             activeRateType = availableRateTypes.includes(forcedRateType)
@@ -513,6 +537,31 @@ export default function HomePage() {
                   {v.short_description && (
                     <div style={{ marginTop: 4, fontSize: 12, color: '#4b5563' }}>
                       {v.short_description}
+                    </div>
+                  )}
+                  {instructionLines.length > 0 && (
+                    <div style={instructionBlockStyle}>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          letterSpacing: 1,
+                          textTransform: 'uppercase',
+                          color: '#7c2d12',
+                        }}
+                      >
+                        Custom instructions
+                      </div>
+                      <ul
+                        style={{
+                          ...instructionListStyle,
+                          listStyleType: 'disc',
+                          listStylePosition: 'inside',
+                        }}
+                      >
+                        {instructionLines.map((line, index) => (
+                          <li key={`${v.id}-instruction-${index}`}>{line}</li>
+                        ))}
+                      </ul>
                     </div>
                   )}
                   <div style={{ marginTop: 10, position: 'relative' }}>
@@ -855,13 +904,27 @@ export default function HomePage() {
   }, [hasStandardRates, hasPromRates, before5pmEligible, hasBefore5pmRates]);
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #04050a, #0f172a 45%, #1e1b4b)',
-        padding: '50px 0 120px',
-      }}
-    >
+    <>
+      <style jsx global>{`
+        @keyframes instructionPulse {
+          0% {
+            box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.5);
+          }
+          70% {
+            box-shadow: 0 0 0 14px rgba(249, 115, 22, 0);
+          }
+          100% {
+            box-shadow: 0 0 0 0 rgba(249, 115, 22, 0);
+          }
+        }
+      `}</style>
+      <div
+        style={{
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #04050a, #0f172a 45%, #1e1b4b)',
+          padding: '50px 0 120px',
+        }}
+      >
       <main
         style={{
           maxWidth: 1500,
@@ -1196,8 +1259,8 @@ export default function HomePage() {
           </div>
         </div>
       )}
-
-    </main>
+      </main>
     </div>
+    </>
   );
 }
