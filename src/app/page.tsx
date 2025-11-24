@@ -128,6 +128,15 @@ function matchTypeFromTokens(tokens: string[]): VehicleType | null {
 
 function getVehicleType(v: Vehicle): VehicleType {
   const tokens = getCategoryTokens(v);
+  const hasPartyBusToken = tokens.some((token) => /party ?bus|partybus/.test(token));
+  const hasLimoToken = tokens.some((token) => /limo|limousine/.test(token));
+  const hasSprinterToken = tokens.some((token) => /sprinter/.test(token));
+  const hasLimoSprinterToken = tokens.some((token) => /limo[-\s]*sprinter|sprinter[-\s]*limo/.test(token));
+
+  if (hasPartyBusToken || hasLimoSprinterToken || (hasLimoToken && hasSprinterToken)) {
+    return 'party-bus';
+  }
+
   const tokenMatch = matchTypeFromTokens(tokens);
   if (tokenMatch) return tokenMatch;
 
@@ -142,8 +151,8 @@ function getVehicleType(v: Vehicle): VehicleType {
     .join(' ')
     .toLowerCase();
 
+  if (haystack.match(/party ?bus|partybus|limo ?sprinter|sprinter ?limo/)) return 'party-bus';
   if (haystack.match(/shuttle|mini ?bus|sprinter|coach/)) return 'shuttle';
-  if (haystack.match(/party ?bus|partybus/)) return 'party-bus';
   if (haystack.match(/limo|limousine|stretch/)) return 'limo';
 
   if (
