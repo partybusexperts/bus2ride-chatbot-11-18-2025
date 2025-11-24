@@ -163,7 +163,7 @@ export default function HomePage() {
   const [selectedHours, setSelectedHours] = useState<Record<string, number | null>>({});
   const [selectedRateTypes, setSelectedRateTypes] = useState<Record<string, RateType>>({});
   const [globalRateType, setGlobalRateType] = useState<RateType | null>(null);
-  const [hoveredPricingId, setHoveredPricingId] = useState<string | null>(null);
+  const [pricingPreviewId, setPricingPreviewId] = useState<string | null>(null);
 
   const before5pmEligible = useMemo(() => {
     if (!vehicles.length) return false;
@@ -180,10 +180,17 @@ export default function HomePage() {
   }, [before5pmEligible, globalRateType]);
 
   useEffect(() => {
-    if (hoveredPricingId && !vehicles.some((vehicle) => vehicle.id === hoveredPricingId)) {
-      setHoveredPricingId(null);
+    if (pricingPreviewId && !vehicles.some((vehicle) => vehicle.id === pricingPreviewId)) {
+      setPricingPreviewId(null);
     }
-  }, [hoveredPricingId, vehicles]);
+  }, [pricingPreviewId, vehicles]);
+
+  useEffect(() => {
+    if (!pricingPreviewId) return;
+    const handleScroll = () => setPricingPreviewId(null);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [pricingPreviewId]);
 
   async function handleSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -314,10 +321,19 @@ export default function HomePage() {
     }
   }, [hasTransferPricing, visibleCategories.transfers]);
 
+  const columnContainerStyle: CSSProperties = {
+    background: 'rgba(255,255,255,0.95)',
+    borderRadius: 24,
+    padding: 16,
+    boxShadow: '0 25px 45px rgba(15,23,42,0.12)',
+    border: '1px solid rgba(15,23,42,0.08)',
+    minHeight: 150,
+  };
+
   const columnStyle = {
-    borderRadius: 10,
+    borderRadius: 16,
     paddingRight: 4,
-    maxHeight: '70vh',
+    maxHeight: '65vh',
     overflowY: 'auto' as const,
   };
 
@@ -359,8 +375,8 @@ export default function HomePage() {
   };
 
   const renderColumn = (title: string, list: Vehicle[], category?: VehicleType) => (
-    <div>
-      <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>{title}</h2>
+    <div style={columnContainerStyle}>
+      <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12, color: '#0f172a' }}>{title}</h2>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, ...columnStyle }}>
         {list.map((v) => {
           const meta = vehicleMeta[v.id];
@@ -396,7 +412,8 @@ export default function HomePage() {
             if (rate === 'before5pm' && !before5pmEligible) return false;
             return (meta?.rateOptions[rate]?.length ?? 0) > 0;
           });
-          const showPricingPopover = hoveredPricingId === v.id;
+          const showPricingPopover = pricingPreviewId === v.id;
+          const hasPopoverContent = popoverRateSections.length > 0 || transferPrice !== null;
 
           return (
             <div key={v.id} style={cardStyle}>
@@ -466,13 +483,7 @@ export default function HomePage() {
                       {v.short_description}
                     </div>
                   )}
-                  <div
-                    style={{ marginTop: 10, position: 'relative' }}
-                    onMouseEnter={() => setHoveredPricingId(v.id)}
-                    onMouseLeave={() =>
-                      setHoveredPricingId((current) => (current === v.id ? null : current))
-                    }
-                  >
+                  <div style={{ marginTop: 10, position: 'relative' }}>
                     {priceOptions.length > 0 && activeRateType ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {availableRateTypes.length > 1 && (
@@ -576,13 +587,41 @@ export default function HomePage() {
                         </div>
                       )
                     )}
+                    {hasPopoverContent && (
+                      <div
+                        style={{
+                          marginTop: 10,
+                          display: 'flex',
+                          justifyContent: 'flex-end',
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setPricingPreviewId((current) => (current === v.id ? null : v.id))
+                          }
+                          style={{
+                            border: '1px solid rgba(15,23,42,0.12)',
+                            borderRadius: 999,
+                            padding: '4px 12px',
+                            fontSize: 12,
+                            background: showPricingPopover ? '#111827' : '#f3f4f6',
+                            color: showPricingPopover ? 'white' : '#111827',
+                            cursor: 'pointer',
+                          }}
+                          aria-pressed={showPricingPopover}
+                        >
+                          {showPricingPopover ? 'Hide quick pricing' : 'Quick pricing'}
+                        </button>
+                      </div>
+                    )}
                     {showPricingPopover && (
                       <div
                         style={{
                           position: 'absolute',
-                          top: 'calc(100% + 10px)',
+                          top: 'calc(100% + 12px)',
                           right: 0,
-                          width: 420,
+                          width: 360,
                           maxWidth: '90vw',
                           borderRadius: 14,
                           border: '1px solid rgba(15,23,42,0.08)',
@@ -594,7 +633,6 @@ export default function HomePage() {
                           display: 'flex',
                           flexDirection: 'column',
                           gap: 10,
-                          pointerEvents: 'none',
                         }}
                       >
                         <div style={{ fontWeight: 600, fontSize: 13, letterSpacing: 0.4 }}>
