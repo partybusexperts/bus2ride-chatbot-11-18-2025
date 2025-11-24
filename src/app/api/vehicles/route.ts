@@ -66,6 +66,14 @@ function extractVehicle(rel: VehicleZipRelation): VehicleRecord | null {
   return rel;
 }
 
+function normalizeCityQuery(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+function escapeForIlike(value: string): string {
+  return value.replace(/[%_\\]/g, '\\$&');
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get('q') ?? '').trim();
@@ -144,7 +152,11 @@ export async function GET(req: Request) {
             return v.active !== false;
           }) ?? [];
     } else {
-      const city = q.toLowerCase();
+      const normalizedCity = normalizeCityQuery(q);
+      if (!normalizedCity) {
+        return NextResponse.json({ vehicles: [] });
+      }
+      const cityPattern = `%${escapeForIlike(normalizedCity)}%`;
 
       const { data, error } = await supabase
         .from('vehicles_for_chatbot')
@@ -188,7 +200,7 @@ export async function GET(req: Request) {
           active
         `
         )
-        .ilike('city', `${city}%`);
+        .ilike('city', cityPattern);
 
       if (error) {
         console.error('Supabase city search error:', error);
