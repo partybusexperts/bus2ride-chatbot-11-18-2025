@@ -151,7 +151,7 @@ export default function HomePage() {
     partyBuses: true,
     limos: true,
     shuttles: true,
-    cars: true,
+    cars: false,
     transfers: false,
   });
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
@@ -164,6 +164,7 @@ export default function HomePage() {
   const [selectedRateTypes, setSelectedRateTypes] = useState<Record<string, RateType>>({});
   const [globalRateType, setGlobalRateType] = useState<RateType | null>(null);
   const [pricingPreviewId, setPricingPreviewId] = useState<string | null>(null);
+  const [expandedRateBuckets, setExpandedRateBuckets] = useState<Record<string, boolean>>({});
 
   const before5pmEligible = useMemo(() => {
     if (!vehicles.length) return false;
@@ -190,6 +191,22 @@ export default function HomePage() {
     const handleScroll = () => setPricingPreviewId(null);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
+  }, [pricingPreviewId]);
+
+  useEffect(() => {
+    setExpandedRateBuckets({});
+    if (!pricingPreviewId) return;
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      const inTrigger = target.closest(`[data-pricing-trigger="${pricingPreviewId}"]`);
+      const inPopover = target.closest(`[data-pricing-popover="${pricingPreviewId}"]`);
+      if (!inTrigger && !inPopover) {
+        setPricingPreviewId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
   }, [pricingPreviewId]);
 
   async function handleSearch(e: React.FormEvent<HTMLFormElement>) {
@@ -323,16 +340,15 @@ export default function HomePage() {
 
   const columnContainerStyle: CSSProperties = {
     background: 'rgba(255,255,255,0.96)',
-    borderRadius: 30,
-    padding: '24px 28px',
-    boxShadow: '0 35px 60px rgba(15,23,42,0.18)',
+    borderRadius: 24,
+    padding: '20px 22px',
+    boxShadow: '0 25px 50px rgba(15,23,42,0.15)',
     border: '1px solid rgba(15,23,42,0.08)',
-    minHeight: 200,
+    minHeight: 180,
   };
 
   const columnStyle = {
     borderRadius: 16,
-    paddingRight: 4,
     display: 'flex',
     flexDirection: 'column' as const,
     gap: 16,
@@ -375,10 +391,17 @@ export default function HomePage() {
     });
   };
 
+  const toggleRateExpansion = useCallback((vehicleId: string, rate: RateType) => {
+    setExpandedRateBuckets((prev) => {
+      const key = `${vehicleId}:${rate}`;
+      return { ...prev, [key]: !prev[key] };
+    });
+  }, []);
+
   const renderColumn = (title: string, list: Vehicle[], category?: VehicleType) => (
     <div style={{ ...columnContainerStyle, marginBottom: 32 }}>
       <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12, color: '#0f172a' }}>{title}</h2>
-      <div style={{ ...columnStyle }}>
+      <div style={columnStyle}>
         {list.map((v) => {
           const meta = vehicleMeta[v.id];
           const images = meta?.images ?? getImages(v);
@@ -396,6 +419,7 @@ export default function HomePage() {
           } else {
             activeRateType = availableRateTypes[0] ?? null;
           }
+
           const priceOptions = activeRateType && meta ? meta.rateOptions[activeRateType] : [];
           const fallbackHour =
             priceOptions.find((opt) => opt.hours === 4)?.hours ?? priceOptions[0]?.hours ?? null;
@@ -515,7 +539,7 @@ export default function HomePage() {
                                     background: isActive ? '#111827' : 'white',
                                     color: isActive ? 'white' : '#111827',
                                     cursor: forcedRateType ? 'not-allowed' : 'pointer',
-                                    opacity: isDisabled ? 0.6 : 1,
+                                    opacity: isDisabled && !isActive ? 0.6 : 1,
                                   }}
                                   disabled={isDisabled}
                                 >
@@ -598,6 +622,7 @@ export default function HomePage() {
                       >
                         <button
                           type="button"
+                          data-pricing-trigger={v.id}
                           onClick={() =>
                             setPricingPreviewId((current) => (current === v.id ? null : v.id))
                           }
@@ -618,6 +643,7 @@ export default function HomePage() {
                     )}
                     {showPricingPopover && (
                       <div
+                        data-pricing-popover={v.id}
                         style={{
                           position: 'absolute',
                           top: 'calc(100% + 14px)',
@@ -649,8 +675,25 @@ export default function HomePage() {
                           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                             {popoverRateSections.map((rate) => {
                               const rateOptions = meta?.rateOptions[rate] ?? [];
-                              const compactOptions = rateOptions.slice(0, 3);
-                              const overflow = rateOptions.length - compactOptions.length;
+                              const rateKey = `${v.id}:${rate}`;
+                              const baseHour = rate === 'prom' ? 8 : 6;
+                              const primaryOptions = rateOptions.filter((opt) => {
+                                if (rate === 'prom') {
+                                  return opt.hours >= 6 && opt.hours <= baseHour;
+                                }
+                                return opt.hours >= 3 && opt.hours <= baseHour;
+                              });
+                              const fallbackCount = primaryOptions.length
+                                ? primaryOptions.length
+                                : Math.min(3, rateOptions.length);
+                              const fallbackOptions = primaryOptions.length
+                                ? primaryOptions
+                                : rateOptions.slice(0, fallbackCount);
+                              const showAll = Boolean(expandedRateBuckets[rateKey]);
+                              const visibleOptions = showAll ? rateOptions : fallbackOptions;
+                              const hiddenCount = Math.max(rateOptions.length - visibleOptions.length, 0);
+                              const hasExtras = rateOptions.length > fallbackOptions.length;
+
                               return (
                                 <div
                                   key={`${v.id}-popover-${rate}`}
@@ -682,22 +725,49 @@ export default function HomePage() {
                                       fontSize: 12,
                                     }}
                                   >
-                                    {compactOptions.map((opt: PriceOption) => (
+                                    {visibleOptions.map((opt: PriceOption) => (
                                       <Fragment key={`${rate}-${opt.hours}`}>
                                         <span>{opt.hours}h</span>
-                                        <span
-                                          style={{ textAlign: 'right', fontWeight: 600 }}
-                                        >
+                                        <span style={{ textAlign: 'right', fontWeight: 600 }}>
                                           ${opt.price.toFixed(0)}
                                         </span>
                                       </Fragment>
                                     ))}
-                                    {overflow > 0 && (
-                                      <span style={{ gridColumn: '1 / span 2', fontSize: 11, color: '#9ca3af' }}>
-                                        +{overflow} more hrs
-                                      </span>
-                                    )}
                                   </div>
+                                  {hasExtras && !showAll && hiddenCount > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleRateExpansion(v.id, rate)}
+                                      style={{
+                                        marginTop: 6,
+                                        border: 'none',
+                                        background: 'transparent',
+                                        color: '#a5b4fc',
+                                        fontSize: 11,
+                                        cursor: 'pointer',
+                                        textDecoration: 'underline',
+                                      }}
+                                    >
+                                      +{hiddenCount} more hours
+                                    </button>
+                                  )}
+                                  {hasExtras && showAll && (
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleRateExpansion(v.id, rate)}
+                                      style={{
+                                        marginTop: 6,
+                                        border: 'none',
+                                        background: 'transparent',
+                                        color: '#a5b4fc',
+                                        fontSize: 11,
+                                        cursor: 'pointer',
+                                        textDecoration: 'underline',
+                                      }}
+                                    >
+                                      Hide extra hours
+                                    </button>
+                                  )}
                                 </div>
                               );
                             })}
