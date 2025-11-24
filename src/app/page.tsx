@@ -322,19 +322,20 @@ export default function HomePage() {
   }, [hasTransferPricing, visibleCategories.transfers]);
 
   const columnContainerStyle: CSSProperties = {
-    background: 'rgba(255,255,255,0.95)',
-    borderRadius: 24,
-    padding: 16,
-    boxShadow: '0 25px 45px rgba(15,23,42,0.12)',
+    background: 'rgba(255,255,255,0.96)',
+    borderRadius: 30,
+    padding: '24px 28px',
+    boxShadow: '0 35px 60px rgba(15,23,42,0.18)',
     border: '1px solid rgba(15,23,42,0.08)',
-    minHeight: 150,
+    minHeight: 200,
   };
 
   const columnStyle = {
     borderRadius: 16,
     paddingRight: 4,
-    maxHeight: '65vh',
-    overflowY: 'auto' as const,
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: 16,
   };
 
   const cardStyle: CSSProperties = {
@@ -345,7 +346,7 @@ export default function HomePage() {
     boxShadow: '0 25px 45px rgba(15,23,42,0.08)',
     fontSize: 14,
     position: 'relative',
-    overflow: 'hidden',
+    overflow: 'visible',
   };
 
   const openPhotoViewer = (title: string, images: string[], startIndex = 0) => {
@@ -375,9 +376,9 @@ export default function HomePage() {
   };
 
   const renderColumn = (title: string, list: Vehicle[], category?: VehicleType) => (
-    <div style={{ ...columnContainerStyle, marginBottom: 20 }}>
+    <div style={{ ...columnContainerStyle, marginBottom: 32 }}>
       <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12, color: '#0f172a' }}>{title}</h2>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, ...columnStyle }}>
+      <div style={{ ...columnStyle }}>
         {list.map((v) => {
           const meta = vehicleMeta[v.id];
           const images = meta?.images ?? getImages(v);
@@ -619,25 +620,25 @@ export default function HomePage() {
                       <div
                         style={{
                           position: 'absolute',
-                          top: 'calc(100% + 12px)',
+                          top: 'calc(100% + 14px)',
                           right: 0,
-                          width: 320,
-                          maxWidth: '80vw',
-                          borderRadius: 18,
+                          width: 280,
+                          maxWidth: '75vw',
+                          borderRadius: 16,
                           border: '1px solid rgba(15,23,42,0.12)',
                           background: 'rgba(15,23,42,0.98)',
                           color: '#f8fafc',
-                          boxShadow: '0 15px 35px rgba(8,13,26,0.45)',
-                          padding: 12,
+                          boxShadow: '0 18px 35px rgba(8,13,26,0.55)',
+                          padding: 10,
                           zIndex: 30,
                           display: 'flex',
                           flexDirection: 'column',
-                          gap: 8,
+                          gap: 6,
                           transformOrigin: 'top right',
                           animation: 'fadeSlide 160ms ease-out',
                         }}
                       >
-                        <div style={{ fontWeight: 600, fontSize: 13, letterSpacing: 0.4 }}>
+                        <div style={{ fontWeight: 600, fontSize: 12, letterSpacing: 0.3 }}>
                           Rate snapshot
                         </div>
                         {popoverRateSections.length === 0 ? (
@@ -645,7 +646,7 @@ export default function HomePage() {
                             Hourly pricing not provided for this vehicle.
                           </div>
                         ) : (
-                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                             {popoverRateSections.map((rate) => {
                               const rateOptions = meta?.rateOptions[rate] ?? [];
                               const compactOptions = rateOptions.slice(0, 3);
@@ -654,10 +655,10 @@ export default function HomePage() {
                                 <div
                                   key={`${v.id}-popover-${rate}`}
                                   style={{
-                                    flex: '1 1 140px',
+                                    flex: '1 1 120px',
                                     background: 'rgba(255,255,255,0.08)',
-                                    borderRadius: 10,
-                                    padding: '6px 8px',
+                                    borderRadius: 9,
+                                    padding: '6px 6px',
                                     backdropFilter: 'blur(6px)',
                                   }}
                                 >
@@ -986,8 +987,8 @@ export default function HomePage() {
           style={{
             marginTop: 24,
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-            gap: 28,
+            gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+            gap: 32,
           }}
         >
           {visibleCategories.partyBuses && partyBuses.length > 0 &&
