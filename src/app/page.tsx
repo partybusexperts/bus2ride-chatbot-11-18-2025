@@ -341,10 +341,13 @@ export default function HomePage() {
   const columnContainerStyle: CSSProperties = {
     background: 'rgba(255,255,255,0.96)',
     borderRadius: 24,
-    padding: '20px 22px',
+    padding: '18px 20px',
     boxShadow: '0 25px 50px rgba(15,23,42,0.15)',
     border: '1px solid rgba(15,23,42,0.08)',
-    minHeight: 180,
+    minHeight: 220,
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
   };
 
   const columnStyle = {
@@ -352,6 +355,10 @@ export default function HomePage() {
     display: 'flex',
     flexDirection: 'column' as const,
     gap: 16,
+    maxHeight: '62vh',
+    overflowY: 'auto' as const,
+    paddingRight: 6,
+    flex: 1,
   };
 
   const cardStyle: CSSProperties = {
@@ -857,7 +864,7 @@ export default function HomePage() {
     >
       <main
         style={{
-          maxWidth: 1100,
+          maxWidth: 1500,
           margin: '0 auto',
           padding: '0 16px',
           fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
@@ -1057,8 +1064,10 @@ export default function HomePage() {
           style={{
             marginTop: 24,
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
-            gap: 32,
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: 20,
+            alignItems: 'stretch',
+            gridAutoRows: '1fr',
           }}
         >
           {visibleCategories.partyBuses && partyBuses.length > 0 &&
