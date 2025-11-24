@@ -94,7 +94,43 @@ const RATE_TYPE_LABELS: Record<RateType, string> = {
 
 const BEFORE5PM_CITIES = ['grand rapids', 'kalamazoo', 'battle creek'];
 
+const CATEGORY_KEYWORDS: Record<VehicleType, RegExp[]> = {
+  'party-bus': [/party/, /party ?bus/, /motorcoach/, /coach bus/],
+  limo: [/limo/, /limousine/, /stretch/, /hummer/],
+  shuttle: [/shuttle/, /mini ?bus/, /minibus/, /sprinter/, /coach/, /passenger van/],
+  car: [/sedan/, /suv/, /suburban/, /escalade/, /town ?car/, /chauffeur/, /black car/, /tesla/],
+  transfer: [],
+};
+
+const CATEGORY_PRIORITY: VehicleType[] = ['shuttle', 'party-bus', 'limo', 'car'];
+
+function getCategoryTokens(v: Vehicle): string[] {
+  return [v.category_slugs, v.categories, v.tag_slugs, v.tags]
+    .filter(Boolean)
+    .flatMap((value) =>
+      String(value)
+        .split(/[,/|]/)
+        .map((token) => token.trim().toLowerCase())
+        .filter(Boolean),
+    );
+}
+
+function matchTypeFromTokens(tokens: string[]): VehicleType | null {
+  for (const type of CATEGORY_PRIORITY) {
+    const patterns = CATEGORY_KEYWORDS[type];
+    if (!patterns.length) continue;
+    if (tokens.some((token) => patterns.some((pattern) => pattern.test(token)))) {
+      return type;
+    }
+  }
+  return null;
+}
+
 function getVehicleType(v: Vehicle): VehicleType {
+  const tokens = getCategoryTokens(v);
+  const tokenMatch = matchTypeFromTokens(tokens);
+  if (tokenMatch) return tokenMatch;
+
   const haystack = [
     v.vehicle_title,
     v.categories,
@@ -106,9 +142,9 @@ function getVehicleType(v: Vehicle): VehicleType {
     .join(' ')
     .toLowerCase();
 
-  if (haystack.match(/party ?bus|partybus|coach/)) return 'party-bus';
+  if (haystack.match(/shuttle|mini ?bus|sprinter|coach/)) return 'shuttle';
+  if (haystack.match(/party ?bus|partybus/)) return 'party-bus';
   if (haystack.match(/limo|limousine|stretch/)) return 'limo';
-  if (haystack.match(/shuttle|mini ?bus|sprinter/)) return 'shuttle';
 
   if (
     haystack.match(/sedan|suv|suburban|escalade|town ?car|chauffeur|black car/) ||
@@ -379,6 +415,23 @@ export default function HomePage() {
     fontSize: 13,
     fontWeight: 500,
     lineHeight: 1.4,
+  };
+
+  const photoNavButtonStyle: CSSProperties = {
+    position: 'absolute',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    border: 'none',
+    background: 'rgba(15,23,42,0.9)',
+    color: 'white',
+    borderRadius: 999,
+    width: 44,
+    height: 44,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 12px 24px rgba(15,23,42,0.35)',
   };
 
   const cardStyle: CSSProperties = {
@@ -1194,30 +1247,12 @@ export default function HomePage() {
             </div>
             <div
               style={{
+                position: 'relative',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 12,
                 justifyContent: 'center',
               }}
             >
-              {photoViewer.images.length > 1 && (
-                <button
-                  type="button"
-                  onClick={showPrev}
-                  style={{
-                    border: 'none',
-                    background: '#111827',
-                    color: 'white',
-                    borderRadius: 999,
-                    width: 40,
-                    height: 40,
-                    cursor: 'pointer',
-                  }}
-                  aria-label="Previous photo"
-                >
-                  ‹
-                </button>
-              )}
               <Image
                 src={photoViewer.images[photoViewer.index]}
                 alt={photoViewer.title}
@@ -1226,6 +1261,7 @@ export default function HomePage() {
                 unoptimized
                 style={{
                   width: '100%',
+                  height: 'auto',
                   maxHeight: '70vh',
                   objectFit: 'contain',
                   borderRadius: 8,
@@ -1233,22 +1269,24 @@ export default function HomePage() {
                 }}
               />
               {photoViewer.images.length > 1 && (
-                <button
-                  type="button"
-                  onClick={showNext}
-                  style={{
-                    border: 'none',
-                    background: '#111827',
-                    color: 'white',
-                    borderRadius: 999,
-                    width: 40,
-                    height: 40,
-                    cursor: 'pointer',
-                  }}
-                  aria-label="Next photo"
-                >
-                  ›
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={showPrev}
+                    style={{ ...photoNavButtonStyle, left: 16 }}
+                    aria-label="Previous photo"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    type="button"
+                    onClick={showNext}
+                    style={{ ...photoNavButtonStyle, right: 16 }}
+                    aria-label="Next photo"
+                  >
+                    ›
+                  </button>
+                </>
               )}
             </div>
             {photoViewer.images.length > 1 && (
