@@ -34,6 +34,11 @@ type Vehicle = {
   before5pm_5hr?: number | null;
   before5pm_6hr?: number | null;
   before5pm_7hr?: number | null;
+  april_may_weekend_5hr?: number | null;
+  april_may_weekend_6hr?: number | null;
+  april_may_weekend_7hr?: number | null;
+  april_may_weekend_8hr?: number | null;
+  april_may_weekend_9hr?: number | null;
   transfer_price?: number | null;
   image_main?: string | null;
   image_2?: string | null;
@@ -44,7 +49,7 @@ type Vehicle = {
 };
 
 type VehicleType = 'party-bus' | 'limo' | 'shuttle' | 'car' | 'transfer';
-type RateType = 'standard' | 'prom' | 'before5pm';
+type RateType = 'standard' | 'prom' | 'before5pm' | 'phillyWeekend';
 type PriceOption = { hours: number; price: number };
 type VehicleMeta = {
   images: string[];
@@ -80,16 +85,26 @@ const BEFORE5PM_FIELDS: Array<{ hours: number; key: keyof Vehicle }> = [
   { hours: 7, key: 'before5pm_7hr' },
 ];
 
+const APRIL_MAY_WEEKEND_FIELDS: Array<{ hours: number; key: keyof Vehicle }> = [
+  { hours: 5, key: 'april_may_weekend_5hr' },
+  { hours: 6, key: 'april_may_weekend_6hr' },
+  { hours: 7, key: 'april_may_weekend_7hr' },
+  { hours: 8, key: 'april_may_weekend_8hr' },
+  { hours: 9, key: 'april_may_weekend_9hr' },
+];
+
 const RATE_TYPE_FIELDS: Record<RateType, Array<{ hours: number; key: keyof Vehicle }>> = {
   standard: PRICE_FIELDS,
   prom: PROM_FIELDS,
   before5pm: BEFORE5PM_FIELDS,
+  phillyWeekend: APRIL_MAY_WEEKEND_FIELDS,
 };
 
 const RATE_TYPE_LABELS: Record<RateType, string> = {
   standard: 'Standard',
   prom: 'Prom',
   before5pm: 'Before 5 PM',
+  phillyWeekend: 'Apr/May Weekend',
 };
 
 const BEFORE5PM_CITIES = ['grand rapids', 'kalamazoo', 'battle creek'];
@@ -298,13 +313,16 @@ export default function HomePage() {
   const vehicleMeta = useMemo(() => {
     const meta: Record<string, VehicleMeta> = {};
     for (const v of vehicles) {
+      const isPhiladelphiaVehicle = (v.city ?? '').toLowerCase().includes('philadelphia');
       const rateOptions: Record<RateType, PriceOption[]> = {
         standard: getPriceOptions(v, 'standard'),
         prom: getPriceOptions(v, 'prom'),
         before5pm: getPriceOptions(v, 'before5pm'),
+        phillyWeekend: isPhiladelphiaVehicle ? getPriceOptions(v, 'phillyWeekend') : [],
       };
       const availableRateTypes = (Object.keys(rateOptions) as RateType[]).filter((rate) => {
         if (rate === 'before5pm' && !before5pmEligible) return false;
+        if (rate === 'phillyWeekend' && !isPhiladelphiaVehicle) return false;
         return rateOptions[rate].length > 0;
       });
       const transferPrice =
@@ -367,15 +385,22 @@ export default function HomePage() {
     [vehicles],
   );
 
+  const hasPhillyWeekendRates = useMemo(
+    () => Object.values(vehicleMeta).some((meta) => meta.rateOptions.phillyWeekend.length > 0),
+    [vehicleMeta],
+  );
+
   useEffect(() => {
     if (globalRateType === 'before5pm' && (!before5pmEligible || !hasBefore5pmRates)) {
+      setGlobalRateType(null);
+    } else if (globalRateType === 'phillyWeekend' && !hasPhillyWeekendRates) {
       setGlobalRateType(null);
     } else if (globalRateType === 'prom' && !hasPromRates) {
       setGlobalRateType(null);
     } else if (globalRateType === 'standard' && !hasStandardRates) {
       setGlobalRateType(null);
     }
-  }, [globalRateType, before5pmEligible, hasBefore5pmRates, hasPromRates, hasStandardRates]);
+  }, [globalRateType, before5pmEligible, hasBefore5pmRates, hasPromRates, hasStandardRates, hasPhillyWeekendRates]);
 
   useEffect(() => {
     if (!hasTransferPricing && visibleCategories.transfers) {
@@ -525,7 +550,7 @@ export default function HomePage() {
             (typeof v.transfer_price === 'number' && !Number.isNaN(v.transfer_price)
               ? v.transfer_price
               : null);
-          const rateSummaryOrder: RateType[] = ['standard', 'prom', 'before5pm'];
+          const rateSummaryOrder: RateType[] = ['standard', 'prom', 'before5pm', 'phillyWeekend'];
           const popoverRateSections: RateType[] = rateSummaryOrder.filter((rate) => {
             if (rate === 'before5pm' && !before5pmEligible) return false;
             return (meta?.rateOptions[rate]?.length ?? 0) > 0;
@@ -962,8 +987,9 @@ export default function HomePage() {
     if (hasStandardRates) options.push('standard');
     if (hasPromRates) options.push('prom');
     if (before5pmEligible && hasBefore5pmRates) options.push('before5pm');
+    if (hasPhillyWeekendRates) options.push('phillyWeekend');
     return options;
-  }, [hasStandardRates, hasPromRates, before5pmEligible, hasBefore5pmRates]);
+  }, [hasStandardRates, hasPromRates, before5pmEligible, hasBefore5pmRates, hasPhillyWeekendRates]);
 
   return (
     <>

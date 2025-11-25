@@ -37,6 +37,11 @@ type VehicleRecord = {
   before5pm_5hr: number | null;
   before5pm_6hr: number | null;
   before5pm_7hr: number | null;
+  april_may_weekend_5hr: number | null;
+  april_may_weekend_6hr: number | null;
+  april_may_weekend_7hr: number | null;
+  april_may_weekend_8hr: number | null;
+  april_may_weekend_9hr: number | null;
   transfer_price: number | null;
   categories: string | null;
   category_slugs: string | null;
@@ -122,6 +127,11 @@ export async function GET(req: Request) {
             before5pm_5hr,
             before5pm_6hr,
             before5pm_7hr,
+            april_may_weekend_5hr,
+            april_may_weekend_6hr,
+            april_may_weekend_7hr,
+            april_may_weekend_8hr,
+            april_may_weekend_9hr,
             transfer_price,
             categories,
             category_slugs,
@@ -186,6 +196,11 @@ export async function GET(req: Request) {
           before5pm_5hr,
           before5pm_6hr,
           before5pm_7hr,
+          april_may_weekend_5hr,
+          april_may_weekend_6hr,
+          april_may_weekend_7hr,
+          april_may_weekend_8hr,
+          april_may_weekend_9hr,
           transfer_price,
           categories,
           category_slugs,
