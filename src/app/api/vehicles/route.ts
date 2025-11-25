@@ -89,7 +89,6 @@ export async function GET(req: Request) {
 
     if (hasDigit) {
       const postal = q.toUpperCase().replace(/\s+/g, '');
-      const prefix = postal.slice(0, 3);
 
       const { data, error } = await supabase
         .from('vehicle_zips')
@@ -137,7 +136,7 @@ export async function GET(req: Request) {
           )
         `
         )
-        .or(`zip.eq.${postal},zip.eq.${prefix}`);
+        .eq('zip', postal);
 
       if (error) {
         console.error('Supabase ZIP/postal search error:', error);
