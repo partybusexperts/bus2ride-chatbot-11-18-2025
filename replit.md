@@ -98,8 +98,17 @@ Displayed in a cyan panel above the vehicle gallery
 ### Pricing & Payment
 - Total quoted price (auto-calculated from quoted vehicles)
 - Deposit: 50% normally, 100% if event is within 7 days
+- **Same-day booking warning** - Red alert prompting cash payment or manager consultation
 - Balance due (auto-calculated)
 - Checkboxes for: Tip included, Paid by Card, Paid by Cash
+
+### Agent Selection
+- Agent dropdown with preset list (Floyd, Marcus, Sarah, Jennifer, David, Other)
+- Selected agent tracked for Zoho integration
+
+### Action Buttons
+- **Save to Zoho** - Saves call data to Zoho CRM (stub, ready for integration)
+- **Send Quote** - Emails quote to customer (requires quoted vehicles + email address)
 
 ### Lead Status
 - Options: New, Not Quoted, Quoted, Booked, Closed, Cancelled
