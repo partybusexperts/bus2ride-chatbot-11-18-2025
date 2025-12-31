@@ -365,8 +365,16 @@ export default function CallPad() {
   }, []);
 
   const changeChipType = useCallback((chipId: string, newType: DetectedType) => {
-    setChips(prev => prev.map(c => c.id === chipId ? { ...c, type: newType, confirmed: false, autoPopulated: false } : c));
-  }, []);
+    setChips(prev => {
+      const chip = prev.find(c => c.id === chipId);
+      if (!chip) return prev;
+      
+      const updatedChip = { ...chip, type: newType, confirmed: true, autoPopulated: false };
+      applyChipToData(updatedChip);
+      
+      return prev.map(c => c.id === chipId ? updatedChip : c);
+    });
+  }, [applyChipToData]);
 
   const doVehicleSearch = useCallback(async (cityOrZip: string, passengers: number | null, hours: number | null) => {
     if (abortControllerRef.current) {
@@ -808,9 +816,23 @@ export default function CallPad() {
                         cursor: 'pointer',
                       }}
                     >
-                      {Object.entries(TYPE_LABELS).map(([key, label]) => (
-                        <option key={key} value={key}>{label}</option>
-                      ))}
+                      {(() => {
+                        const priorityOrder: DetectedType[] = [
+                          chip.type,
+                          'name', 'phone', 'email', 'city', 'zip', 'date', 'time',
+                          'passengers', 'hours', 'event_type', 'vehicle_type',
+                          'pickup_address', 'destination', 'dropoff_address', 'website', 'unknown'
+                        ];
+                        const seen = new Set<string>();
+                        const sortedTypes = priorityOrder.filter(t => {
+                          if (seen.has(t)) return false;
+                          seen.add(t);
+                          return TYPE_LABELS[t] !== undefined;
+                        });
+                        return sortedTypes.map(key => (
+                          <option key={key} value={key}>{TYPE_LABELS[key]}</option>
+                        ));
+                      })()}
                     </select>
                     <span style={{ fontSize: '13px', color: colors.text, fontWeight: 500 }}>
                       {chip.value}
