@@ -25,6 +25,10 @@ type VehicleRecord = {
   price_9hr: number | null;
   price_10hr: number | null;
   active: boolean | null;
+  image_main: string | null;
+  image_2: string | null;
+  image_3: string | null;
+  category: string | null;
 };
 
 function getPriceForHours(vehicle: VehicleRecord, hours: number | null): { price: number; hours: number } | null {
@@ -60,6 +64,95 @@ function normalizeCityQuery(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
 }
 
+const CITY_ALIASES: Record<string, string[]> = {
+  'phoenix': ['mesa', 'tempe', 'scottsdale', 'glendale', 'chandler', 'gilbert', 'peoria', 'surprise', 'goodyear', 'avondale', 'buckeye', 'cave creek', 'carefree', 'paradise valley', 'fountain hills', 'queen creek', 'apache junction', 'sun city', 'sun lakes', 'anthem'],
+  'los angeles': ['la', 'hollywood', 'beverly hills', 'santa monica', 'pasadena', 'glendale', 'burbank', 'long beach', 'torrance', 'inglewood', 'culver city', 'west hollywood', 'malibu', 'venice', 'marina del rey', 'downtown la', 'dtla'],
+  'new york': ['nyc', 'manhattan', 'brooklyn', 'queens', 'bronx', 'staten island', 'harlem', 'soho', 'tribeca', 'chelsea', 'midtown'],
+  'las vegas': ['vegas', 'henderson', 'north las vegas', 'summerlin', 'the strip', 'downtown vegas', 'boulder city', 'paradise'],
+  'san diego': ['la jolla', 'del mar', 'coronado', 'chula vista', 'oceanside', 'carlsbad', 'encinitas', 'escondido', 'national city'],
+  'san francisco': ['sf', 'oakland', 'berkeley', 'san jose', 'palo alto', 'mountain view', 'sunnyvale', 'fremont', 'hayward', 'daly city', 'south sf'],
+  'miami': ['miami beach', 'south beach', 'fort lauderdale', 'boca raton', 'west palm beach', 'coral gables', 'hialeah', 'hollywood fl', 'pompano beach'],
+  'chicago': ['evanston', 'oak park', 'naperville', 'schaumburg', 'aurora', 'joliet', 'elgin', 'waukegan', 'cicero'],
+  'dallas': ['fort worth', 'arlington', 'plano', 'irving', 'garland', 'frisco', 'mckinney', 'denton', 'richardson', 'carrollton', 'lewisville'],
+  'houston': ['the woodlands', 'sugar land', 'katy', 'pearland', 'pasadena', 'baytown', 'league city', 'galveston', 'cypress', 'spring'],
+  'atlanta': ['marietta', 'sandy springs', 'roswell', 'alpharetta', 'johns creek', 'smyrna', 'dunwoody', 'kennesaw', 'decatur', 'buckhead'],
+  'denver': ['aurora', 'lakewood', 'thornton', 'arvada', 'westminster', 'boulder', 'centennial', 'littleton', 'highlands ranch', 'cherry hills'],
+  'seattle': ['bellevue', 'tacoma', 'everett', 'kent', 'renton', 'federal way', 'kirkland', 'redmond', 'olympia', 'bothell'],
+  'philadelphia': ['philly', 'camden', 'cherry hill', 'king of prussia', 'media', 'norristown', 'upper darby', 'wilmington'],
+  'boston': ['cambridge', 'brookline', 'newton', 'somerville', 'quincy', 'waltham', 'medford', 'worcester'],
+  'austin': ['round rock', 'cedar park', 'georgetown', 'pflugerville', 'san marcos', 'kyle', 'leander', 'dripping springs'],
+  'nashville': ['franklin', 'murfreesboro', 'brentwood', 'hendersonville', 'smyrna', 'gallatin', 'lebanon', 'mt juliet'],
+  'orlando': ['kissimmee', 'lake buena vista', 'winter park', 'sanford', 'altamonte springs', 'celebration', 'daytona beach'],
+  'tampa': ['st petersburg', 'clearwater', 'brandon', 'lakeland', 'sarasota', 'bradenton', 'st pete beach'],
+  'new orleans': ['nola', 'metairie', 'kenner', 'slidell', 'gretna', 'harvey', 'marrero', 'french quarter'],
+  'san antonio': ['new braunfels', 'boerne', 'schertz', 'cibolo', 'helotes', 'alamo heights', 'live oak'],
+};
+
+const COMMON_TYPOS: Record<string, string> = {
+  'pheonix': 'phoenix',
+  'phoneix': 'phoenix',
+  'phonix': 'phoenix',
+  'phx': 'phoenix',
+  'los angelas': 'los angeles',
+  'los angelos': 'los angeles',
+  'la': 'los angeles',
+  'las vagas': 'las vegas',
+  'las vages': 'las vegas',
+  'vagas': 'las vegas',
+  'new yourk': 'new york',
+  'newyork': 'new york',
+  'san deigo': 'san diego',
+  'san diago': 'san diego',
+  'miama': 'miami',
+  'maimi': 'miami',
+  'chicaco': 'chicago',
+  'chigago': 'chicago',
+  'houstan': 'houston',
+  'huston': 'houston',
+  'atlana': 'atlanta',
+  'altanta': 'atlanta',
+  'seatle': 'seattle',
+  'seattel': 'seattle',
+  'philidelphia': 'philadelphia',
+  'philadephia': 'philadelphia',
+  'philiadelphia': 'philadelphia',
+  'bostan': 'boston',
+  'nashvile': 'nashville',
+  'nashvill': 'nashville',
+  'olrando': 'orlando',
+  'oralndo': 'orlando',
+  'tamapa': 'tampa',
+  'dalls': 'dallas',
+  'dalas': 'dallas',
+  'denvor': 'denver',
+  'austun': 'austin',
+  'ausin': 'austin',
+};
+
+function resolveCity(query: string): { resolved: string; suggestion?: string; isAlias: boolean } {
+  const lower = query.toLowerCase().trim();
+  
+  if (COMMON_TYPOS[lower]) {
+    return { 
+      resolved: COMMON_TYPOS[lower], 
+      suggestion: `Did you mean "${COMMON_TYPOS[lower]}"?`,
+      isAlias: false 
+    };
+  }
+  
+  for (const [mainCity, aliases] of Object.entries(CITY_ALIASES)) {
+    if (aliases.includes(lower)) {
+      return { 
+        resolved: mainCity, 
+        suggestion: `Searching ${mainCity} area (includes ${query})`,
+        isAlias: true 
+      };
+    }
+  }
+  
+  return { resolved: query, isAlias: false };
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -74,8 +167,12 @@ export async function POST(req: Request) {
       });
     }
 
-    const query = normalizeCityQuery(cityOrZip);
-    const isZip = /^\d{5}$/.test(query);
+    const rawQuery = normalizeCityQuery(cityOrZip);
+    const isZip = /^\d{5}$/.test(rawQuery);
+    
+    const { resolved: query, suggestion, isAlias } = isZip 
+      ? { resolved: rawQuery, suggestion: undefined, isAlias: false }
+      : resolveCity(rawQuery);
 
     let vehicles: VehicleRecord[] = [];
 
@@ -102,6 +199,16 @@ export async function POST(req: Request) {
         .eq('active', true);
 
       vehicles = cityData || [];
+      
+      if (vehicles.length === 0 && isAlias) {
+        const { data: aliasData } = await supabase
+          .from('vehicles_for_chatbot')
+          .select('*')
+          .ilike('city', `%${rawQuery}%`)
+          .eq('active', true);
+        
+        vehicles = aliasData || [];
+      }
     }
 
     if (passengers) {
@@ -130,14 +237,27 @@ export async function POST(req: Request) {
         priceDisplay: priceInfo 
           ? `$${priceInfo.price.toLocaleString()} for ${priceInfo.hours} hours`
           : 'Price varies',
+        image: v.image_main || v.image_2 || v.image_3 || null,
+        category: v.category || null,
+        city: v.city || null,
       };
     });
 
+    let message = formattedVehicles.length > 0 
+      ? `Found ${formattedVehicles.length} vehicle(s)` 
+      : "No vehicles found for this area";
+    
+    if (suggestion && formattedVehicles.length > 0) {
+      message = `${suggestion} - ${message}`;
+    } else if (suggestion && formattedVehicles.length === 0) {
+      message = suggestion;
+    }
+
     return NextResponse.json({
       vehicles: formattedVehicles,
-      message: formattedVehicles.length > 0 
-        ? `Found ${formattedVehicles.length} vehicle(s)` 
-        : "No vehicles found for this area",
+      message,
+      suggestion,
+      resolvedQuery: query !== rawQuery ? query : undefined,
     });
   } catch (error) {
     console.error('Error in get-vehicles-for-call:', error);

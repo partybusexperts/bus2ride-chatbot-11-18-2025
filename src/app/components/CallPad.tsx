@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 
 type QuotedVehicle = {
   id: string;
@@ -91,13 +91,7 @@ function calculateDaysUntilEvent(dateStr: string): number {
   }
 }
 
-interface CallPadProps {
-  onVehicleSearch?: (cityOrZip: string, passengers: number | null, hours: number | null) => void;
-  availableVehicles?: any[];
-  loadingVehicles?: boolean;
-}
-
-export default function CallPad({ onVehicleSearch, availableVehicles = [], loadingVehicles = false }: CallPadProps) {
+export default function CallPad() {
   const [form, setForm] = useState<FormState>(initialForm);
   const [lead, setLead] = useState<LeadSummary | null>(null);
   const [leadMessage, setLeadMessage] = useState<string>("");
@@ -105,19 +99,80 @@ export default function CallPad({ onVehicleSearch, availableVehicles = [], loadi
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [quotedVehicles, setQuotedVehicles] = useState<QuotedVehicle[]>([]);
   const [loadingLead, setLoadingLead] = useState(false);
-  const [internalLoadingVehicles, setInternalLoadingVehicles] = useState(false);
+  const [loadingVehicles, setLoadingVehicles] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
-  const isLoadingVehicles = loadingVehicles || internalLoadingVehicles;
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const doVehicleSearch = useCallback(async (cityOrZip: string, passengers: number | null, hours: number | null) => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    if (!cityOrZip.trim()) {
+      setVehicles([]);
+      setMessage("");
+      return;
+    }
+
+    abortControllerRef.current = new AbortController();
+    setLoadingVehicles(true);
+    setMessage("Searching...");
+
+    try {
+      const res = await fetch("/api/get-vehicles-for-call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cityOrZip, passengers, hours }),
+        signal: abortControllerRef.current.signal,
+      });
+
+      const data = await res.json();
+      setVehicles(data.vehicles || []);
+      setMessage(data.message || "");
+      setQuotedVehicles([]);
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.error(err);
+        setMessage("Error getting vehicles");
+      }
+    } finally {
+      setLoadingVehicles(false);
+    }
+  }, []);
 
   useEffect(() => {
-    setVehicles(availableVehicles || []);
-    setQuotedVehicles([]);
-    setMessage(availableVehicles && availableVehicles.length > 0 
-      ? `Found ${availableVehicles.length} vehicle(s)` 
-      : "");
-  }, [availableVehicles]);
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    const cityOrZip = form.cityOrZip.trim();
+    const passengers = Number(form.passengers) || null;
+    const hours = Number(form.hours) || null;
+
+    if (!cityOrZip) {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      setVehicles([]);
+      setMessage("");
+      setLoadingVehicles(false);
+      return;
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      doVehicleSearch(cityOrZip, passengers, hours);
+    }, 500);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [form.cityOrZip, form.passengers, form.hours, doVehicleSearch]);
 
   function updateField<K extends keyof FormState>(field: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -197,44 +252,6 @@ export default function CallPad({ onVehicleSearch, availableVehicles = [], loadi
 
     return () => clearTimeout(timeout);
   }, [form.phone, form.email]);
-
-  async function handleGetVehicles() {
-    setQuotedVehicles([]);
-    
-    if (onVehicleSearch) {
-      onVehicleSearch(
-        form.cityOrZip,
-        Number(form.passengers) || null,
-        Number(form.hours) || null
-      );
-      return;
-    }
-
-    setInternalLoadingVehicles(true);
-    setMessage("");
-
-    try {
-      const res = await fetch("/api/get-vehicles-for-call", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cityOrZip: form.cityOrZip,
-          passengers: Number(form.passengers) || null,
-          hours: Number(form.hours) || null,
-        }),
-      });
-
-      const data = await res.json();
-      setVehicles(data.vehicles || []);
-      setMessage(data.message || "");
-      setQuotedVehicles([]);
-    } catch (err) {
-      console.error(err);
-      setMessage("Error getting vehicles");
-    } finally {
-      setInternalLoadingVehicles(false);
-    }
-  }
 
   function toggleQuoted(vehicle: any) {
     setQuotedVehicles((prev) => {
@@ -468,46 +485,87 @@ export default function CallPad({ onVehicleSearch, availableVehicles = [], loadi
 
         <div>
           <div style={sectionStyle}>
-            <h3 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: '#374151' }}>Vehicles & Quotes</h3>
-            
-            <button
-              style={{ ...buttonStyle, background: '#3b82f6', color: '#fff', marginBottom: '12px', width: '100%' }}
-              onClick={handleGetVehicles}
-              disabled={isLoadingVehicles}
-            >
-              {isLoadingVehicles ? "Loading vehicles..." : "Get Vehicles"}
-            </button>
+            <h3 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: '#374151' }}>
+              Vehicles & Quotes
+              {loadingVehicles && <span style={{ fontWeight: 400, color: '#6b7280', marginLeft: '8px' }}>Searching...</span>}
+            </h3>
+
+            {message && (
+              <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px', padding: '6px 10px', background: '#f0f9ff', borderRadius: '4px', borderLeft: '3px solid #3b82f6' }}>
+                {message}
+              </div>
+            )}
 
             {vehicles.length === 0 ? (
               <div style={{ fontSize: '13px', color: '#6b7280', padding: '12px', background: '#f9fafb', borderRadius: '6px' }}>
-                Enter city/zip, passengers, hours, then click "Get Vehicles".
+                {form.cityOrZip.trim() 
+                  ? (loadingVehicles ? "Searching for vehicles..." : "No vehicles found for this location.")
+                  : "Start typing a city or ZIP to see available vehicles."}
               </div>
             ) : (
-              <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto' }}>
+              <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '350px', overflowY: 'auto' }}>
                 {vehicles.map((v) => (
                   <li
                     key={v.id}
-                    style={{ border: '1px solid #e5e7eb', padding: '10px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: isQuoted(v.id) ? '#f0fdf4' : '#fff' }}
+                    style={{ 
+                      border: isQuoted(v.id) ? '2px solid #16a34a' : '1px solid #e5e7eb', 
+                      padding: '12px', 
+                      borderRadius: '10px', 
+                      display: 'flex', 
+                      gap: '12px',
+                      alignItems: 'flex-start',
+                      background: isQuoted(v.id) ? '#f0fdf4' : '#fff',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                    }}
                   >
-                    <div>
-                      <div style={{ fontWeight: 600, color: '#111827', fontSize: '13px' }}>{v.name}</div>
-                      {v.capacity && <div style={{ fontSize: '12px', color: '#6b7280' }}>{v.capacity}</div>}
-                      <div style={{ fontSize: '12px', color: '#374151' }}>{v.priceDisplay}</div>
+                    {v.image && (
+                      <div style={{ 
+                        width: '80px', 
+                        height: '60px', 
+                        borderRadius: '6px', 
+                        overflow: 'hidden',
+                        flexShrink: 0,
+                        background: '#f3f4f6',
+                      }}>
+                        <img 
+                          src={v.image} 
+                          alt={v.name}
+                          style={{ 
+                            width: '100%', 
+                            height: '100%', 
+                            objectFit: 'cover' 
+                          }}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, color: '#111827', fontSize: '14px', marginBottom: '4px' }}>{v.name}</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: '12px', color: '#6b7280', marginBottom: '6px' }}>
+                        {v.capacity && <span style={{ background: '#f3f4f6', padding: '2px 6px', borderRadius: '4px' }}>{v.capacity}</span>}
+                        {v.category && <span style={{ background: '#e0e7ff', padding: '2px 6px', borderRadius: '4px', color: '#4338ca' }}>{v.category}</span>}
+                        {v.city && <span style={{ background: '#fef3c7', padding: '2px 6px', borderRadius: '4px', color: '#92400e' }}>{v.city}</span>}
+                      </div>
+                      <div style={{ fontSize: '15px', fontWeight: 600, color: '#059669' }}>{v.priceDisplay}</div>
                     </div>
                     <button
                       onClick={() => toggleQuoted(v)}
                       style={{
-                        padding: '6px 12px',
-                        borderRadius: '4px',
+                        padding: '8px 14px',
+                        borderRadius: '6px',
                         border: 'none',
                         cursor: 'pointer',
                         fontSize: '12px',
-                        fontWeight: 500,
-                        background: isQuoted(v.id) ? '#16a34a' : '#e5e7eb',
-                        color: isQuoted(v.id) ? '#fff' : '#374151',
+                        fontWeight: 600,
+                        background: isQuoted(v.id) ? '#16a34a' : '#3b82f6',
+                        color: '#fff',
+                        flexShrink: 0,
+                        transition: 'all 0.2s',
                       }}
                     >
-                      {isQuoted(v.id) ? "Quoted" : "Quote"}
+                      {isQuoted(v.id) ? "✓ Quoted" : "Quote"}
                     </button>
                   </li>
                 ))}

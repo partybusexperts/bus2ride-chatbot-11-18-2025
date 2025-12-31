@@ -17,6 +17,12 @@ A Next.js application for searching party buses, limos, shuttle buses, and other
 ## Call Pad Feature
 The Call Pad is integrated directly into the main page (toggle with "Show/Hide Call Pad" button). Features:
 
+### Smart Search
+- **Auto-search on typing** - No button clicks needed, searches as you type with 500ms debounce
+- **City name resolution** - Type suburb names (Mesa, Tempe, Scottsdale) and it searches the main metro area (Phoenix)
+- **Typo correction** - Common misspellings auto-corrected (Pheonix → Phoenix)
+- **ZIP code support** - Enter 5-digit ZIP codes for precise location matching
+
 ### Caller Details
 - Agent name, caller name, phone, email
 - Website URL (where they came from)
@@ -32,7 +38,8 @@ The Call Pad is integrated directly into the main page (toggle with "Show/Hide C
 - Pickup address, destination, drop-off address
 
 ### Vehicles & Quotes
-- Real-time vehicle search from Supabase database
+- Real-time vehicle search from Supabase database with auto-search
+- Enhanced vehicle cards with photos, capacity, category, and city tags
 - Mark vehicles as quoted during the call
 - View quoted vehicles list
 

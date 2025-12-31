@@ -227,26 +227,6 @@ export default function HomePage() {
   const [pricingPreviewId, setPricingPreviewId] = useState<string | null>(null);
   const [expandedRateBuckets, setExpandedRateBuckets] = useState<Record<string, boolean>>({});
   const [showCallPad, setShowCallPad] = useState(true);
-  const [callPadVehicles, setCallPadVehicles] = useState<any[]>([]);
-  const [loadingCallPadVehicles, setLoadingCallPadVehicles] = useState(false);
-
-  const handleCallPadVehicleSearch = useCallback(async (cityOrZip: string, passengers: number | null, hours: number | null) => {
-    setLoadingCallPadVehicles(true);
-    try {
-      const res = await fetch("/api/get-vehicles-for-call", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cityOrZip, passengers, hours }),
-      });
-      const data = await res.json();
-      setCallPadVehicles(data.vehicles || []);
-    } catch (err) {
-      console.error(err);
-      setCallPadVehicles([]);
-    } finally {
-      setLoadingCallPadVehicles(false);
-    }
-  }, []);
 
   const before5pmEligible = useMemo(() => {
     if (!vehicles.length) return false;
@@ -1086,60 +1066,58 @@ export default function HomePage() {
 
         {showCallPad && (
           <section style={{ marginBottom: 24 }}>
-            <CallPad
-              onVehicleSearch={handleCallPadVehicleSearch}
-              availableVehicles={callPadVehicles}
-              loadingVehicles={loadingCallPadVehicles}
-            />
+            <CallPad />
           </section>
         )}
 
-        <div
-          style={{
-            background: 'white',
-            borderRadius: 22,
-            padding: '20px 24px',
-            boxShadow: '0 25px 60px rgba(15,23,42,0.15)',
-            marginBottom: 24,
-          }}
-        >
-          <form
-            onSubmit={handleSearch}
-            style={{ marginBottom: 0, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}
+        {!showCallPad && (
+          <div
+            style={{
+              background: 'white',
+              borderRadius: 22,
+              padding: '20px 24px',
+              boxShadow: '0 25px 60px rgba(15,23,42,0.15)',
+              marginBottom: 24,
+            }}
           >
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Enter ZIP/postal or city (e.g. 85249, R2C, Phoenix)"
-              style={{
-                flex: '1 1 220px',
-                padding: '12px 16px',
-                fontSize: 16,
-                borderRadius: 999,
-                border: '1px solid #cbd5f5',
-                background: '#f8fafc',
-              }}
-            />
-            <button
-              type="submit"
-              style={{
-                padding: '12px 22px',
-                fontSize: 16,
-                borderRadius: 999,
-                border: 'none',
-                background: 'linear-gradient(120deg, #2563eb, #7c3aed)',
-                color: 'white',
-                cursor: 'pointer',
-                boxShadow: '0 12px 25px rgba(79,70,229,0.35)',
-                whiteSpace: 'nowrap',
-                fontWeight: 600,
-              }}
+            <form
+              onSubmit={handleSearch}
+              style={{ marginBottom: 0, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}
             >
-              {loading ? 'Searching…' : 'Search'}
-            </button>
-          </form>
-        </div>
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Enter ZIP/postal or city (e.g. 85249, R2C, Phoenix)"
+                style={{
+                  flex: '1 1 220px',
+                  padding: '12px 16px',
+                  fontSize: 16,
+                  borderRadius: 999,
+                  border: '1px solid #cbd5f5',
+                  background: '#f8fafc',
+                }}
+              />
+              <button
+                type="submit"
+                style={{
+                  padding: '12px 22px',
+                  fontSize: 16,
+                  borderRadius: 999,
+                  border: 'none',
+                  background: 'linear-gradient(120deg, #2563eb, #7c3aed)',
+                  color: 'white',
+                  cursor: 'pointer',
+                  boxShadow: '0 12px 25px rgba(79,70,229,0.35)',
+                  whiteSpace: 'nowrap',
+                  fontWeight: 600,
+                }}
+              >
+                {loading ? 'Searching…' : 'Search'}
+              </button>
+            </form>
+          </div>
+        )}
       <section
         style={{
           border: '1px solid rgba(15,23,42,0.08)',
