@@ -227,6 +227,25 @@ export default function CallPad() {
   });
   const [historyCities, setHistoryCities] = useState<HistoryCity[]>([]);
   const [lookingUpPlace, setLookingUpPlace] = useState(false);
+  const [cityDisambiguation, setCityDisambiguation] = useState<{ city: string; options: string[] } | null>(null);
+
+  const AMBIGUOUS_CITIES: Record<string, string[]> = {
+    'westmont': ['IL', 'NJ', 'CA', 'PA'],
+    'springfield': ['IL', 'MA', 'MO', 'OH', 'OR', 'NJ'],
+    'clinton': ['IA', 'MD', 'MA', 'MI', 'MS', 'NJ', 'NY', 'NC', 'OK', 'SC', 'TN'],
+    'franklin': ['IN', 'KY', 'MA', 'NJ', 'NC', 'OH', 'PA', 'TN', 'VA', 'WI'],
+    'madison': ['AL', 'CT', 'GA', 'IN', 'MS', 'NJ', 'WI'],
+    'georgetown': ['DC', 'DE', 'KY', 'SC', 'TX'],
+    'greenville': ['MI', 'MS', 'NC', 'OH', 'PA', 'SC', 'TX'],
+    'bristol': ['CT', 'PA', 'RI', 'TN', 'VA'],
+    'auburn': ['AL', 'CA', 'IN', 'ME', 'MA', 'NY', 'WA'],
+    'oxford': ['AL', 'CT', 'MA', 'MI', 'MS', 'NC', 'OH', 'PA'],
+    'riverside': ['CA', 'IL', 'NJ', 'OH'],
+    'fairfield': ['CA', 'CT', 'IA', 'OH', 'TX'],
+    'manchester': ['CT', 'NH', 'NJ', 'TN'],
+    'columbia': ['MD', 'MO', 'PA', 'SC', 'TN'],
+    'lexington': ['KY', 'MA', 'NC', 'SC', 'VA'],
+  };
   
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -304,6 +323,14 @@ export default function CallPad() {
     };
     
     if (chip.type === 'city' || chip.type === 'zip') {
+      const lowerCity = chip.value.toLowerCase().trim();
+      const ambiguousOptions = AMBIGUOUS_CITIES[lowerCity];
+      
+      if (ambiguousOptions && chip.type === 'city') {
+        setCityDisambiguation({ city: chip.value, options: ambiguousOptions });
+        return;
+      }
+      
       setHistoryCities(prev => {
         const newHistory = prev.map(c => ({ ...c, active: false }));
         const existing = newHistory.find(c => c.value.toLowerCase() === chip.value.toLowerCase());
@@ -315,6 +342,7 @@ export default function CallPad() {
         return newHistory;
       });
       setConfirmedData(prev => ({ ...prev, cityOrZip: chip.value }));
+      setCityDisambiguation(null);
       return;
     }
     
@@ -467,8 +495,8 @@ export default function CallPad() {
       setConfirmedData(prev => ({
         ...prev,
         tripNotes: prev.tripNotes 
-          ? `${prev.tripNotes}\nUnknown: ${unknownNotes}` 
-          : `Unknown: ${unknownNotes}`
+          ? `${prev.tripNotes}\n${unknownNotes}` 
+          : unknownNotes
       }));
     }
     
@@ -942,7 +970,7 @@ export default function CallPad() {
                           chip.type,
                           'name', 'phone', 'email', 'city', 'zip', 'date', 'time',
                           'passengers', 'hours', 'event_type', 'vehicle_type',
-                          'pickup_address', 'destination', 'dropoff_address', 'website', 'unknown'
+                          'pickup_address', 'dropoff_address', 'place', 'stop', 'website'
                         ];
                         const seen = new Set<string>();
                         const sortedTypes = priorityOrder.filter(t => {
@@ -1091,6 +1119,61 @@ export default function CallPad() {
                     Looking up place...
                   </div>
                 )}
+                {cityDisambiguation && (
+                  <div style={{ 
+                    marginTop: '6px', 
+                    padding: '8px', 
+                    background: '#fef3c7', 
+                    borderRadius: '6px',
+                    border: '1px solid #f59e0b',
+                  }}>
+                    <div style={{ fontSize: '11px', color: '#92400e', fontWeight: 600, marginBottom: '6px' }}>
+                      Which {cityDisambiguation.city}?
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                      {cityDisambiguation.options.map(state => (
+                        <button
+                          key={state}
+                          onClick={() => {
+                            const fullCity = `${cityDisambiguation.city}, ${state}`;
+                            setHistoryCities(prev => {
+                              const newHistory = prev.map(c => ({ ...c, active: false }));
+                              newHistory.push({ value: fullCity, addedAt: Date.now(), active: true });
+                              return newHistory;
+                            });
+                            setConfirmedData(prev => ({ ...prev, cityOrZip: fullCity }));
+                            setCityDisambiguation(null);
+                          }}
+                          style={{
+                            padding: '4px 10px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            background: '#fff',
+                            border: '1px solid #d97706',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            color: '#92400e',
+                          }}
+                        >
+                          {state}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => setCityDisambiguation(null)}
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '11px',
+                          background: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: '#9ca3af',
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <div>
@@ -1131,14 +1214,25 @@ export default function CallPad() {
                 <input style={inputStyle} placeholder="Pickup location" value={confirmedData.pickupAddress} onChange={(e) => setConfirmedData(prev => ({ ...prev, pickupAddress: e.target.value }))} />
               </div>
               <div>
-                <label style={labelStyle}>Destination</label>
-                <input style={inputStyle} placeholder="Where going" value={confirmedData.destination} onChange={(e) => setConfirmedData(prev => ({ ...prev, destination: e.target.value }))} />
-              </div>
-              <div>
                 <label style={labelStyle}>Drop-off Address</label>
                 <input style={inputStyle} placeholder="Final drop-off" value={confirmedData.dropoffAddress} onChange={(e) => setConfirmedData(prev => ({ ...prev, dropoffAddress: e.target.value }))} />
               </div>
             </div>
+          </div>
+
+          <div style={{ background: '#fff', padding: '14px', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+            <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '10px', color: '#374151' }}>Trip Notes</h3>
+            <textarea
+              style={{ 
+                ...inputStyle, 
+                minHeight: '120px', 
+                resize: 'vertical',
+                fontFamily: 'inherit',
+              }}
+              placeholder="Stops, special requests, venue details, any other notes..."
+              value={confirmedData.tripNotes}
+              onChange={(e) => setConfirmedData(prev => ({ ...prev, tripNotes: e.target.value }))}
+            />
           </div>
         </div>
 
@@ -1238,16 +1332,6 @@ export default function CallPad() {
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
-          </div>
-
-          <div style={{ background: '#fff', padding: '14px', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-            <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '10px', color: '#374151' }}>Notes</h3>
-            <textarea
-              style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }}
-              placeholder="Special requests..."
-              value={confirmedData.tripNotes}
-              onChange={(e) => setConfirmedData(prev => ({ ...prev, tripNotes: e.target.value }))}
-            />
           </div>
 
           <div style={{ display: 'flex', gap: '8px' }}>

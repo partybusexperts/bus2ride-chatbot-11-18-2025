@@ -89,6 +89,9 @@ const CITY_KEYWORDS = [
   'san diego', 'san francisco', 'seattle', 'portland', 'atlanta', 'miami',
   'orlando', 'tampa', 'boston', 'new york', 'philadelphia', 'detroit',
   'minneapolis', 'st louis', 'kansas city', 'nashville', 'memphis', 'charlotte',
+  'westmont', 'springfield', 'clinton', 'franklin', 'madison', 'georgetown',
+  'greenville', 'bristol', 'auburn', 'oxford', 'riverside', 'fairfield',
+  'manchester', 'columbia', 'lexington', 'nyc', 'la', 'sf', 'dc', 'philly',
 ];
 
 const VENUE_KEYWORDS = [
