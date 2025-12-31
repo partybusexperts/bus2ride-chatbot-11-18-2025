@@ -1,0 +1,645 @@
+Step 1 – Add the Call Pad UI (frontend) in Replit
+
+I’ll assume your Replit app is a React front-end + Node/Express backend (the usual setup). If it’s slightly different, the code is still usable with tiny tweaks.
+
+1.1 Create CallPad.tsx or CallPad.jsx
+
+In your React client (e.g. src/CallPad.tsx):
+
+import { useState, useEffect } from "react";
+
+type QuotedVehicle = {
+  id: string;
+  name: string;
+  capacity?: string;
+  priceDisplay: string;
+  hours?: number;
+};
+
+type LeadSummary = {
+  id: string;
+  name: string;
+  status?: string;
+};
+
+const initialForm = {
+  agentName: "",
+  callerName: "",
+  phone: "",
+  email: "",
+  cityOrZip: "",
+  passengers: "",
+  hours: "",
+  eventType: "",
+  date: "",
+  pickupTime: "",
+  notes: "",
+};
+
+export default function CallPad() {
+  const [form, setForm] = useState(initialForm);
+  const [lead, setLead] = useState<LeadSummary | null>(null);
+  const [leadMessage, setLeadMessage] = useState<string>("");
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [quotedVehicles, setQuotedVehicles] = useState<QuotedVehicle[]>([]);
+  const [loadingLead, setLoadingLead] = useState(false);
+  const [loadingVehicles, setLoadingVehicles] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  function updateField(field: keyof typeof initialForm, value: string) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  // 1) Auto-look up Zoho lead when phone or email changes
+  useEffect(() => {
+    const phone = form.phone.trim();
+    const email = form.email.trim();
+    if (!phone && !email) {
+      setLead(null);
+      setLeadMessage("");
+      return;
+    }
+
+    const timeout = setTimeout(async () => {
+      setLoadingLead(true);
+      setLeadMessage("Checking Zoho for existing customer...");
+
+      try {
+        const res = await fetch("/api/zoho/find-lead", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone, email }),
+        });
+
+        if (!res.ok) throw new Error("Zoho lookup failed");
+        const data = await res.json();
+
+        if (data.lead) {
+          setLead(data.lead);
+          setLeadMessage(
+            `Existing customer: ${data.lead.name}${
+              data.lead.status ? " (" + data.lead.status + ")" : ""
+            }`
+          );
+          if (!form.callerName) {
+            setForm((prev) => ({ ...prev, callerName: data.lead.name }));
+          }
+        } else {
+          setLead(null);
+          setLeadMessage("New caller (no matching lead in Zoho).");
+        }
+      } catch (err) {
+        console.error(err);
+        setLead(null);
+        setLeadMessage("Error checking Zoho");
+      } finally {
+        setLoadingLead(false);
+      }
+    }, 600);
+
+    return () => clearTimeout(timeout);
+  }, [form.phone, form.email]);
+
+  // 2) Get vehicles from your quoting engine/Supabase
+  async function handleGetVehicles() {
+    setLoadingVehicles(true);
+    setMessage("");
+
+    try {
+      const res = await fetch("/api/get-vehicles-for-call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cityOrZip: form.cityOrZip,
+          passengers: Number(form.passengers) || null,
+          hours: Number(form.hours) || null,
+        }),
+      });
+
+      const data = await res.json();
+      setVehicles(data.vehicles || []);
+      setMessage(data.message || "");
+      setQuotedVehicles([]);
+    } catch (err) {
+      console.error(err);
+      setMessage("Error getting vehicles");
+    } finally {
+      setLoadingVehicles(false);
+    }
+  }
+
+  // 3) Toggle quoted vehicle
+  function toggleQuoted(vehicle: any) {
+    setQuotedVehicles((prev) => {
+      const exists = prev.find((v) => v.id === vehicle.id);
+      if (exists) {
+        return prev.filter((v) => v.id !== vehicle.id);
+      }
+      const qv: QuotedVehicle = {
+        id: vehicle.id,
+        name: vehicle.name,
+        capacity: vehicle.capacity,
+        priceDisplay: vehicle.priceDisplay,
+        hours: vehicle.hours,
+      };
+      return [...prev, qv];
+    });
+  }
+
+  function isQuoted(id: string) {
+    return quotedVehicles.some((v) => v.id === id);
+  }
+
+  // 4) Save to Zoho
+  async function handleSaveToZoho() {
+    setSaving(true);
+    setMessage("");
+
+    const snapshot = {
+      ...form,
+      passengers: form.passengers ? Number(form.passengers) : null,
+      hours: form.hours ? Number(form.hours) : null,
+      leadId: lead?.id || null,
+      quotedVehicles,
+    };
+
+    try {
+      const res = await fetch("/api/zoho/save-call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(snapshot),
+      });
+
+      if (!res.ok) throw new Error("Zoho error");
+      const data = await res.json();
+      setMessage("Saved to Zoho ✅");
+      if (data.lead) {
+        setLead(data.lead);
+      }
+    } catch (err) {
+      console.error(err);
+      setMessage("Error saving to Zoho");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="max-w-6xl mx-auto p-4 grid md:grid-cols-2 gap-6">
+      {/* LEFT: Call details + controls */}
+      <div>
+        <h2 className="text-xl font-bold mb-3">Call Pad</h2>
+
+        <div className="space-y-2">
+          <input
+            placeholder="Agent Name"
+            value={form.agentName}
+            onChange={(e) => updateField("agentName", e.target.value)}
+          />
+          <input
+            placeholder="Caller Name"
+            value={form.callerName}
+            onChange={(e) => updateField("callerName", e.target.value)}
+          />
+          <input
+            placeholder="Phone"
+            value={form.phone}
+            onChange={(e) => updateField("phone", e.target.value)}
+          />
+          <input
+            placeholder="Email"
+            value={form.email}
+            onChange={(e) => updateField("email", e.target.value)}
+          />
+          {loadingLead ? (
+            <div className="text-sm text-gray-500">Checking Zoho...</div>
+          ) : (
+            leadMessage && (
+              <div className="text-sm text-gray-700">{leadMessage}</div>
+            )
+          )}
+
+          <input
+            placeholder="City / ZIP / Area"
+            value={form.cityOrZip}
+            onChange={(e) => updateField("cityOrZip", e.target.value)}
+          />
+          <input
+            placeholder="# Passengers"
+            value={form.passengers}
+            onChange={(e) => updateField("passengers", e.target.value)}
+          />
+          <input
+            placeholder="Hours"
+            value={form.hours}
+            onChange={(e) => updateField("hours", e.target.value)}
+          />
+          <input
+            placeholder="Event Type (Prom, Wedding, etc.)"
+            value={form.eventType}
+            onChange={(e) => updateField("eventType", e.target.value)}
+          />
+          <input
+            placeholder="Date (YYYY-MM-DD)"
+            value={form.date}
+            onChange={(e) => updateField("date", e.target.value)}
+          />
+          <input
+            placeholder="Pickup Time"
+            value={form.pickupTime}
+            onChange={(e) => updateField("pickupTime", e.target.value)}
+          />
+
+          <textarea
+            placeholder="Notes (anything unusual: multiple stops, drinks, etc.)"
+            value={form.notes}
+            onChange={(e) => updateField("notes", e.target.value)}
+          />
+        </div>
+
+        <div className="mt-4 flex gap-2">
+          <button onClick={handleGetVehicles} disabled={loadingVehicles}>
+            {loadingVehicles ? "Loading vehicles..." : "Get Vehicles"}
+          </button>
+          <button onClick={handleSaveToZoho} disabled={saving}>
+            {saving ? "Saving..." : "Save to Zoho"}
+          </button>
+        </div>
+
+        {message && <div className="mt-2 text-sm">{message}</div>}
+      </div>
+
+      {/* RIGHT: Vehicles + quoted list */}
+      <div>
+        <h2 className="text-xl font-bold mb-3">Vehicles & Quotes</h2>
+
+        {vehicles.length === 0 && (
+          <div className="text-sm text-gray-600">
+            No vehicles yet. Enter city/zip, passengers, hours, then click
+            "Get Vehicles".
+          </div>
+        )}
+
+        <ul className="space-y-2 mb-4">
+          {vehicles.map((v) => (
+            <li
+              key={v.id}
+              className="border p-2 rounded flex items-center justify-between"
+            >
+              <div>
+                <div className="font-semibold">{v.name}</div>
+                {v.capacity && (
+                  <div className="text-sm text-gray-600">{v.capacity}</div>
+                )}
+                <div className="text-sm">{v.priceDisplay}</div>
+              </div>
+              <button
+                onClick={() => toggleQuoted(v)}
+                className={
+                  "px-3 py-1 rounded text-sm " +
+                  (isQuoted(v.id)
+                    ? "bg-green-600 text-white"
+                    : "bg-gray-200 text-gray-800")
+                }
+              >
+                {isQuoted(v.id) ? "Quoted ✅" : "Mark as Quoted"}
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        <h3 className="font-semibold mb-1">Quoted this call:</h3>
+        {quotedVehicles.length === 0 ? (
+          <div className="text-sm text-gray-600">
+            Click "Mark as Quoted" next to each vehicle you tell them a price
+            for.
+          </div>
+        ) : (
+          <ul className="text-sm list-disc pl-4">
+            {quotedVehicles.map((v) => (
+              <li key={v.id}>
+                {v.name} – {v.priceDisplay}
+                {v.capacity ? ` (${v.capacity})` : ""}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+Then include it in your main app (for example in App.tsx):
+
+import CallPad from "./CallPad";
+
+function App() {
+  return <CallPad />;
+}
+
+export default App;
+
+
+Now your frontend is ready to talk to:
+
+POST /api/zoho/find-lead
+
+POST /api/zoho/save-call
+
+POST /api/get-vehicles-for-call
+
+Those don’t exist yet, so next we stub them.
+
+Step 2 – Add stub API routes in Replit (no Zoho yet)
+
+In your Node/Express backend (Replit):
+
+2.1 Basic Express setup (if you don’t have one)
+
+In index.js (or server.js):
+
+const express = require("express");
+const bodyParser = require("body-parser");
+const cors = require("cors");
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(bodyParser.json());
+
+// --- Stub endpoints so the UI works ---
+// 1) Zoho find lead – always return "no lead" for now
+app.post("/api/zoho/find-lead", (req, res) => {
+  console.log("Stub /zoho/find-lead called with:", req.body);
+  return res.json({ lead: null });
+});
+
+// 2) Zoho save call – just log snapshot
+app.post("/api/zoho/save-call", (req, res) => {
+  console.log("Stub /zoho/save-call snapshot:", req.body);
+  return res.json({ success: true });
+});
+
+// 3) Vehicles for call – return fake vehicles for now
+app.post("/api/get-vehicles-for-call", (req, res) => {
+  console.log("Stub /get-vehicles-for-call:", req.body);
+  const { passengers, hours } = req.body;
+
+  // TEMP demo data. Later, hook this to your Supabase quoting logic.
+  const demoVehicles = [
+    {
+      id: "v1",
+      name: "18 Passenger Party Bus",
+      capacity: "18 Passenger",
+      priceDisplay: "$650 for 4 hours",
+      hours: hours || 4,
+    },
+    {
+      id: "v2",
+      name: "24 Passenger Party Bus",
+      capacity: "24 Passenger",
+      priceDisplay: "$800 for 5 hours",
+      hours: hours || 5,
+    },
+    {
+      id: "v3",
+      name: "Stretch Limo",
+      capacity: "10 Passenger",
+      priceDisplay: "$500 for 3 hours",
+      hours: hours || 3,
+    },
+  ];
+
+  return res.json({
+    vehicles: demoVehicles,
+    message: "Demo vehicles (hook this to Supabase later)",
+  });
+});
+
+app.get("/", (req, res) => {
+  res.send("Bus2Ride Call Pad backend running.");
+});
+
+app.listen(PORT, () => {
+  console.log("Server listening on", PORT);
+});
+
+
+Run this in Replit.
+Now the Call Pad UI will:
+
+Show demo vehicles when you click “Get Vehicles”
+
+Let agents mark “Quoted”
+
+Log snapshots to the backend when they hit “Save to Zoho”
+
+No real Zoho yet, but the workflow is live and testable.
+
+Step 3 – When you’re ready: connect real Zoho API
+
+You are right: to actually hit Zoho CRM, you do need:
+
+A Zoho OAuth app
+
+Access token + refresh token
+
+Real field API names (for your custom fields)
+
+But that’s a separate “configure once” task.
+
+Once you’ve created the Zoho app and you have a working ZOHO_ACCESS_TOKEN in your env, you just:
+
+Replace the stub /api/zoho/find-lead with the real search code.
+
+Replace the stub /api/zoho/save-call with the real create/update code I gave earlier.
+
+Concretely:
+
+3.1 Swap stub find-lead with real version
+
+Replace this:
+
+app.post("/api/zoho/find-lead", (req, res) => {
+  console.log("Stub /zoho/find-lead called with:", req.body);
+  return res.json({ lead: null });
+});
+
+
+With this (simplified from earlier, using getZohoAccessToken()):
+
+const fetch = require("node-fetch");
+
+async function getZohoAccessToken() {
+  // For now: store a valid access token in env
+  return process.env.ZOHO_ACCESS_TOKEN;
+}
+
+app.post("/api/zoho/find-lead", async (req, res) => {
+  const { phone, email } = req.body;
+
+  try {
+    const token = await getZohoAccessToken();
+
+    let criteriaParts = [];
+    if (phone) criteriaParts.push(`(Phone:equals:${phone})`);
+    if (email) criteriaParts.push(`(Email:equals:${email})`);
+    if (!criteriaParts.length) {
+      return res.json({ lead: null });
+    }
+
+    const criteria = criteriaParts.join("or");
+
+    const resp = await fetch(
+      "https://www.zohoapis.com/crm/v2/Leads/search?criteria=" +
+        encodeURIComponent(criteria),
+      {
+        headers: {
+          Authorization: `Zoho-oauthtoken ${token}`,
+        },
+      }
+    );
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      console.error("Zoho search error:", text);
+      return res.status(500).json({ error: "Zoho search error", detail: text });
+    }
+
+    const data = await resp.json();
+    if (!data.data || !data.data.length) {
+      return res.json({ lead: null });
+    }
+
+    const l = data.data[0];
+    const lead = {
+      id: l.id,
+      name: l.Full_Name || l.Last_Name || l.Company || "Unknown",
+      status: l.Lead_Status || "",
+    };
+
+    res.json({ lead });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+3.2 Swap stub save-call with real create/update
+
+Replace this:
+
+app.post("/api/zoho/save-call", (req, res) => {
+  console.log("Stub /zoho/save-call snapshot:", req.body);
+  return res.json({ success: true });
+});
+
+
+With the real one:
+
+app.post("/api/zoho/save-call", async (req, res) => {
+  const snapshot = req.body;
+  const token = await getZohoAccessToken();
+
+  const quotedSummary = (snapshot.quotedVehicles || [])
+    .map(
+      (v) =>
+        `${v.name} - ${v.priceDisplay}${
+          v.capacity ? " (" + v.capacity + ")" : ""
+        }`
+    )
+    .join("\n");
+
+  // Map to your actual Zoho field names
+  const leadPayload = {
+    Full_Name: snapshot.callerName || "Unknown",
+    Last_Name: snapshot.callerName || "Unknown",
+    Phone: snapshot.phone || "",
+    Email: snapshot.email || "",
+    City_ZIP_Area: snapshot.cityOrZip || "",
+    Passengers: snapshot.passengers || null,
+    Hours: snapshot.hours || null,
+    Event_Type: snapshot.eventType || "",
+    Trip_Date: snapshot.date || "",
+    Pickup_Time: snapshot.pickupTime || "",
+    Call_Notes: snapshot.notes || "",
+    Quoted_Vehicles: quotedSummary,
+    Last_Quoted_Price: snapshot.priceQuoted || "",
+    Lead_Source: "Phone - Bus2Ride",
+  };
+
+  async function createLead() {
+    const resp = await fetch("https://www.zohoapis.com/crm/v2/Leads", {
+      method: "POST",
+      headers: {
+        Authorization: `Zoho-oauthtoken ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ data: [leadPayload] }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+      console.error("Zoho create error:", data);
+      throw new Error("Zoho create error");
+    }
+    const newLead = data.data && data.data[0];
+    return {
+      id: newLead.details.id,
+      name: leadPayload.Full_Name,
+    };
+  }
+
+  async function updateLead(leadId) {
+    const resp = await fetch(
+      `https://www.zohoapis.com/crm/v2/Leads/${leadId}`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Zoho-oauthtoken ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ data: [leadPayload] }),
+      }
+    );
+    const data = await resp.json();
+    if (!resp.ok) {
+      console.error("Zoho update error:", data);
+      throw new Error("Zoho update error");
+    }
+    return {
+      id: leadId,
+      name: leadPayload.Full_Name,
+    };
+  }
+
+  try {
+    let leadInfo;
+
+    if (snapshot.leadId) {
+      leadInfo = await updateLead(snapshot.leadId);
+    } else {
+      // You could re-search here by phone/email if you want
+      leadInfo = await createLead();
+    }
+
+    res.json({ success: true, lead: leadInfo });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Zoho save error" });
+  }
+});
+
+TL;DR for you right now
+
+If you want the immediate answer:
+
+✅ Yes, you can paste the React Call Pad + the stub backend code into Replit right now.
+
+❗ No, you don’t need Zoho API hooked up yet to test it. Use the stub endpoints first.
+
+When you’re ready for real Zoho, we swap the stub code for the real Zoho code above and add your Zoho access token.
+
+If you tell me what your Replit looks like (e.g. “I have index.js with Express and client/src/App.tsx with React”), I can literally give you file-by-file instructions with exact filenames and imports so you can just drop it in.
