@@ -5,7 +5,6 @@ A Next.js application for searching party buses, limos, shuttle buses, and other
 
 ## Project Structure
 - `src/app/page.tsx` - Main page component with vehicle search and display logic
-- `src/app/call-pad/page.tsx` - Call Pad page for agents to take customer calls
 - `src/app/components/CallPad.tsx` - Call Pad component with form and vehicle quoting
 - `src/app/api/vehicles/route.ts` - API endpoint for vehicle searches
 - `src/app/api/zoho/find-lead/route.ts` - Stub endpoint for Zoho lead lookup
