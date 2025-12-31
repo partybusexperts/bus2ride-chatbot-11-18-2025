@@ -16,11 +16,39 @@ A Next.js application for searching party buses, limos, shuttle buses, and other
 - `public/` - Static assets
 
 ## Call Pad Feature
-The Call Pad (`/call-pad`) is a tool for agents taking customer calls. Features:
+The Call Pad is integrated directly into the main page (toggle with "Show/Hide Call Pad" button). Features:
+
+### Caller Details
+- Agent name, caller name, phone, email
+- Website URL (where they came from)
+- Lead source (Google, referral, etc.)
 - Auto-lookup of existing Zoho leads by phone/email
-- Vehicle search by city/zip, passengers, and hours
+
+### Trip & Schedule
+- City/ZIP/Area for vehicle search
+- Event type (Prom, Wedding, etc.)
+- Number of passengers, hours needed
+- Event date with auto-calculated day of week
+- Pickup time with auto-calculated drop-off time
+- Pickup address, destination, drop-off address
+
+### Vehicles & Quotes
+- Real-time vehicle search from Supabase database
 - Mark vehicles as quoted during the call
-- Save call snapshots to Zoho CRM
+- View quoted vehicles list
+
+### Pricing & Payment
+- Total quoted price (auto-calculated from quoted vehicles)
+- Deposit: 50% normally, 100% if event is within 7 days
+- Balance due (auto-calculated)
+- Checkboxes for: Tip included, Paid by Card, Paid by Cash
+
+### Lead Status
+- Options: New, Not Quoted, Quoted, Booked, Closed, Cancelled
+- Auto-sets to "Quoted" when saving with quoted vehicles
+
+### Trip Notes
+- Free text area for special requests (red carpet, multiple stops, etc.)
 
 Note: Zoho integration endpoints are currently stubs. To enable real Zoho integration, you'll need:
 - A Zoho OAuth app with access/refresh tokens

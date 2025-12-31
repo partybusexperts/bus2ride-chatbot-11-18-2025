@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
+import CallPad from './components/CallPad';
 
 type Vehicle = {
   id: string;
@@ -225,6 +226,27 @@ export default function HomePage() {
   const [globalRateType, setGlobalRateType] = useState<RateType | null>(null);
   const [pricingPreviewId, setPricingPreviewId] = useState<string | null>(null);
   const [expandedRateBuckets, setExpandedRateBuckets] = useState<Record<string, boolean>>({});
+  const [showCallPad, setShowCallPad] = useState(true);
+  const [callPadVehicles, setCallPadVehicles] = useState<any[]>([]);
+  const [loadingCallPadVehicles, setLoadingCallPadVehicles] = useState(false);
+
+  const handleCallPadVehicleSearch = useCallback(async (cityOrZip: string, passengers: number | null, hours: number | null) => {
+    setLoadingCallPadVehicles(true);
+    try {
+      const res = await fetch("/api/get-vehicles-for-call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cityOrZip, passengers, hours }),
+      });
+      const data = await res.json();
+      setCallPadVehicles(data.vehicles || []);
+    } catch (err) {
+      console.error(err);
+      setCallPadVehicles([]);
+    } finally {
+      setLoadingCallPadVehicles(false);
+    }
+  }, []);
 
   const before5pmEligible = useMemo(() => {
     if (!vehicles.length) return false;
@@ -1031,15 +1053,46 @@ export default function HomePage() {
             boxShadow: '0 30px 60px rgba(6,10,24,0.55)',
           }}
         >
-          <h1 style={{ fontSize: 34, marginBottom: 8, fontWeight: 700 }}>Bus2Ride Vehicle Finder</h1>
-          <p style={{ marginBottom: 16, fontSize: 15, color: 'rgba(226,232,240,0.85)' }}>
-            Plug in any ZIP/postal or city to preview the exact inventory, rates, and transfer coverage your chatbot presents to riders.
-          </p>
-          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 12, color: 'rgba(226,232,240,0.8)' }}>
-            <span>Hover a card for instant rate cards & transfer intel.</span>
-            <span>Toggle Standard / Prom / Before 5 PM globally or per vehicle.</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+            <div>
+              <h1 style={{ fontSize: 34, marginBottom: 8, fontWeight: 700 }}>Bus2Ride Vehicle Finder</h1>
+              <p style={{ marginBottom: 16, fontSize: 15, color: 'rgba(226,232,240,0.85)' }}>
+                Plug in any ZIP/postal or city to preview the exact inventory, rates, and transfer coverage your chatbot presents to riders.
+              </p>
+              <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 12, color: 'rgba(226,232,240,0.8)' }}>
+                <span>Hover a card for instant rate cards & transfer intel.</span>
+                <span>Toggle Standard / Prom / Before 5 PM globally or per vehicle.</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowCallPad(!showCallPad)}
+              style={{
+                padding: '10px 20px',
+                borderRadius: '8px',
+                border: 'none',
+                background: showCallPad ? '#ef4444' : '#10b981',
+                color: 'white',
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: '14px',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {showCallPad ? 'Hide Call Pad' : 'Show Call Pad'}
+            </button>
           </div>
         </section>
+
+        {showCallPad && (
+          <section style={{ marginBottom: 24 }}>
+            <CallPad
+              onVehicleSearch={handleCallPadVehicleSearch}
+              availableVehicles={callPadVehicles}
+              loadingVehicles={loadingCallPadVehicles}
+            />
+          </section>
+        )}
 
         <div
           style={{
