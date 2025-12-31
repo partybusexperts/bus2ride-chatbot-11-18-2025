@@ -5,7 +5,13 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 type DetectedType = 
   | 'phone' | 'email' | 'zip' | 'city' | 'date' | 'time' 
   | 'passengers' | 'hours' | 'pickup_address' | 'destination' 
-  | 'dropoff_address' | 'event_type' | 'vehicle_type' | 'name' | 'website' | 'unknown';
+  | 'dropoff_address' | 'event_type' | 'vehicle_type' | 'name' | 'website' | 'place' | 'stop' | 'unknown';
+
+interface HistoryCity {
+  value: string;
+  addedAt: number;
+  active: boolean;
+}
 
 interface DetectedChip {
   id: string;
@@ -63,6 +69,8 @@ const TYPE_LABELS: Record<DetectedType, string> = {
   vehicle_type: 'Vehicle Type',
   name: 'Customer Name',
   website: 'Website',
+  place: 'Place/Venue',
+  stop: 'Trip Stop',
   unknown: 'Unknown',
 };
 
@@ -82,6 +90,8 @@ const TYPE_COLORS: Record<DetectedType, { bg: string; text: string; border: stri
   vehicle_type: { bg: '#fef3c7', text: '#78350f', border: '#d97706' },
   name: { bg: '#f1f5f9', text: '#475569', border: '#94a3b8' },
   website: { bg: '#cffafe', text: '#155e75', border: '#06b6d4' },
+  place: { bg: '#fef3c7', text: '#92400e', border: '#f59e0b' },
+  stop: { bg: '#fce7f3', text: '#9d174d', border: '#ec4899' },
   unknown: { bg: '#f3f4f6', text: '#6b7280', border: '#9ca3af' },
 };
 
@@ -215,11 +225,64 @@ export default function CallPad() {
     shuttle: true,
     other: true,
   });
+  const [historyCities, setHistoryCities] = useState<HistoryCity[]>([]);
+  const [lookingUpPlace, setLookingUpPlace] = useState(false);
   
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const parseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const CITY_NAMES = [
+    'phoenix', 'scottsdale', 'mesa', 'tempe', 'glendale', 'chandler', 'gilbert',
+    'peoria', 'surprise', 'goodyear', 'avondale', 'tucson', 'las vegas', 'denver',
+    'chicago', 'dallas', 'houston', 'austin', 'san antonio', 'los angeles',
+    'san diego', 'san francisco', 'seattle', 'portland', 'atlanta', 'miami',
+    'orlando', 'tampa', 'boston', 'new york', 'philadelphia', 'detroit',
+  ];
+
+  const extractCityFromText = (text: string): string | null => {
+    const lower = text.toLowerCase();
+    for (const city of CITY_NAMES) {
+      if (lower.includes(city)) {
+        return city.charAt(0).toUpperCase() + city.slice(1);
+      }
+    }
+    return null;
+  };
+
+  const lookupPlace = useCallback(async (placeName: string, context: 'pickup' | 'destination' | 'stop' = 'stop', overrideLocation?: string) => {
+    const extractedCity = extractCityFromText(placeName);
+    const nearLocation = overrideLocation || extractedCity || confirmedData.cityOrZip || 'Arizona';
+    setLookingUpPlace(true);
+    try {
+      const res = await fetch('/api/places/lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ placeName, nearLocation, context }),
+      });
+      const data = await res.json();
+      
+      if (data.found && data.fullAddress) {
+        if (context === 'pickup') {
+          setConfirmedData(prev => ({ ...prev, pickupAddress: data.fullAddress }));
+        } else {
+          const stopNote = `Stop: ${data.name} - ${data.fullAddress}`;
+          setConfirmedData(prev => ({
+            ...prev,
+            tripNotes: prev.tripNotes ? `${prev.tripNotes}\n${stopNote}` : stopNote,
+          }));
+        }
+        return data;
+      }
+      return null;
+    } catch (error) {
+      console.error('Place lookup error:', error);
+      return null;
+    } finally {
+      setLookingUpPlace(false);
+    }
+  }, [confirmedData.cityOrZip]);
 
   const applyChipToData = useCallback((chip: DetectedChip) => {
     const fieldMap: Partial<Record<DetectedType, keyof typeof confirmedData>> = {
@@ -240,6 +303,26 @@ export default function CallPad() {
       website: 'websiteUrl',
     };
     
+    if (chip.type === 'city' || chip.type === 'zip') {
+      setHistoryCities(prev => {
+        const newHistory = prev.map(c => ({ ...c, active: false }));
+        const existing = newHistory.find(c => c.value.toLowerCase() === chip.value.toLowerCase());
+        if (!existing) {
+          newHistory.push({ value: chip.value, addedAt: Date.now(), active: true });
+        } else {
+          existing.active = true;
+        }
+        return newHistory;
+      });
+      setConfirmedData(prev => ({ ...prev, cityOrZip: chip.value }));
+      return;
+    }
+    
+    if (chip.type === 'place' || chip.type === 'stop') {
+      lookupPlace(chip.value, 'stop');
+      return;
+    }
+    
     const field = fieldMap[chip.type];
     if (field) {
       let value = chip.value;
@@ -250,7 +333,7 @@ export default function CallPad() {
       }
       setConfirmedData(prev => ({ ...prev, [field]: value }));
     }
-  }, []);
+  }, [lookupPlace]);
 
   const parseInput = useCallback(async (text: string) => {
     if (!text.trim()) return;
@@ -278,11 +361,42 @@ export default function CallPad() {
           };
         });
         
+        const cityChip = newChips.find(c => c.autoPopulated && (c.type === 'city' || c.type === 'zip'));
+        const placeChips = newChips.filter(c => c.autoPopulated && (c.type === 'place' || c.type === 'stop'));
+        const detectedCity = cityChip?.value || confirmedData.cityOrZip;
+        
         newChips.forEach(chip => {
-          if (chip.autoPopulated) {
+          if (chip.autoPopulated && chip.type !== 'place' && chip.type !== 'stop') {
             applyChipToData(chip);
           }
         });
+        
+        if (placeChips.length > 0) {
+          for (const placeChip of placeChips) {
+            const extractedCity = extractCityFromText(placeChip.value);
+            const nearLocation = detectedCity || extractedCity || confirmedData.cityOrZip || 'Arizona';
+            setLookingUpPlace(true);
+            try {
+              const placeRes = await fetch('/api/places/lookup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ placeName: placeChip.value, nearLocation, context: 'stop' }),
+              });
+              const placeData = await placeRes.json();
+              if (placeData.found && placeData.fullAddress) {
+                const stopNote = `Stop: ${placeData.name} - ${placeData.fullAddress}`;
+                setConfirmedData(prev => ({
+                  ...prev,
+                  tripNotes: prev.tripNotes ? `${prev.tripNotes}\n${stopNote}` : stopNote,
+                }));
+              }
+            } catch (error) {
+              console.error('Place lookup error:', error);
+            } finally {
+              setLookingUpPlace(false);
+            }
+          }
+        }
         
         setChips(prev => {
           const existingValues = new Set(prev.map(c => `${c.type}:${c.value.toLowerCase()}`));
@@ -296,7 +410,7 @@ export default function CallPad() {
     } finally {
       setParsingInput(false);
     }
-  }, [applyChipToData]);
+  }, [applyChipToData, confirmedData.cityOrZip]);
 
   const handleInputKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && smartInput.trim()) {
@@ -937,6 +1051,46 @@ export default function CallPad() {
               <div>
                 <label style={labelStyle}>City / ZIP</label>
                 <input style={inputStyle} placeholder="Service area" value={confirmedData.cityOrZip} onChange={(e) => setConfirmedData(prev => ({ ...prev, cityOrZip: e.target.value }))} />
+                {historyCities.filter(c => !c.active).length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                    {historyCities.filter(c => !c.active).map((city) => (
+                      <span 
+                        key={city.addedAt}
+                        style={{
+                          fontSize: '11px',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          background: '#e5e7eb',
+                          color: '#6b7280',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        {city.value}
+                        <button
+                          onClick={() => setHistoryCities(prev => prev.filter(c => c.addedAt !== city.addedAt))}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: 0,
+                            color: '#9ca3af',
+                            fontSize: '12px',
+                            lineHeight: 1,
+                          }}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {lookingUpPlace && (
+                  <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
+                    Looking up place...
+                  </div>
+                )}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <div>

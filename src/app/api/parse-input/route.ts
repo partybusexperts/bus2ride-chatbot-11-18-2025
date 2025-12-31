@@ -22,6 +22,8 @@ type DetectedType =
   | 'vehicle_type'
   | 'name'
   | 'website'
+  | 'place'
+  | 'stop'
   | 'unknown';
 
 interface DetectedItem {
@@ -87,6 +89,16 @@ const CITY_KEYWORDS = [
   'san diego', 'san francisco', 'seattle', 'portland', 'atlanta', 'miami',
   'orlando', 'tampa', 'boston', 'new york', 'philadelphia', 'detroit',
   'minneapolis', 'st louis', 'kansas city', 'nashville', 'memphis', 'charlotte',
+];
+
+const VENUE_KEYWORDS = [
+  'topgolf', 'top golf', 'dave and busters', 'dave & busters', 'bowlero',
+  'main event', 'lucky strike', 'pinstripes', 'k1 speed', 'andretti',
+  'casino', 'hotel', 'resort', 'bar', 'grill', 'lounge', 'club', 'brewery',
+  'winery', 'distillery', 'steakhouse', 'restaurant', 'pub', 'tavern',
+  'arena', 'stadium', 'amphitheater', 'theater', 'theatre', 'venue',
+  'country club', 'golf course', 'spa', 'salon', 'church', 'chapel',
+  'airport', 'terminal', 'station', 'mall', 'plaza', 'center', 'centre',
 ];
 
 const COMMON_FIRST_NAMES = [
@@ -214,6 +226,23 @@ function detectPattern(text: string): DetectedItem | null {
     if (lowerText === keyword || lowerText.includes(keyword)) {
       return { type: 'vehicle_type', value: vehicleType, confidence: 0.9, original: trimmed };
     }
+  }
+
+  for (const venue of VENUE_KEYWORDS) {
+    if (lowerText.includes(venue)) {
+      const isPickup = lowerText.includes('pu ') || lowerText.includes('pickup') || lowerText.includes('pick up');
+      return { 
+        type: isPickup ? 'pickup_address' : 'place', 
+        value: trimmed, 
+        confidence: 0.85, 
+        original: trimmed 
+      };
+    }
+  }
+
+  const businessPattern = /\d{2,4}\s+(bar|grill|lounge|club|restaurant|steakhouse|brewery|pub|tavern)/i;
+  if (businessPattern.test(trimmed)) {
+    return { type: 'place', value: trimmed, confidence: 0.85, original: trimmed };
   }
 
   for (const city of CITY_KEYWORDS) {

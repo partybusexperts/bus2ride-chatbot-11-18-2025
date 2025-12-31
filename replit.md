@@ -12,6 +12,7 @@ A Next.js application for searching party buses, limos, shuttle buses, and other
 - `src/app/api/zoho/save-call/route.ts` - Stub endpoint for saving calls to Zoho
 - `src/app/api/get-vehicles-for-call/route.ts` - Endpoint for getting vehicles during a call
 - `src/app/api/vehicle-recommendation/route.ts` - AI-powered selling points generator
+- `src/app/api/places/lookup/route.ts` - AI-powered venue/place address lookup
 - `src/lib/supabase.ts` - Supabase client configuration
 - `next.config.ts` - Next.js configuration
 - `public/` - Static assets
@@ -41,7 +42,22 @@ The system auto-detects:
 - **Hours** - "5 hours", "5 hrs"
 - **Event types** - Wedding, Prom, Birthday, etc.
 - **Addresses** - "pu at [location]", "to [destination]", "do at [dropoff]"
+- **Places/Venues** - TopGolf, bars, restaurants, hotels detected and looked up via OpenAI
 - **Complex addresses** - Uses OpenAI for address parsing
+
+### Venue/Place Lookup
+When a venue is mentioned (e.g., "TopGolf Scottsdale", "480 bar", "Dave & Busters"):
+- System detects venue keywords (bar, grill, restaurant, hotel, TopGolf, etc.)
+- Looks up the real address using OpenAI with the current service area as context
+- Adds to Trip Notes as "Stop: [venue name] - [full address]"
+- Works with single entries like "TopGolf Scottsdale" by extracting the city from the text
+
+### Multiple Cities
+When multiple cities are entered (e.g., first "phoenix", then "mesa"):
+- Previous cities appear as gray chips below the City/ZIP field
+- Old cities are dismissable with × button
+- Current active city drives vehicle search
+- History helps track multi-city inquiries
 
 **Auto-Population:** High-confidence detections (80%+) automatically populate fields and show as confirmed chips with green checkmarks.
 
