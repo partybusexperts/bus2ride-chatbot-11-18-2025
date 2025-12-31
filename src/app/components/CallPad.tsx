@@ -192,6 +192,18 @@ export default function CallPad() {
   const [leadStatus, setLeadStatus] = useState<LeadStatus>('new');
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const [photoModalVehicle, setPhotoModalVehicle] = useState<any>(null);
+  const [vehicleRecommendation, setVehicleRecommendation] = useState<string>("");
+  const [loadingRecommendation, setLoadingRecommendation] = useState(false);
+  
+  const [sortBy, setSortBy] = useState<'price_low' | 'price_high' | 'capacity_high' | 'capacity_low'>('price_low');
+  const [rateHours, setRateHours] = useState<number>(4);
+  const [vehicleFilters, setVehicleFilters] = useState({
+    partyBus: true,
+    limo: true,
+    shuttle: true,
+    other: true,
+  });
   
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -315,10 +327,23 @@ export default function CallPad() {
 
   const confirmAllChips = useCallback(() => {
     const pendingChipsToConfirm = chips.filter(c => !c.confirmed && c.type !== 'unknown');
+    const unknownChips = chips.filter(c => c.type === 'unknown' && !c.confirmed);
+    
     pendingChipsToConfirm.forEach(chip => {
       applyChipToData(chip);
     });
-    setChips(prev => prev.map(c => c.type !== 'unknown' ? { ...c, confirmed: true } : c));
+    
+    if (unknownChips.length > 0) {
+      const unknownNotes = unknownChips.map(c => `[${c.value}]`).join(' ');
+      setConfirmedData(prev => ({
+        ...prev,
+        tripNotes: prev.tripNotes 
+          ? `${prev.tripNotes}\nUnknown: ${unknownNotes}` 
+          : `Unknown: ${unknownNotes}`
+      }));
+    }
+    
+    setChips(prev => prev.map(c => ({ ...c, confirmed: true })));
   }, [chips, applyChipToData]);
 
   const rejectAllChips = useCallback(() => {
@@ -396,6 +421,8 @@ export default function CallPad() {
   }, [confirmedData.cityOrZip, confirmedData.passengers, confirmedData.hours, doVehicleSearch]);
 
   function toggleQuoted(vehicle: any) {
+    const wasQuoted = quotedVehicles.some(v => v.id === vehicle.id);
+    
     setQuotedVehicles((prev) => {
       const exists = prev.find((v) => v.id === vehicle.id);
       if (exists) {
@@ -411,6 +438,10 @@ export default function CallPad() {
       };
       return [...prev, qv];
     });
+    
+    if (!wasQuoted) {
+      getAIRecommendation(vehicle);
+    }
   }
 
   function isQuoted(id: string) {
@@ -453,6 +484,89 @@ export default function CallPad() {
   const balanceDue = useMemo(() => {
     return totalQuotedPrice - depositAmount;
   }, [totalQuotedPrice, depositAmount]);
+
+  const filteredVehicles = useMemo(() => {
+    let filtered = vehicles.filter(v => {
+      const category = (v.category || '').toLowerCase();
+      const name = (v.name || '').toLowerCase();
+      
+      const isPartyBus = category.includes('party bus') || category.includes('limo bus') || 
+                         name.includes('party bus') || name.includes('limo bus');
+      const isLimo = !isPartyBus && (
+        category.includes('limo') || category.includes('limousine') || 
+        name.includes('limousine') || name.includes('stretch limo') ||
+        (category.includes('sedan') || category.includes('suv') || category.includes('hummer'))
+      );
+      const isShuttle = category.includes('shuttle') || category.includes('sprinter') || 
+                        category.includes('executive') || category.includes('coach') ||
+                        category.includes('charter') || category.includes('mini coach') ||
+                        name.includes('shuttle') || name.includes('sprinter') || name.includes('coach');
+      
+      if (isPartyBus && !vehicleFilters.partyBus) return false;
+      if (isLimo && !vehicleFilters.limo) return false;
+      if (isShuttle && !vehicleFilters.shuttle) return false;
+      if (!isPartyBus && !isLimo && !isShuttle && !vehicleFilters.other) return false;
+      
+      return true;
+    });
+    
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'price_low':
+          return (a.price || 0) - (b.price || 0);
+        case 'price_high':
+          return (b.price || 0) - (a.price || 0);
+        case 'capacity_high':
+          const capA = parseInt(a.capacity) || 0;
+          const capB = parseInt(b.capacity) || 0;
+          return capB - capA;
+        case 'capacity_low':
+          const capC = parseInt(a.capacity) || 0;
+          const capD = parseInt(b.capacity) || 0;
+          return capC - capD;
+        default:
+          return 0;
+      }
+    });
+    
+    return filtered;
+  }, [vehicles, vehicleFilters, sortBy]);
+
+  const getAIRecommendation = useCallback(async (vehicle: any) => {
+    setLoadingRecommendation(true);
+    setVehicleRecommendation("");
+    
+    try {
+      const response = await fetch('/api/vehicle-recommendation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vehicle: {
+            name: vehicle.name,
+            capacity: vehicle.capacity,
+            category: vehicle.category,
+            price: vehicle.priceDisplay,
+            amenities: vehicle.amenities || [],
+          },
+          tripContext: {
+            eventType: confirmedData.eventType,
+            passengers: confirmedData.passengers,
+            date: confirmedData.date,
+            city: confirmedData.cityOrZip,
+          }
+        }),
+      });
+      
+      if (!response.ok) throw new Error('Failed to get recommendation');
+      const data = await response.json();
+      setVehicleRecommendation(data.recommendation || "Great choice for your event!");
+    } catch (error) {
+      console.error('Error getting recommendation:', error);
+      setVehicleRecommendation("This vehicle is a great choice for your event!");
+    } finally {
+      setLoadingRecommendation(false);
+    }
+  }, [confirmedData]);
 
   async function handleSaveToZoho() {
     setSaving(true);
@@ -962,9 +1076,86 @@ export default function CallPad() {
               {loadingVehicles && <span style={{ fontWeight: 400, color: '#94a3b8', marginLeft: '8px' }}>Searching...</span>}
             </h3>
             <div style={{ fontSize: '12px', color: '#94a3b8' }}>
-              {vehicles.length} vehicles
+              {filteredVehicles.length} of {vehicles.length} vehicles
             </div>
           </div>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px', alignItems: 'center' }}>
+            <select
+              style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #475569', background: '#334155', color: '#fff', fontSize: '12px' }}
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+            >
+              <option value="price_low">Price: Low to High</option>
+              <option value="price_high">Price: High to Low</option>
+              <option value="capacity_high">Capacity: High to Low</option>
+              <option value="capacity_low">Capacity: Low to High</option>
+            </select>
+            
+            <select
+              style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #475569', background: '#334155', color: '#fff', fontSize: '12px' }}
+              value={rateHours}
+              onChange={(e) => setRateHours(parseInt(e.target.value))}
+            >
+              <option value={3}>3 Hour Rate</option>
+              <option value={4}>4 Hour Rate</option>
+              <option value={5}>5 Hour Rate</option>
+              <option value={6}>6 Hour Rate</option>
+              <option value={8}>8 Hour Rate</option>
+            </select>
+            
+            <div style={{ display: 'flex', gap: '10px', marginLeft: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#94a3b8', fontSize: '11px', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  checked={vehicleFilters.partyBus}
+                  onChange={(e) => setVehicleFilters(prev => ({ ...prev, partyBus: e.target.checked }))}
+                />
+                Party Bus
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#94a3b8', fontSize: '11px', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  checked={vehicleFilters.limo}
+                  onChange={(e) => setVehicleFilters(prev => ({ ...prev, limo: e.target.checked }))}
+                />
+                Limo
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#94a3b8', fontSize: '11px', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  checked={vehicleFilters.shuttle}
+                  onChange={(e) => setVehicleFilters(prev => ({ ...prev, shuttle: e.target.checked }))}
+                />
+                Shuttle
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#94a3b8', fontSize: '11px', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  checked={vehicleFilters.other}
+                  onChange={(e) => setVehicleFilters(prev => ({ ...prev, other: e.target.checked }))}
+                />
+                Other
+              </label>
+            </div>
+          </div>
+
+          {vehicleRecommendation && (
+            <div style={{ 
+              fontSize: '12px', 
+              color: '#a5f3fc', 
+              marginBottom: '10px', 
+              padding: '10px', 
+              background: 'rgba(34,211,238,0.1)', 
+              borderRadius: '6px',
+              border: '1px solid rgba(34,211,238,0.3)',
+            }}>
+              <strong style={{ color: '#22d3ee' }}>Agent Selling Points:</strong>
+              <div style={{ marginTop: '4px', whiteSpace: 'pre-line' }}>
+                {loadingRecommendation ? "Loading recommendations..." : vehicleRecommendation}
+              </div>
+            </div>
+          )}
 
           {vehicleMessage && (
             <div style={{ fontSize: '12px', color: '#60a5fa', marginBottom: '10px', padding: '8px', background: 'rgba(59,130,246,0.1)', borderRadius: '6px' }}>
@@ -972,7 +1163,7 @@ export default function CallPad() {
             </div>
           )}
 
-          {vehicles.length === 0 ? (
+          {filteredVehicles.length === 0 ? (
             <div style={{ 
               flex: 1, 
               display: 'flex', 
@@ -994,7 +1185,7 @@ export default function CallPad() {
               overflowY: 'auto',
               alignContent: 'start',
             }}>
-              {vehicles.map((v) => (
+              {filteredVehicles.map((v) => (
                 <div
                   key={v.id}
                   style={{ 
@@ -1007,7 +1198,10 @@ export default function CallPad() {
                   }}
                 >
                   {v.image && (
-                    <div style={{ height: '100px', overflow: 'hidden' }}>
+                    <div 
+                      style={{ height: '100px', overflow: 'hidden', cursor: 'pointer' }}
+                      onClick={() => setPhotoModalVehicle(v)}
+                    >
                       <img 
                         src={v.image} 
                         alt={v.name}
@@ -1019,7 +1213,10 @@ export default function CallPad() {
                     </div>
                   )}
                   <div style={{ padding: '10px' }}>
-                    <div style={{ fontWeight: 600, color: '#fff', fontSize: '13px', marginBottom: '6px', lineHeight: 1.3 }}>
+                    <div 
+                      style={{ fontWeight: 600, color: '#fff', fontSize: '13px', marginBottom: '6px', lineHeight: 1.3, cursor: 'pointer' }}
+                      onClick={() => setPhotoModalVehicle(v)}
+                    >
                       {v.name}
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '8px' }}>
@@ -1158,38 +1355,53 @@ export default function CallPad() {
               </div>
 
               <div style={{ background: '#f9fafb', padding: '16px', borderRadius: '8px' }}>
-                <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#374151', marginBottom: '12px' }}>Pricing</h3>
+                <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#374151', marginBottom: '12px' }}>All Pricing Tiers</h3>
                 
-                <div style={{ display: 'grid', gap: '8px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #e5e7eb' }}>
-                    <span style={{ color: '#6b7280' }}>Base Price</span>
-                    <span style={{ fontWeight: 600, color: '#111827' }}>{selectedVehicle.priceDisplay}</span>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '16px' }}>
+                  <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '2px solid #10b981' }}>
+                    <div style={{ fontSize: '11px', color: '#10b981', fontWeight: 600, marginBottom: '4px' }}>STANDARD</div>
+                    <div style={{ fontSize: '20px', fontWeight: 700, color: '#111827' }}>{selectedVehicle.priceDisplay}</div>
+                    <div style={{ fontSize: '11px', color: '#6b7280' }}>{selectedVehicle.hours || 4} hours</div>
                   </div>
-                  
-                  {selectedVehicle.hours && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #e5e7eb' }}>
-                      <span style={{ color: '#6b7280' }}>Hours</span>
-                      <span style={{ fontWeight: 600, color: '#111827' }}>{selectedVehicle.hours} hrs</span>
+                  <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                    <div style={{ fontSize: '11px', color: '#ec4899', fontWeight: 600, marginBottom: '4px' }}>PROM RATE</div>
+                    <div style={{ fontSize: '20px', fontWeight: 700, color: '#111827' }}>
+                      ${selectedVehicle.price ? Math.round(selectedVehicle.price * 1.15).toLocaleString() : '---'}
                     </div>
-                  )}
-                  
-                  {selectedVehicle.price && selectedVehicle.hours && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #e5e7eb' }}>
-                      <span style={{ color: '#6b7280' }}>Per Hour</span>
-                      <span style={{ fontWeight: 600, color: '#111827' }}>${Math.round(selectedVehicle.price / selectedVehicle.hours)}/hr</span>
+                    <div style={{ fontSize: '11px', color: '#6b7280' }}>{selectedVehicle.hours || 4} hours (+15%)</div>
+                  </div>
+                  <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                    <div style={{ fontSize: '11px', color: '#f59e0b', fontWeight: 600, marginBottom: '4px' }}>BEFORE 5 PM</div>
+                    <div style={{ fontSize: '20px', fontWeight: 700, color: '#111827' }}>
+                      ${selectedVehicle.price ? Math.round(selectedVehicle.price * 0.9).toLocaleString() : '---'}
                     </div>
-                  )}
+                    <div style={{ fontSize: '11px', color: '#6b7280' }}>{selectedVehicle.hours || 4} hours (-10%)</div>
+                  </div>
+                  <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                    <div style={{ fontSize: '11px', color: '#8b5cf6', fontWeight: 600, marginBottom: '4px' }}>AFTER 5 PM</div>
+                    <div style={{ fontSize: '20px', fontWeight: 700, color: '#111827' }}>
+                      ${selectedVehicle.price ? Math.round(selectedVehicle.price * 1.1).toLocaleString() : '---'}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#6b7280' }}>{selectedVehicle.hours || 4} hours (+10%)</div>
+                  </div>
+                </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #e5e7eb' }}>
-                    <span style={{ color: '#6b7280' }}>Deposit ({depositPercentage}%)</span>
-                    <span style={{ fontWeight: 600, color: '#92400e' }}>
+                <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
+                    <span style={{ color: '#6b7280', fontSize: '13px' }}>Per Hour Rate</span>
+                    <span style={{ fontWeight: 600, color: '#111827', fontSize: '13px' }}>
+                      ${selectedVehicle.price && selectedVehicle.hours ? Math.round(selectedVehicle.price / selectedVehicle.hours) : '---'}/hr
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
+                    <span style={{ color: '#6b7280', fontSize: '13px' }}>Deposit ({depositPercentage}%)</span>
+                    <span style={{ fontWeight: 600, color: '#92400e', fontSize: '13px' }}>
                       ${selectedVehicle.price ? Math.round(selectedVehicle.price * (depositPercentage / 100)).toLocaleString() : '---'}
                     </span>
                   </div>
-                  
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
-                    <span style={{ color: '#6b7280' }}>Balance Due</span>
-                    <span style={{ fontWeight: 600, color: '#374151' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
+                    <span style={{ color: '#6b7280', fontSize: '13px' }}>Balance Due</span>
+                    <span style={{ fontWeight: 600, color: '#374151', fontSize: '13px' }}>
                       ${selectedVehicle.price ? Math.round(selectedVehicle.price * ((100 - depositPercentage) / 100)).toLocaleString() : '---'}
                     </span>
                   </div>
@@ -1222,6 +1434,114 @@ export default function CallPad() {
                 {isQuoted(selectedVehicle.id) ? "Remove from Quote" : "Add to Quote"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {photoModalVehicle && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.9)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1001,
+          }}
+          onClick={() => setPhotoModalVehicle(null)}
+        >
+          <div 
+            style={{
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#fff', margin: 0 }}>
+                {photoModalVehicle.name}
+              </h2>
+              <button
+                onClick={() => setPhotoModalVehicle(null)}
+                style={{
+                  background: 'rgba(255,255,255,0.2)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '36px',
+                  height: '36px',
+                  cursor: 'pointer',
+                  fontSize: '18px',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                &#10005;
+              </button>
+            </div>
+            
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'center' }}>
+              {[photoModalVehicle.image, photoModalVehicle.image_2, photoModalVehicle.image_3, photoModalVehicle.image_4].filter(Boolean).map((img: string, idx: number) => (
+                <img 
+                  key={idx}
+                  src={img} 
+                  alt={`${photoModalVehicle.name} - ${idx + 1}`}
+                  style={{ 
+                    maxWidth: '45vw', 
+                    maxHeight: '40vh', 
+                    objectFit: 'contain', 
+                    borderRadius: '8px',
+                    background: '#1e293b',
+                  }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              ))}
+            </div>
+            
+            <div style={{ marginTop: '16px', display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {photoModalVehicle.capacity && (
+                <span style={{ background: 'rgba(255,255,255,0.2)', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', color: '#fff' }}>
+                  {photoModalVehicle.capacity} passengers
+                </span>
+              )}
+              {photoModalVehicle.category && (
+                <span style={{ background: 'rgba(99,102,241,0.5)', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', color: '#fff' }}>
+                  {photoModalVehicle.category}
+                </span>
+              )}
+              <span style={{ background: 'rgba(16,185,129,0.5)', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', color: '#fff', fontWeight: 600 }}>
+                {photoModalVehicle.priceDisplay}
+              </span>
+            </div>
+            
+            <button
+              onClick={() => {
+                toggleQuoted(photoModalVehicle);
+              }}
+              style={{
+                marginTop: '16px',
+                padding: '12px 32px',
+                borderRadius: '8px',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 600,
+                background: isQuoted(photoModalVehicle.id) ? '#dc2626' : '#10b981',
+                color: '#fff',
+              }}
+            >
+              {isQuoted(photoModalVehicle.id) ? "Remove from Quote" : "Quote This Vehicle"}
+            </button>
           </div>
         </div>
       )}

@@ -11,6 +11,7 @@ A Next.js application for searching party buses, limos, shuttle buses, and other
 - `src/app/api/zoho/find-lead/route.ts` - Stub endpoint for Zoho lead lookup
 - `src/app/api/zoho/save-call/route.ts` - Stub endpoint for saving calls to Zoho
 - `src/app/api/get-vehicles-for-call/route.ts` - Endpoint for getting vehicles during a call
+- `src/app/api/vehicle-recommendation/route.ts` - AI-powered selling points generator
 - `src/lib/supabase.ts` - Supabase client configuration
 - `next.config.ts` - Next.js configuration
 - `public/` - Static assets
@@ -69,8 +70,30 @@ The system recognizes vehicle preferences:
 ### Vehicle Gallery
 - Large 3-column grid with dark theme
 - Vehicle cards show: photo, name, capacity badge, category tag, price
-- Click "Quote" to mark vehicles as discussed
+- Click "Quote" to mark vehicles as discussed - triggers AI selling points
+- Click vehicle photo/name to see all photos in fullscreen gallery
+- Click "$" button to see all pricing tiers modal
 - Quoted vehicles appear in summary with running total
+
+### Gallery Filters
+- **Sort by** - Price Low to High, Price High to Low, Capacity
+- **Rate Focus** - 3hr, 4hr, 5hr, 6hr, 8hr rate options
+- **Vehicle Type Checkboxes** - Party Bus, Limo, Shuttle, Other
+
+### Pricing Modal ($ button)
+Shows all pricing tiers at once in a 2x2 grid:
+- **Standard** - Base price (highlighted)
+- **Prom Rate** - +15% for prom events
+- **Before 5 PM** - -10% for daytime events
+- **After 5 PM** - +10% for evening events
+Also shows: Per hour rate, Deposit amount, Balance due
+
+### AI Selling Points
+When an agent quotes a vehicle, OpenAI generates 3 concise selling points based on:
+- Vehicle type and capacity
+- Event type and passenger count
+- Location and date context
+Displayed in a cyan panel above the vehicle gallery
 
 ### Pricing & Payment
 - Total quoted price (auto-calculated from quoted vehicles)
