@@ -89,6 +89,22 @@ const CITY_KEYWORDS = [
   'minneapolis', 'st louis', 'kansas city', 'nashville', 'memphis', 'charlotte',
 ];
 
+const COMMON_FIRST_NAMES = [
+  'james', 'john', 'robert', 'michael', 'david', 'william', 'richard', 'joseph', 'thomas', 'charles',
+  'christopher', 'daniel', 'matthew', 'anthony', 'mark', 'donald', 'steven', 'paul', 'andrew', 'joshua',
+  'kenneth', 'kevin', 'brian', 'george', 'timothy', 'ronald', 'edward', 'jason', 'jeffrey', 'ryan',
+  'jacob', 'gary', 'nicholas', 'eric', 'jonathan', 'stephen', 'larry', 'justin', 'scott', 'brandon',
+  'benjamin', 'samuel', 'raymond', 'gregory', 'frank', 'alexander', 'patrick', 'jack', 'dennis', 'jerry',
+  'mary', 'patricia', 'jennifer', 'linda', 'elizabeth', 'barbara', 'susan', 'jessica', 'sarah', 'karen',
+  'lisa', 'nancy', 'betty', 'margaret', 'sandra', 'ashley', 'kimberly', 'emily', 'donna', 'michelle',
+  'dorothy', 'carol', 'amanda', 'melissa', 'deborah', 'stephanie', 'rebecca', 'sharon', 'laura', 'cynthia',
+  'kathleen', 'amy', 'angela', 'shirley', 'anna', 'brenda', 'pamela', 'emma', 'nicole', 'helen',
+  'samantha', 'katherine', 'christine', 'debra', 'rachel', 'carolyn', 'janet', 'catherine', 'maria', 'heather',
+  'diane', 'ruth', 'julie', 'olivia', 'joyce', 'virginia', 'victoria', 'kelly', 'lauren', 'christina',
+  'joe', 'mike', 'chris', 'matt', 'nick', 'tony', 'steve', 'dave', 'dan', 'jim', 'bob', 'tom', 'bill',
+  'alex', 'ben', 'sam', 'max', 'jake', 'luke', 'adam', 'josh', 'kyle', 'sean', 'marcus', 'floyd', 'sarah',
+];
+
 function detectPattern(text: string): DetectedItem | null {
   const trimmed = text.trim();
   if (!trimmed) return null;
@@ -161,6 +177,11 @@ function detectPattern(text: string): DetectedItem | null {
     if (isNotCity && isNotVehicle && isNotEvent) {
       return { type: 'name', value: trimmed, confidence: 0.7, original: trimmed };
     }
+  }
+  
+  if (COMMON_FIRST_NAMES.includes(lowerText)) {
+    const capitalizedName = trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+    return { type: 'name', value: capitalizedName, confidence: 0.8, original: trimmed };
   }
 
   if (TIME_REGEX.test(trimmed)) {
