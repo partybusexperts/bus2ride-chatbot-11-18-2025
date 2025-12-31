@@ -203,6 +203,7 @@ export default function CallPad() {
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [photoModalVehicle, setPhotoModalVehicle] = useState<any>(null);
+  const [photoModalIndex, setPhotoModalIndex] = useState(0);
   const [vehicleRecommendation, setVehicleRecommendation] = useState<string>("");
   const [loadingRecommendation, setLoadingRecommendation] = useState(false);
   
@@ -569,6 +570,12 @@ export default function CallPad() {
             category: vehicle.category,
             price: vehicle.priceDisplay,
             amenities: vehicle.amenities || [],
+            description: vehicle.description || vehicle.short_description || '',
+            custom_instructions: vehicle.custom_instructions || vehicle.instructions || '',
+            price_3hr: vehicle.price_3hr,
+            price_4hr: vehicle.price_4hr,
+            price_5hr: vehicle.price_5hr,
+            price_6hr: vehicle.price_6hr,
           },
           tripContext: {
             eventType: confirmedData.eventType,
@@ -1518,7 +1525,42 @@ export default function CallPad() {
         </div>
       )}
 
-      {photoModalVehicle && (
+      {photoModalVehicle && (() => {
+        const photos = [photoModalVehicle.image, photoModalVehicle.image_2, photoModalVehicle.image_3, photoModalVehicle.image_4].filter(Boolean);
+        const currentIndex = Math.min(photoModalIndex, photos.length - 1);
+        const pricingTiers = [
+          { label: 'Standard', hours: [3, 4, 5, 6, 7, 8, 9, 10], prefix: 'price_' },
+          { label: 'Prom', hours: [6, 7, 8, 9, 10], prefix: 'prom_price_' },
+          { label: 'Before 5PM', hours: [3, 4, 5, 6, 7], prefix: 'before5pm_' },
+          { label: 'After 5PM', hours: [3, 4, 5, 6, 7, 8], prefix: 'after5pm_' },
+        ];
+        const depositPercent = daysUntilEvent <= 7 ? 100 : 50;
+        const customInstructions = photoModalVehicle.custom_instructions || photoModalVehicle.instructions || '';
+        
+        const findSimilarVehicle = (type: 'affordable' | 'premium' | 'larger' | 'smaller') => {
+          let pool = [...filteredVehicles].filter(v => v.id !== photoModalVehicle.id);
+          if (pool.length === 0) {
+            pool = [...vehicles].filter(v => v.id !== photoModalVehicle.id);
+          }
+          const currentPrice = photoModalVehicle[`price_${rateHours}hr`] || photoModalVehicle.price || 0;
+          const currentCap = photoModalVehicle.capacity || 0;
+          
+          if (type === 'affordable') {
+            return pool.filter(v => (v[`price_${rateHours}hr`] || v.price || 0) < currentPrice)
+              .sort((a, b) => (b[`price_${rateHours}hr`] || b.price || 0) - (a[`price_${rateHours}hr`] || a.price || 0))[0];
+          } else if (type === 'premium') {
+            return pool.filter(v => (v[`price_${rateHours}hr`] || v.price || 0) > currentPrice)
+              .sort((a, b) => (a[`price_${rateHours}hr`] || a.price || 0) - (b[`price_${rateHours}hr`] || b.price || 0))[0];
+          } else if (type === 'larger') {
+            return pool.filter(v => (v.capacity || 0) > currentCap)
+              .sort((a, b) => (a.capacity || 0) - (b.capacity || 0))[0];
+          } else {
+            return pool.filter(v => (v.capacity || 0) < currentCap)
+              .sort((a, b) => (b.capacity || 0) - (a.capacity || 0))[0];
+          }
+        };
+        
+        return (
         <div 
           style={{
             position: 'fixed',
@@ -1526,95 +1568,147 @@ export default function CallPad() {
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'rgba(0,0,0,0.9)',
+            background: 'rgba(0,0,0,0.95)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 1001,
+            padding: '20px',
           }}
-          onClick={() => setPhotoModalVehicle(null)}
+          onClick={() => { setPhotoModalVehicle(null); setPhotoModalIndex(0); }}
         >
           <div 
             style={{
-              maxWidth: '90vw',
+              width: '100%',
+              maxWidth: '900px',
               maxHeight: '90vh',
+              overflowY: 'auto',
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'center',
+              background: '#1e293b',
+              borderRadius: '16px',
+              padding: '20px',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '16px' }}>
-              <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#fff', margin: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#fff', margin: 0 }}>
                 {photoModalVehicle.name}
+                {photoModalVehicle.capacity && <span style={{ fontWeight: 400, color: '#94a3b8', marginLeft: '8px' }}>({photoModalVehicle.capacity} pax)</span>}
               </h2>
               <button
-                onClick={() => setPhotoModalVehicle(null)}
-                style={{
-                  background: 'rgba(255,255,255,0.2)',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: '36px',
-                  height: '36px',
-                  cursor: 'pointer',
-                  fontSize: '18px',
-                  color: '#fff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                &#10005;
-              </button>
+                onClick={() => { setPhotoModalVehicle(null); setPhotoModalIndex(0); }}
+                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: '36px', height: '36px', cursor: 'pointer', fontSize: '18px', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >&#10005;</button>
             </div>
             
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'center' }}>
-              {[photoModalVehicle.image, photoModalVehicle.image_2, photoModalVehicle.image_3, photoModalVehicle.image_4].filter(Boolean).map((img: string, idx: number) => (
+            {photos.length > 0 && (
+              <div style={{ position: 'relative', marginBottom: '16px' }}>
                 <img 
-                  key={idx}
-                  src={img} 
-                  alt={`${photoModalVehicle.name} - ${idx + 1}`}
-                  style={{ 
-                    maxWidth: '45vw', 
-                    maxHeight: '40vh', 
-                    objectFit: 'contain', 
-                    borderRadius: '8px',
-                    background: '#1e293b',
-                  }}
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
+                  src={photos[currentIndex]} 
+                  alt={photoModalVehicle.name}
+                  style={{ width: '100%', height: '300px', objectFit: 'cover', borderRadius: '12px' }}
+                  onError={(e) => { (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23334155" width="100" height="100"/></svg>'; }}
                 />
-              ))}
+                {photos.length > 1 && (
+                  <>
+                    <button onClick={() => setPhotoModalIndex((currentIndex - 1 + photos.length) % photos.length)} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.7)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', color: '#fff', fontSize: '20px', cursor: 'pointer' }}>&lt;</button>
+                    <button onClick={() => setPhotoModalIndex((currentIndex + 1) % photos.length)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.7)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', color: '#fff', fontSize: '20px', cursor: 'pointer' }}>&gt;</button>
+                    <div style={{ position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px' }}>
+                      {photos.map((_, i) => (
+                        <button key={i} onClick={() => setPhotoModalIndex(i)} style={{ width: '10px', height: '10px', borderRadius: '50%', border: 'none', background: i === currentIndex ? '#fff' : 'rgba(255,255,255,0.4)', cursor: 'pointer' }} />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+            
+            {customInstructions && (
+              <div style={{ background: 'rgba(249,115,22,0.15)', border: '2px solid #f97316', borderRadius: '10px', padding: '12px', marginBottom: '16px', animation: 'pulse 2s infinite' }}>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: '#f97316', textTransform: 'uppercase', marginBottom: '6px' }}>Custom Instructions</div>
+                <div style={{ fontSize: '13px', color: '#fed7aa', lineHeight: 1.5 }}>{customInstructions}</div>
+              </div>
+            )}
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+              {pricingTiers.map(tier => {
+                const prices = tier.hours.map(h => {
+                  const key = `${tier.prefix}${h}hr`;
+                  const price = photoModalVehicle[key];
+                  return price ? { hours: h, price } : null;
+                }).filter(Boolean);
+                if (prices.length === 0) return null;
+                return (
+                  <div key={tier.label} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '10px', padding: '12px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', marginBottom: '8px' }}>{tier.label}</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {prices.map((p: any) => (
+                        <span key={p.hours} style={{ background: p.hours === rateHours ? '#10b981' : 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', color: '#fff' }}>
+                          {p.hours}hr: ${p.price.toLocaleString()}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
             
-            <div style={{ marginTop: '16px', display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
-              {photoModalVehicle.capacity && (
-                <span style={{ background: 'rgba(255,255,255,0.2)', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', color: '#fff' }}>
-                  {photoModalVehicle.capacity} passengers
-                </span>
-              )}
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
+              <div style={{ flex: 1, minWidth: '150px', background: depositPercent === 100 ? 'rgba(220,38,38,0.2)' : 'rgba(234,179,8,0.2)', borderRadius: '10px', padding: '12px', border: `1px solid ${depositPercent === 100 ? '#dc2626' : '#eab308'}` }}>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: depositPercent === 100 ? '#fca5a5' : '#fde047', textTransform: 'uppercase' }}>Deposit Required</div>
+                <div style={{ fontSize: '20px', fontWeight: 700, color: '#fff' }}>{depositPercent}%</div>
+                <div style={{ fontSize: '11px', color: '#94a3b8' }}>{depositPercent === 100 ? 'Within 7 days' : 'More than 7 days out'}</div>
+              </div>
               {photoModalVehicle.category && (
-                <span style={{ background: 'rgba(99,102,241,0.5)', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', color: '#fff' }}>
-                  {photoModalVehicle.category}
-                </span>
+                <div style={{ flex: 1, minWidth: '150px', background: 'rgba(99,102,241,0.2)', borderRadius: '10px', padding: '12px', border: '1px solid #6366f1' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 600, color: '#a5b4fc', textTransform: 'uppercase' }}>Category</div>
+                  <div style={{ fontSize: '16px', fontWeight: 600, color: '#fff' }}>{photoModalVehicle.category}</div>
+                </div>
               )}
-              <span style={{ background: 'rgba(16,185,129,0.5)', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', color: '#fff', fontWeight: 600 }}>
-                {photoModalVehicle.priceDisplay}
-              </span>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+              {[
+                { label: 'More Affordable', type: 'affordable' as const, icon: '💰' },
+                { label: 'More Premium', type: 'premium' as const, icon: '✨' },
+                { label: 'Smaller', type: 'smaller' as const, icon: '⬇️' },
+                { label: 'Larger', type: 'larger' as const, icon: '⬆️' },
+              ].map(btn => {
+                const similar = findSimilarVehicle(btn.type);
+                return (
+                  <button
+                    key={btn.type}
+                    onClick={() => { if (similar) { setPhotoModalVehicle(similar); setPhotoModalIndex(0); } }}
+                    disabled={!similar}
+                    style={{
+                      flex: 1,
+                      minWidth: '100px',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: similar ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.03)',
+                      color: similar ? '#fff' : '#64748b',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      cursor: similar ? 'pointer' : 'not-allowed',
+                    }}
+                  >
+                    {btn.icon} {btn.label}
+                  </button>
+                );
+              })}
             </div>
             
             <button
-              onClick={() => {
-                toggleQuoted(photoModalVehicle);
-              }}
+              onClick={() => { toggleQuoted(photoModalVehicle); }}
               style={{
-                marginTop: '16px',
-                padding: '12px 32px',
+                width: '100%',
+                padding: '14px',
                 borderRadius: '8px',
                 border: 'none',
                 cursor: 'pointer',
-                fontSize: '14px',
+                fontSize: '15px',
                 fontWeight: 600,
                 background: isQuoted(photoModalVehicle.id) ? '#dc2626' : '#10b981',
                 color: '#fff',
@@ -1624,7 +1718,8 @@ export default function CallPad() {
             </button>
           </div>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

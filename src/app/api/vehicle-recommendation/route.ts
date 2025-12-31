@@ -17,24 +17,42 @@ export async function POST(request: Request) {
       );
     }
 
-    const prompt = `You are a helpful sales assistant for a luxury vehicle rental company (party buses, limos, shuttles).
+    const vehicleName = vehicle.name || '';
+    const capacity = vehicle.capacity || 0;
+    const category = vehicle.category || '';
+    const description = vehicle.description || vehicle.short_description || '';
+    const instructions = vehicle.custom_instructions || '';
+    
+    const prompt = `Generate 3 quick selling points for this vehicle. NO generic phrases. Be SPECIFIC to THIS vehicle.
 
-Generate 3 SHORT selling points (1 line each) that an agent can use when recommending this vehicle to a customer. Be specific to the vehicle and event type. Focus on benefits the customer cares about.
+VEHICLE: ${vehicleName}
+TYPE: ${category}
+FITS: ${capacity} passengers
+${description ? `DETAILS: ${description}` : ''}
+${instructions ? `NOTES: ${instructions}` : ''}
 
-Vehicle Information:
-- Name: ${vehicle.name}
-- Type: ${vehicle.category || 'Luxury Vehicle'}
-- Capacity: ${vehicle.capacity || 'Multiple passengers'}
-- Price: ${vehicle.price || 'Competitive pricing'}
-${vehicle.amenities?.length > 0 ? `- Amenities: ${vehicle.amenities.join(', ')}` : ''}
+CUSTOMER NEEDS:
+- Event: ${tripContext?.eventType || 'event'}
+- Group: ${tripContext?.passengers || capacity} people
+- Area: ${tripContext?.city || 'local'}
 
-Customer Context:
-- Event: ${tripContext?.eventType || 'Special occasion'}
-- Party size: ${tripContext?.passengers || 'Group'}
-- Date: ${tripContext?.date || 'Upcoming'}
-- Location: ${tripContext?.city || 'Local'}
+RULES:
+1. Each point MAX 10 words
+2. Focus on what makes THIS vehicle special
+3. Mention capacity fit, vehicle features, or value
+4. NO filler words like "perfect", "great", "amazing"
+5. NO generic statements that could apply to any vehicle
+6. Start each with •
 
-Respond with exactly 3 bullet points, each starting with a bullet point character. Keep each point under 15 words. Be enthusiastic but professional.`;
+Examples of GOOD points:
+• Fits your group of 25 with room to spare
+• Built-in bar and dance pole included
+• Lowest price for a 30-passenger bus here
+
+Examples of BAD points (too generic):
+• Perfect for your special occasion
+• Great value for your group
+• Comfortable transportation`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
