@@ -59,6 +59,13 @@ When multiple cities are entered (e.g., first "phoenix", then "mesa"):
 - Current active city drives vehicle search
 - History helps track multi-city inquiries
 
+### City Disambiguation
+For ambiguous city names (cities with the same name in multiple states):
+- System detects: westmont, springfield, clinton, franklin, madison, georgetown, greenville, bristol, auburn, oxford, riverside, fairfield, manchester, columbia, lexington
+- Yellow popup shows state buttons (e.g., IL, NJ, CA, PA for Westmont)
+- Clicking state button sets city as "Westmont, IL"
+- Also supports abbreviations: nyc, la, sf, dc, philly
+
 **Auto-Population:** High-confidence detections (80%+) automatically populate fields and show as confirmed chips with green checkmarks.
 
 **Bulk Actions:** "Confirm All" and "Reject All" buttons for quick chip management.

@@ -247,6 +247,21 @@ function detectPattern(text: string): DetectedItem | null {
   if (businessPattern.test(trimmed)) {
     return { type: 'place', value: trimmed, confidence: 0.85, original: trimmed };
   }
+  
+  const namedVenuePattern = /(bar|grill|club|restaurant|pub|tavern|lounge|brewery|winery|steakhouse|venue|arena|stadium|hotel|resort|casino|theater|theatre)\s+(called|named)\s+\w+/i;
+  if (namedVenuePattern.test(trimmed)) {
+    return { type: 'place', value: trimmed, confidence: 0.9, original: trimmed };
+  }
+  
+  const venueNearPattern = /\b(bar|grill|club|restaurant|pub|tavern|lounge|brewery|winery|steakhouse)\b.*\b(near|by|at|next\s+to|across\s+from)\b/i;
+  if (venueNearPattern.test(trimmed)) {
+    return { type: 'place', value: trimmed, confidence: 0.85, original: trimmed };
+  }
+  
+  const cityVenuePattern = new RegExp(`^(${CITY_KEYWORDS.join('|')})\\s+(bar|grill|club|restaurant|pub|tavern|lounge|brewery|venue|hotel|casino)`, 'i');
+  if (cityVenuePattern.test(trimmed)) {
+    return { type: 'place', value: trimmed, confidence: 0.9, original: trimmed };
+  }
 
   for (const city of CITY_KEYWORDS) {
     if (lowerText === city || lowerText.startsWith(city + ' ') || lowerText.includes(' ' + city)) {
