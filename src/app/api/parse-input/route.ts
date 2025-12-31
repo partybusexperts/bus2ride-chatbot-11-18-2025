@@ -181,7 +181,7 @@ function detectPattern(text: string): DetectedItem | null {
   
   if (COMMON_FIRST_NAMES.includes(lowerText)) {
     const capitalizedName = trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
-    return { type: 'name', value: capitalizedName, confidence: 0.8, original: trimmed };
+    return { type: 'name', value: capitalizedName, confidence: 0.85, original: trimmed };
   }
 
   if (TIME_REGEX.test(trimmed)) {
