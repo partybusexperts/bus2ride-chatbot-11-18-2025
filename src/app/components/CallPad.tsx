@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 type DetectedType = 
   | 'phone' | 'email' | 'zip' | 'city' | 'date' | 'time' 
   | 'passengers' | 'hours' | 'pickup_address' | 'destination' 
-  | 'dropoff_address' | 'event_type' | 'name' | 'website' | 'unknown';
+  | 'dropoff_address' | 'event_type' | 'vehicle_type' | 'name' | 'website' | 'unknown';
 
 interface DetectedChip {
   id: string;
@@ -50,6 +50,7 @@ const TYPE_LABELS: Record<DetectedType, string> = {
   destination: 'Destination',
   dropoff_address: 'Drop-off',
   event_type: 'Event',
+  vehicle_type: 'Vehicle Type',
   name: 'Name',
   website: 'Website',
   unknown: 'Unknown',
@@ -68,6 +69,7 @@ const TYPE_COLORS: Record<DetectedType, { bg: string; text: string; border: stri
   destination: { bg: '#fef9c3', text: '#854d0e', border: '#eab308' },
   dropoff_address: { bg: '#fee2e2', text: '#991b1b', border: '#ef4444' },
   event_type: { bg: '#f3e8ff', text: '#6b21a8', border: '#a855f7' },
+  vehicle_type: { bg: '#fef3c7', text: '#78350f', border: '#d97706' },
   name: { bg: '#f1f5f9', text: '#475569', border: '#94a3b8' },
   website: { bg: '#cffafe', text: '#155e75', border: '#06b6d4' },
   unknown: { bg: '#f3f4f6', text: '#6b7280', border: '#9ca3af' },
@@ -169,6 +171,7 @@ export default function CallPad() {
     passengers: "",
     hours: "",
     eventType: "",
+    vehicleType: "",
     date: "",
     pickupTime: "",
     pickupAddress: "",
@@ -209,6 +212,7 @@ export default function CallPad() {
       destination: 'destination',
       dropoff_address: 'dropoffAddress',
       event_type: 'eventType',
+      vehicle_type: 'vehicleType',
       name: 'callerName',
       website: 'websiteUrl',
     };
@@ -257,7 +261,11 @@ export default function CallPad() {
           }
         });
         
-        setChips(prev => [...prev, ...newChips]);
+        setChips(prev => {
+          const existingValues = new Set(prev.map(c => `${c.type}:${c.value.toLowerCase()}`));
+          const uniqueNewChips = newChips.filter(c => !existingValues.has(`${c.type}:${c.value.toLowerCase()}`));
+          return [...prev, ...uniqueNewChips];
+        });
         setSmartInput("");
       }
     } catch (err) {
@@ -306,13 +314,12 @@ export default function CallPad() {
   }, []);
 
   const confirmAllChips = useCallback(() => {
-    setChips(prev => {
-      prev.filter(c => !c.confirmed && c.type !== 'unknown').forEach(chip => {
-        applyChipToData(chip);
-      });
-      return prev.map(c => c.type !== 'unknown' ? { ...c, confirmed: true } : c);
+    const pendingChipsToConfirm = chips.filter(c => !c.confirmed && c.type !== 'unknown');
+    pendingChipsToConfirm.forEach(chip => {
+      applyChipToData(chip);
     });
-  }, [applyChipToData]);
+    setChips(prev => prev.map(c => c.type !== 'unknown' ? { ...c, confirmed: true } : c));
+  }, [chips, applyChipToData]);
 
   const rejectAllChips = useCallback(() => {
     setChips([]);
@@ -413,18 +420,35 @@ export default function CallPad() {
   const dayOfWeek = useMemo(() => getDayOfWeek(confirmedData.date), [confirmedData.date]);
   const daysUntilEvent = useMemo(() => calculateDaysUntilEvent(confirmedData.date), [confirmedData.date]);
   
+  const lastQuotedVehicle = useMemo(() => {
+    return quotedVehicles.length > 0 ? quotedVehicles[quotedVehicles.length - 1] : null;
+  }, [quotedVehicles]);
+
+  const currentVehiclePrice = useMemo(() => {
+    return lastQuotedVehicle?.price || 0;
+  }, [lastQuotedVehicle]);
+
   const totalQuotedPrice = useMemo(() => {
     return quotedVehicles.reduce((sum, v) => sum + (v.price || 0), 0);
   }, [quotedVehicles]);
+
+  const depositPercentage = useMemo(() => {
+    return daysUntilEvent <= 7 ? 100 : 50;
+  }, [daysUntilEvent]);
+
+  const currentDepositAmount = useMemo(() => {
+    if (currentVehiclePrice === 0) return 0;
+    return daysUntilEvent <= 7 ? currentVehiclePrice : Math.round(currentVehiclePrice * 0.5);
+  }, [currentVehiclePrice, daysUntilEvent]);
+
+  const currentBalanceDue = useMemo(() => {
+    return currentVehiclePrice - currentDepositAmount;
+  }, [currentVehiclePrice, currentDepositAmount]);
 
   const depositAmount = useMemo(() => {
     if (totalQuotedPrice === 0) return 0;
     return daysUntilEvent <= 7 ? totalQuotedPrice : Math.round(totalQuotedPrice * 0.5);
   }, [totalQuotedPrice, daysUntilEvent]);
-
-  const depositPercentage = useMemo(() => {
-    return daysUntilEvent <= 7 ? 100 : 50;
-  }, [daysUntilEvent]);
 
   const balanceDue = useMemo(() => {
     return totalQuotedPrice - depositAmount;
@@ -550,9 +574,15 @@ export default function CallPad() {
             </div>
           </div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>Total</div>
-            <div style={{ fontSize: '14px', color: totalQuotedPrice > 0 ? '#4ade80' : '#475569', fontWeight: 700 }}>
-              ${totalQuotedPrice.toLocaleString()}
+            <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>Current Price</div>
+            <div style={{ fontSize: '14px', color: currentVehiclePrice > 0 ? '#4ade80' : '#475569', fontWeight: 700 }}>
+              ${currentVehiclePrice.toLocaleString()}
+            </div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>Deposit</div>
+            <div style={{ fontSize: '14px', color: currentDepositAmount > 0 ? '#fbbf24' : '#475569', fontWeight: 700 }}>
+              ${currentDepositAmount.toLocaleString()}
             </div>
           </div>
         </div>
@@ -819,23 +849,35 @@ export default function CallPad() {
           </div>
 
           <div style={{ background: '#fff', padding: '14px', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-            <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '10px', color: '#374151' }}>Pricing</h3>
+            <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '10px', color: '#374151' }}>
+              Current Vehicle Pricing
+              {lastQuotedVehicle && (
+                <span style={{ marginLeft: '6px', fontWeight: 400, color: '#6b7280', fontSize: '11px' }}>
+                  ({lastQuotedVehicle.name})
+                </span>
+              )}
+            </h3>
             <div style={{ display: 'grid', gap: '8px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 10px', background: '#f9fafb', borderRadius: '6px' }}>
-                <span style={{ fontSize: '12px', color: '#6b7280' }}>Total</span>
-                <span style={{ fontSize: '16px', fontWeight: 700, color: '#111827' }}>${totalQuotedPrice.toLocaleString()}</span>
+                <span style={{ fontSize: '12px', color: '#6b7280' }}>Price</span>
+                <span style={{ fontSize: '16px', fontWeight: 700, color: '#111827' }}>${currentVehiclePrice.toLocaleString()}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 10px', background: '#fef3c7', borderRadius: '6px' }}>
                 <span style={{ fontSize: '12px', color: '#92400e' }}>Deposit ({depositPercentage}%)</span>
-                <span style={{ fontSize: '16px', fontWeight: 700, color: '#92400e' }}>${depositAmount.toLocaleString()}</span>
+                <span style={{ fontSize: '16px', fontWeight: 700, color: '#92400e' }}>${currentDepositAmount.toLocaleString()}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 10px', background: '#f9fafb', borderRadius: '6px' }}>
                 <span style={{ fontSize: '12px', color: '#6b7280' }}>Balance</span>
-                <span style={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>${balanceDue.toLocaleString()}</span>
+                <span style={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>${currentBalanceDue.toLocaleString()}</span>
               </div>
               {daysUntilEvent <= 7 && daysUntilEvent !== Infinity && (
                 <div style={{ fontSize: '11px', color: '#dc2626', background: '#fef2f2', padding: '6px 8px', borderRadius: '4px' }}>
                   Event within 7 days - 100% deposit required
+                </div>
+              )}
+              {quotedVehicles.length > 1 && (
+                <div style={{ fontSize: '11px', color: '#6b7280', background: '#f3f4f6', padding: '6px 8px', borderRadius: '4px', marginTop: '4px' }}>
+                  {quotedVehicles.length} vehicles quoted (Total: ${totalQuotedPrice.toLocaleString()})
                 </div>
               )}
             </div>

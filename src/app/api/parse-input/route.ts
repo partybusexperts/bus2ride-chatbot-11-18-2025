@@ -163,6 +163,12 @@ function detectPattern(text: string): DetectedItem | null {
     }
   }
 
+  for (const [keyword, vehicleType] of Object.entries(VEHICLE_TYPE_KEYWORDS)) {
+    if (lowerText === keyword || lowerText.includes(keyword)) {
+      return { type: 'vehicle_type', value: vehicleType, confidence: 0.9, original: trimmed };
+    }
+  }
+
   for (const city of CITY_KEYWORDS) {
     if (lowerText === city || lowerText.startsWith(city + ' ') || lowerText.includes(' ' + city)) {
       return { type: 'city', value: trimmed, confidence: 0.9, original: trimmed };

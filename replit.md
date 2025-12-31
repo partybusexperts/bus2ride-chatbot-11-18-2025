@@ -54,8 +54,17 @@ Agents can still:
 ### Results Dashboard
 A live dashboard at the top shows:
 - Location, Event, Date, Passengers, Hours
-- Vehicle count, Quoted count, Total quoted price
-All update in real-time as data is entered.
+- Vehicle count, Quoted count, Current Price, Deposit
+All update in real-time as data is entered. Shows the most recently quoted vehicle's pricing.
+
+### Vehicle Type Detection
+The system recognizes vehicle preferences:
+- Limousine, Limo, Stretch Limo
+- Party Bus, Limo Bus
+- Shuttle, Sprinter, Executive
+- Charter Bus, Coach
+- Sedan, SUV, Hummer
+- Trolley, Vintage, Rolls Royce, Bentley
 
 ### Vehicle Gallery
 - Large 3-column grid with dark theme
