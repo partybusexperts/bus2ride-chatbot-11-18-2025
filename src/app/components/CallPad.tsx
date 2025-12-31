@@ -14,6 +14,7 @@ interface DetectedChip {
   confidence: number;
   original: string;
   confirmed: boolean;
+  autoPopulated: boolean;
 }
 
 type QuotedVehicle = {
@@ -72,6 +73,8 @@ const TYPE_COLORS: Record<DetectedType, { bg: string; text: string; border: stri
   unknown: { bg: '#f3f4f6', text: '#6b7280', border: '#9ca3af' },
 };
 
+const AUTO_POPULATE_THRESHOLD = 0.8;
+
 function generateId() {
   return Math.random().toString(36).substr(2, 9);
 }
@@ -100,10 +103,62 @@ function calculateDaysUntilEvent(dateStr: string): number {
   }
 }
 
+function parseDateString(dateStr: string): string {
+  const lower = dateStr.toLowerCase().trim();
+  const months: Record<string, string> = {
+    jan: '01', january: '01', feb: '02', february: '02', mar: '03', march: '03',
+    apr: '04', april: '04', may: '05', jun: '06', june: '06',
+    jul: '07', july: '07', aug: '08', august: '08', sep: '09', september: '09',
+    oct: '10', october: '10', nov: '11', november: '11', dec: '12', december: '12',
+  };
+  
+  const currentYear = new Date().getFullYear();
+  
+  for (const [name, num] of Object.entries(months)) {
+    if (lower.startsWith(name)) {
+      const dayMatch = lower.match(/(\d{1,2})/);
+      if (dayMatch) {
+        const day = dayMatch[1].padStart(2, '0');
+        return `${currentYear}-${num}-${day}`;
+      }
+    }
+  }
+  
+  const slashMatch = lower.match(/^(\d{1,2})\/(\d{1,2})(\/(\d{2,4}))?$/);
+  if (slashMatch) {
+    const month = slashMatch[1].padStart(2, '0');
+    const day = slashMatch[2].padStart(2, '0');
+    let year = currentYear.toString();
+    if (slashMatch[4]) {
+      year = slashMatch[4].length === 2 ? '20' + slashMatch[4] : slashMatch[4];
+    }
+    return `${year}-${month}-${day}`;
+  }
+  
+  return '';
+}
+
+function parseTimeString(timeStr: string): string {
+  const lower = timeStr.toLowerCase().trim();
+  const match = lower.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+  if (match) {
+    let hour = parseInt(match[1], 10);
+    const minute = match[2] || '00';
+    const period = match[3]?.toLowerCase();
+    
+    if (period === 'pm' && hour < 12) hour += 12;
+    if (period === 'am' && hour === 12) hour = 0;
+    
+    return `${hour.toString().padStart(2, '0')}:${minute}`;
+  }
+  return '';
+}
+
 export default function CallPad() {
   const [smartInput, setSmartInput] = useState("");
   const [chips, setChips] = useState<DetectedChip[]>([]);
   const [parsingInput, setParsingInput] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
   
   const [confirmedData, setConfirmedData] = useState({
     agentName: "",
@@ -140,6 +195,36 @@ export default function CallPad() {
   const parseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const applyChipToData = useCallback((chip: DetectedChip) => {
+    const fieldMap: Partial<Record<DetectedType, keyof typeof confirmedData>> = {
+      phone: 'phone',
+      email: 'email',
+      zip: 'cityOrZip',
+      city: 'cityOrZip',
+      date: 'date',
+      time: 'pickupTime',
+      passengers: 'passengers',
+      hours: 'hours',
+      pickup_address: 'pickupAddress',
+      destination: 'destination',
+      dropoff_address: 'dropoffAddress',
+      event_type: 'eventType',
+      name: 'callerName',
+      website: 'websiteUrl',
+    };
+    
+    const field = fieldMap[chip.type];
+    if (field) {
+      let value = chip.value;
+      if (chip.type === 'date') {
+        value = parseDateString(chip.value) || chip.value;
+      } else if (chip.type === 'time') {
+        value = parseTimeString(chip.value) || chip.value;
+      }
+      setConfirmedData(prev => ({ ...prev, [field]: value }));
+    }
+  }, []);
+
   const parseInput = useCallback(async (text: string) => {
     if (!text.trim()) return;
     
@@ -153,14 +238,25 @@ export default function CallPad() {
       const data = await res.json();
       
       if (data.items && data.items.length > 0) {
-        const newChips: DetectedChip[] = data.items.map((item: any) => ({
-          id: generateId(),
-          type: item.type,
-          value: item.value,
-          confidence: item.confidence,
-          original: item.original || text,
-          confirmed: false,
-        }));
+        const newChips: DetectedChip[] = data.items.map((item: any) => {
+          const shouldAutoPopulate = item.confidence >= AUTO_POPULATE_THRESHOLD && item.type !== 'unknown';
+          return {
+            id: generateId(),
+            type: item.type,
+            value: item.value,
+            confidence: item.confidence,
+            original: item.original || text,
+            confirmed: shouldAutoPopulate,
+            autoPopulated: shouldAutoPopulate,
+          };
+        });
+        
+        newChips.forEach(chip => {
+          if (chip.autoPopulated) {
+            applyChipToData(chip);
+          }
+        });
+        
         setChips(prev => [...prev, ...newChips]);
         setSmartInput("");
       }
@@ -169,7 +265,7 @@ export default function CallPad() {
     } finally {
       setParsingInput(false);
     }
-  }, []);
+  }, [applyChipToData]);
 
   const handleInputKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && smartInput.trim()) {
@@ -199,38 +295,31 @@ export default function CallPad() {
       const chip = prev.find(c => c.id === chipId);
       if (!chip) return prev;
       
-      const fieldMap: Partial<Record<DetectedType, keyof typeof confirmedData>> = {
-        phone: 'phone',
-        email: 'email',
-        zip: 'cityOrZip',
-        city: 'cityOrZip',
-        date: 'date',
-        time: 'pickupTime',
-        passengers: 'passengers',
-        hours: 'hours',
-        pickup_address: 'pickupAddress',
-        destination: 'destination',
-        dropoff_address: 'dropoffAddress',
-        event_type: 'eventType',
-        name: 'callerName',
-        website: 'websiteUrl',
-      };
-      
-      const field = fieldMap[chip.type];
-      if (field) {
-        setConfirmedData(prev => ({ ...prev, [field]: chip.value }));
-      }
+      applyChipToData(chip);
       
       return prev.map(c => c.id === chipId ? { ...c, confirmed: true } : c);
     });
-  }, []);
+  }, [applyChipToData]);
 
   const rejectChip = useCallback((chipId: string) => {
     setChips(prev => prev.filter(c => c.id !== chipId));
   }, []);
 
+  const confirmAllChips = useCallback(() => {
+    setChips(prev => {
+      prev.filter(c => !c.confirmed && c.type !== 'unknown').forEach(chip => {
+        applyChipToData(chip);
+      });
+      return prev.map(c => c.type !== 'unknown' ? { ...c, confirmed: true } : c);
+    });
+  }, [applyChipToData]);
+
+  const rejectAllChips = useCallback(() => {
+    setChips([]);
+  }, []);
+
   const changeChipType = useCallback((chipId: string, newType: DetectedType) => {
-    setChips(prev => prev.map(c => c.id === chipId ? { ...c, type: newType } : c));
+    setChips(prev => prev.map(c => c.id === chipId ? { ...c, type: newType, confirmed: false, autoPopulated: false } : c));
   }, []);
 
   const doVehicleSearch = useCallback(async (cityOrZip: string, passengers: number | null, hours: number | null) => {
@@ -380,7 +469,7 @@ export default function CallPad() {
   }
 
   const pendingChips = chips.filter(c => !c.confirmed);
-  const confirmedChips = chips.filter(c => c.confirmed);
+  const autoPopulatedChips = chips.filter(c => c.autoPopulated);
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
@@ -404,11 +493,70 @@ export default function CallPad() {
   return (
     <div style={{ background: '#f3f4f6', padding: '16px', borderRadius: '12px' }}>
       <div style={{ 
-        background: 'linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%)',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #2d5a87 100%)',
         padding: '16px 20px',
         borderRadius: '10px',
         marginBottom: '16px',
       }}>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
+          gap: '12px',
+          marginBottom: '16px',
+          background: 'rgba(255,255,255,0.05)',
+          padding: '12px',
+          borderRadius: '8px',
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>Location</div>
+            <div style={{ fontSize: '14px', color: confirmedData.cityOrZip ? '#60a5fa' : '#475569', fontWeight: 600 }}>
+              {confirmedData.cityOrZip || '---'}
+            </div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>Event</div>
+            <div style={{ fontSize: '14px', color: confirmedData.eventType ? '#a78bfa' : '#475569', fontWeight: 600 }}>
+              {confirmedData.eventType || '---'}
+            </div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>Date</div>
+            <div style={{ fontSize: '14px', color: confirmedData.date ? '#fbbf24' : '#475569', fontWeight: 600 }}>
+              {confirmedData.date ? `${confirmedData.date} (${dayOfWeek.slice(0,3)})` : '---'}
+            </div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>Passengers</div>
+            <div style={{ fontSize: '14px', color: confirmedData.passengers ? '#34d399' : '#475569', fontWeight: 600 }}>
+              {confirmedData.passengers || '---'}
+            </div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>Hours</div>
+            <div style={{ fontSize: '14px', color: confirmedData.hours ? '#34d399' : '#475569', fontWeight: 600 }}>
+              {confirmedData.hours || '---'}
+            </div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>Vehicles</div>
+            <div style={{ fontSize: '14px', color: vehicles.length > 0 ? '#22d3ee' : '#475569', fontWeight: 600 }}>
+              {vehicles.length}
+            </div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>Quoted</div>
+            <div style={{ fontSize: '14px', color: quotedVehicles.length > 0 ? '#4ade80' : '#475569', fontWeight: 600 }}>
+              {quotedVehicles.length}
+            </div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>Total</div>
+            <div style={{ fontSize: '14px', color: totalQuotedPrice > 0 ? '#4ade80' : '#475569', fontWeight: 700 }}>
+              ${totalQuotedPrice.toLocaleString()}
+            </div>
+          </div>
+        </div>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <input
             ref={inputRef}
@@ -416,7 +564,7 @@ export default function CallPad() {
             value={smartInput}
             onChange={(e) => setSmartInput(e.target.value)}
             onKeyDown={handleInputKeyDown}
-            placeholder="Type anything: phone, address, city, date, passengers... (press Enter or wait)"
+            placeholder="Type: chicago, may 25th, wedding, pu at 9pm, 30 passengers... (comma-separated)"
             style={{
               flex: 1,
               padding: '14px 18px',
@@ -432,83 +580,132 @@ export default function CallPad() {
           )}
         </div>
         
-        {pendingChips.length > 0 && (
-          <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {pendingChips.map(chip => {
-              const colors = TYPE_COLORS[chip.type];
-              return (
-                <div
-                  key={chip.id}
+        {(pendingChips.length > 0 || autoPopulatedChips.length > 0) && (
+          <div style={{ marginTop: '12px' }}>
+            {pendingChips.length > 0 && (
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                <button
+                  onClick={confirmAllChips}
                   style={{
-                    background: colors.bg,
-                    border: `2px solid ${colors.border}`,
-                    borderRadius: '20px',
                     padding: '6px 12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: '#16a34a',
+                    color: '#fff',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
                   }}
                 >
-                  <select
-                    value={chip.type}
-                    onChange={(e) => changeChipType(chip.id, e.target.value as DetectedType)}
+                  Confirm All
+                </button>
+                <button
+                  onClick={rejectAllChips}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: '#dc2626',
+                    color: '#fff',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Reject All
+                </button>
+              </div>
+            )}
+            
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {chips.map(chip => {
+                const colors = TYPE_COLORS[chip.type];
+                const isAutoPopulated = chip.autoPopulated && chip.confirmed;
+                return (
+                  <div
+                    key={chip.id}
                     style={{
-                      background: 'transparent',
-                      border: 'none',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      color: colors.text,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {Object.entries(TYPE_LABELS).map(([key, label]) => (
-                      <option key={key} value={key}>{label}</option>
-                    ))}
-                  </select>
-                  <span style={{ fontSize: '13px', color: colors.text, fontWeight: 500 }}>
-                    {chip.value}
-                  </span>
-                  <button
-                    onClick={() => confirmChip(chip.id)}
-                    style={{
-                      background: '#16a34a',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '50%',
-                      width: '22px',
-                      height: '22px',
-                      cursor: 'pointer',
-                      fontSize: '12px',
+                      background: isAutoPopulated ? colors.bg : colors.bg,
+                      border: `2px solid ${isAutoPopulated ? '#16a34a' : colors.border}`,
+                      borderRadius: '20px',
+                      padding: '6px 12px',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
+                      gap: '8px',
+                      opacity: chip.confirmed ? 0.8 : 1,
                     }}
-                    title="Confirm"
                   >
-                    ✓
-                  </button>
-                  <button
-                    onClick={() => rejectChip(chip.id)}
-                    style={{
-                      background: '#dc2626',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '50%',
-                      width: '22px',
-                      height: '22px',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                    title="Reject"
-                  >
-                    ✕
-                  </button>
-                </div>
-              );
-            })}
+                    {isAutoPopulated && (
+                      <span style={{ fontSize: '12px', color: '#16a34a' }}>&#10003;</span>
+                    )}
+                    <select
+                      value={chip.type}
+                      onChange={(e) => changeChipType(chip.id, e.target.value as DetectedType)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: colors.text,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {Object.entries(TYPE_LABELS).map(([key, label]) => (
+                        <option key={key} value={key}>{label}</option>
+                      ))}
+                    </select>
+                    <span style={{ fontSize: '13px', color: colors.text, fontWeight: 500 }}>
+                      {chip.value}
+                    </span>
+                    {!chip.confirmed && (
+                      <>
+                        <button
+                          onClick={() => confirmChip(chip.id)}
+                          style={{
+                            background: '#16a34a',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '22px',
+                            height: '22px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                          title="Confirm"
+                        >
+                          &#10003;
+                        </button>
+                        <button
+                          onClick={() => rejectChip(chip.id)}
+                          style={{
+                            background: '#dc2626',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '22px',
+                            height: '22px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                          title="Reject"
+                        >
+                          &#10005;
+                        </button>
+                      </>
+                    )}
+                    {chip.confirmed && !isAutoPopulated && (
+                      <span style={{ fontSize: '10px', color: '#16a34a', fontWeight: 600 }}>CONFIRMED</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
@@ -798,22 +995,40 @@ export default function CallPad() {
                     <div style={{ fontSize: '15px', fontWeight: 700, color: '#34d399', marginBottom: '8px' }}>
                       {v.priceDisplay}
                     </div>
-                    <button
-                      onClick={() => toggleQuoted(v)}
-                      style={{
-                        width: '100%',
-                        padding: '8px',
-                        borderRadius: '6px',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        background: isQuoted(v.id) ? '#10b981' : '#3b82f6',
-                        color: '#fff',
-                      }}
-                    >
-                      {isQuoted(v.id) ? "✓ Quoted" : "Quote"}
-                    </button>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button
+                        onClick={() => toggleQuoted(v)}
+                        style={{
+                          flex: 1,
+                          padding: '8px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          background: isQuoted(v.id) ? '#10b981' : '#3b82f6',
+                          color: '#fff',
+                        }}
+                      >
+                        {isQuoted(v.id) ? "Quoted" : "Quote"}
+                      </button>
+                      <button
+                        onClick={() => setSelectedVehicle(v)}
+                        style={{
+                          padding: '8px 10px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          background: '#6366f1',
+                          color: '#fff',
+                        }}
+                        title="View pricing details"
+                      >
+                        $
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -821,6 +1036,153 @@ export default function CallPad() {
           )}
         </div>
       </div>
+
+      {selectedVehicle && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setSelectedVehicle(null)}
+        >
+          <div 
+            style={{
+              background: '#fff',
+              borderRadius: '12px',
+              padding: '24px',
+              maxWidth: '500px',
+              width: '90%',
+              maxHeight: '80vh',
+              overflow: 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#111827', margin: 0 }}>
+                {selectedVehicle.name}
+              </h2>
+              <button
+                onClick={() => setSelectedVehicle(null)}
+                style={{
+                  background: '#f3f4f6',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  cursor: 'pointer',
+                  fontSize: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                &#10005;
+              </button>
+            </div>
+            
+            {selectedVehicle.image && (
+              <img 
+                src={selectedVehicle.image} 
+                alt={selectedVehicle.name}
+                style={{ width: '100%', height: '200px', objectFit: 'cover', borderRadius: '8px', marginBottom: '16px' }}
+              />
+            )}
+
+            <div style={{ display: 'grid', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {selectedVehicle.capacity && (
+                  <span style={{ background: '#e0e7ff', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', color: '#3730a3', fontWeight: 500 }}>
+                    {selectedVehicle.capacity} passengers
+                  </span>
+                )}
+                {selectedVehicle.category && (
+                  <span style={{ background: '#f3e8ff', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', color: '#6b21a8', fontWeight: 500 }}>
+                    {selectedVehicle.category}
+                  </span>
+                )}
+                {selectedVehicle.city && (
+                  <span style={{ background: '#d1fae5', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', color: '#065f46', fontWeight: 500 }}>
+                    {selectedVehicle.city}
+                  </span>
+                )}
+              </div>
+
+              <div style={{ background: '#f9fafb', padding: '16px', borderRadius: '8px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#374151', marginBottom: '12px' }}>Pricing</h3>
+                
+                <div style={{ display: 'grid', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #e5e7eb' }}>
+                    <span style={{ color: '#6b7280' }}>Base Price</span>
+                    <span style={{ fontWeight: 600, color: '#111827' }}>{selectedVehicle.priceDisplay}</span>
+                  </div>
+                  
+                  {selectedVehicle.hours && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #e5e7eb' }}>
+                      <span style={{ color: '#6b7280' }}>Hours</span>
+                      <span style={{ fontWeight: 600, color: '#111827' }}>{selectedVehicle.hours} hrs</span>
+                    </div>
+                  )}
+                  
+                  {selectedVehicle.price && selectedVehicle.hours && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #e5e7eb' }}>
+                      <span style={{ color: '#6b7280' }}>Per Hour</span>
+                      <span style={{ fontWeight: 600, color: '#111827' }}>${Math.round(selectedVehicle.price / selectedVehicle.hours)}/hr</span>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #e5e7eb' }}>
+                    <span style={{ color: '#6b7280' }}>Deposit ({depositPercentage}%)</span>
+                    <span style={{ fontWeight: 600, color: '#92400e' }}>
+                      ${selectedVehicle.price ? Math.round(selectedVehicle.price * (depositPercentage / 100)).toLocaleString() : '---'}
+                    </span>
+                  </div>
+                  
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
+                    <span style={{ color: '#6b7280' }}>Balance Due</span>
+                    <span style={{ fontWeight: 600, color: '#374151' }}>
+                      ${selectedVehicle.price ? Math.round(selectedVehicle.price * ((100 - depositPercentage) / 100)).toLocaleString() : '---'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {selectedVehicle.description && (
+                <div style={{ fontSize: '13px', color: '#6b7280', lineHeight: 1.6 }}>
+                  {selectedVehicle.description}
+                </div>
+              )}
+
+              <button
+                onClick={() => {
+                  toggleQuoted(selectedVehicle);
+                  setSelectedVehicle(null);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  background: isQuoted(selectedVehicle.id) ? '#dc2626' : '#10b981',
+                  color: '#fff',
+                }}
+              >
+                {isQuoted(selectedVehicle.id) ? "Remove from Quote" : "Add to Quote"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

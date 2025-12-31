@@ -51,10 +51,14 @@ const CITY_KEYWORDS = [
   'phoenix', 'scottsdale', 'mesa', 'tempe', 'glendale', 'chandler', 'gilbert',
   'peoria', 'surprise', 'goodyear', 'avondale', 'tucson', 'las vegas', 'denver',
   'chicago', 'dallas', 'houston', 'austin', 'san antonio', 'los angeles',
+  'san diego', 'san francisco', 'seattle', 'portland', 'atlanta', 'miami',
+  'orlando', 'tampa', 'boston', 'new york', 'philadelphia', 'detroit',
+  'minneapolis', 'st louis', 'kansas city', 'nashville', 'memphis', 'charlotte',
 ];
 
 function detectPattern(text: string): DetectedItem | null {
   const trimmed = text.trim();
+  if (!trimmed) return null;
   
   const digitsOnly = trimmed.replace(/\D/g, '');
   if (digitsOnly.length === 10 || digitsOnly.length === 11) {
@@ -79,6 +83,27 @@ function detectPattern(text: string): DetectedItem | null {
     return { type: 'zip', value: trimmed, confidence: 0.95, original: trimmed };
   }
 
+  const lowerText = trimmed.toLowerCase();
+  
+  const puMatch = lowerText.match(/^(pu|pickup|pick\s*up)\s+(at\s+)?(.+)/i);
+  if (puMatch) {
+    const timeCheck = puMatch[3].match(/^(\d{1,2})(:\d{2})?\s*(am|pm)?$/i);
+    if (timeCheck) {
+      return { type: 'time', value: puMatch[3], confidence: 0.9, original: trimmed };
+    }
+    return { type: 'pickup_address', value: puMatch[3], confidence: 0.85, original: trimmed };
+  }
+  
+  const doMatch = lowerText.match(/^(do|dropoff|drop\s*off)\s+(at\s+)?(.+)/i);
+  if (doMatch) {
+    return { type: 'dropoff_address', value: doMatch[3], confidence: 0.85, original: trimmed };
+  }
+  
+  const destMatch = lowerText.match(/^(to|going\s+to|destination)\s+(.+)/i);
+  if (destMatch) {
+    return { type: 'destination', value: destMatch[2], confidence: 0.85, original: trimmed };
+  }
+
   if (TIME_REGEX.test(trimmed)) {
     return { type: 'time', value: trimmed, confidence: 0.9, original: trimmed };
   }
@@ -99,16 +124,15 @@ function detectPattern(text: string): DetectedItem | null {
     return { type: 'hours', value: hoursMatch[1], confidence: 0.85, original: trimmed };
   }
 
-  const lowerText = trimmed.toLowerCase();
   for (const event of EVENT_KEYWORDS) {
-    if (lowerText.includes(event)) {
-      return { type: 'event_type', value: trimmed, confidence: 0.8, original: trimmed };
+    if (lowerText === event || lowerText.startsWith(event + ' ') || lowerText.endsWith(' ' + event)) {
+      return { type: 'event_type', value: trimmed, confidence: 0.9, original: trimmed };
     }
   }
 
   for (const city of CITY_KEYWORDS) {
-    if (lowerText.includes(city)) {
-      return { type: 'city', value: trimmed, confidence: 0.8, original: trimmed };
+    if (lowerText === city || lowerText.startsWith(city + ' ') || lowerText.includes(' ' + city)) {
+      return { type: 'city', value: trimmed, confidence: 0.9, original: trimmed };
     }
   }
 
@@ -168,25 +192,46 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ items: [] });
     }
 
-    const patternResult = detectPattern(text);
-    if (patternResult && patternResult.confidence >= 0.8) {
-      return NextResponse.json({ items: [patternResult] });
+    const segments = text.split(',').map(s => s.trim()).filter(s => s.length > 0);
+    
+    if (segments.length === 0) {
+      return NextResponse.json({ items: [] });
     }
 
-    if (useAI && text.length > 3) {
-      const aiResults = await parseWithAI(text);
-      if (aiResults.length > 0) {
-        return NextResponse.json({ items: aiResults });
+    const allItems: DetectedItem[] = [];
+    const unknownSegments: string[] = [];
+
+    for (const segment of segments) {
+      const patternResult = detectPattern(segment);
+      if (patternResult && patternResult.confidence >= 0.8) {
+        allItems.push(patternResult);
+      } else if (patternResult) {
+        allItems.push(patternResult);
+      } else {
+        unknownSegments.push(segment);
       }
     }
 
-    if (patternResult) {
-      return NextResponse.json({ items: [patternResult] });
+    if (useAI && unknownSegments.length > 0) {
+      for (const segment of unknownSegments) {
+        if (segment.length > 3) {
+          const aiResults = await parseWithAI(segment);
+          if (aiResults.length > 0) {
+            allItems.push(...aiResults);
+          } else {
+            allItems.push({ type: 'unknown', value: segment, confidence: 0, original: segment });
+          }
+        } else {
+          allItems.push({ type: 'unknown', value: segment, confidence: 0, original: segment });
+        }
+      }
+    } else {
+      for (const segment of unknownSegments) {
+        allItems.push({ type: 'unknown', value: segment, confidence: 0, original: segment });
+      }
     }
 
-    return NextResponse.json({ 
-      items: [{ type: 'unknown', value: text, confidence: 0, original: text }] 
-    });
+    return NextResponse.json({ items: allItems });
   } catch (error) {
     console.error("Parse input error:", error);
     return NextResponse.json({ items: [] }, { status: 500 });

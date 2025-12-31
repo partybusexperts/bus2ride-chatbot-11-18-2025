@@ -25,22 +25,37 @@ The Call Pad uses a modern three-panel layout with AI-powered smart input parsin
 - **Right Panel** - Large 3-column Vehicle Gallery (dark theme)
 
 ### Smart Input Parsing
-Type anything in the main input box and the system will auto-detect:
+Type comma-separated entries in the main input box. Example:
+`chicago, may 25th, wedding, pu at 9pm, 30 passengers`
+
+The system auto-detects:
 - **Phone numbers** - 10-digit numbers detected as phone
 - **Email addresses** - Detected by @ symbol
 - **ZIP codes** - 5-digit codes
 - **Cities** - Common city names recognized
-- **Dates** - Various formats (1/15, January 15th)
+- **Dates** - Various formats (1/15, January 15th, may 25th)
 - **Times** - Various formats (6pm, 6:00 PM)
+- **Pickup time** - "pu at 9pm" or "pickup at 9pm"
 - **Passenger counts** - "30 people", "30 passengers"
 - **Hours** - "5 hours", "5 hrs"
 - **Event types** - Wedding, Prom, Birthday, etc.
-- **Addresses** - Uses OpenAI to detect pickup, destination, or drop-off locations
+- **Addresses** - "pu at [location]", "to [destination]", "do at [dropoff]"
+- **Complex addresses** - Uses OpenAI for address parsing
 
-Detected data appears as colored chips with confirm/reject buttons. Agents can:
+**Auto-Population:** High-confidence detections (80%+) automatically populate fields and show as confirmed chips with green checkmarks.
+
+**Bulk Actions:** "Confirm All" and "Reject All" buttons for quick chip management.
+
+Agents can still:
 - Change the detected type via dropdown
-- Confirm to move data to the appropriate field
-- Reject to remove the chip
+- Confirm individual chips to move data to fields
+- Reject chips to remove them
+
+### Results Dashboard
+A live dashboard at the top shows:
+- Location, Event, Date, Passengers, Hours
+- Vehicle count, Quoted count, Total quoted price
+All update in real-time as data is entered.
 
 ### Vehicle Gallery
 - Large 3-column grid with dark theme
