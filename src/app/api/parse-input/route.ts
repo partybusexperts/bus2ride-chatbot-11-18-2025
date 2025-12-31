@@ -118,23 +118,49 @@ function detectPattern(text: string): DetectedItem | null {
 
   const lowerText = trimmed.toLowerCase();
   
-  const puMatch = lowerText.match(/^(pu|pickup|pick\s*up)\s+(at\s+)?(.+)/i);
-  if (puMatch) {
-    const timeCheck = puMatch[3].match(/^(\d{1,2})(:\d{2})?\s*(am|pm)?$/i);
+  const puMatch = lowerText.match(/^(pu|p\/u|pickup|pick\s*-?\s*up)\s*(at|@)?\s*(.+)/i);
+  if (puMatch && puMatch[3]) {
+    const rest = puMatch[3].trim();
+    const timeCheck = rest.match(/^(\d{1,2})(:\d{2})?\s*(am|pm)?$/i);
     if (timeCheck) {
-      return { type: 'time', value: puMatch[3], confidence: 0.9, original: trimmed };
+      return { type: 'time', value: rest, confidence: 0.9, original: trimmed };
     }
-    return { type: 'pickup_address', value: puMatch[3], confidence: 0.85, original: trimmed };
+    if (rest.length > 2) {
+      return { type: 'pickup_address', value: rest, confidence: 0.85, original: trimmed };
+    }
   }
   
-  const doMatch = lowerText.match(/^(do|dropoff|drop\s*off)\s+(at\s+)?(.+)/i);
-  if (doMatch) {
-    return { type: 'dropoff_address', value: doMatch[3], confidence: 0.85, original: trimmed };
+  const doMatch = lowerText.match(/^(do|d\/o|dropoff|drop\s*-?\s*off)\s*(at|@)?\s*(.+)/i);
+  if (doMatch && doMatch[3]) {
+    const rest = doMatch[3].trim();
+    const timeCheck = rest.match(/^(\d{1,2})(:\d{2})?\s*(am|pm)?$/i);
+    if (timeCheck) {
+      return { type: 'time', value: rest, confidence: 0.9, original: trimmed };
+    }
+    if (rest.length > 2) {
+      return { type: 'dropoff_address', value: rest, confidence: 0.85, original: trimmed };
+    }
   }
   
-  const destMatch = lowerText.match(/^(to|going\s+to|destination)\s+(.+)/i);
-  if (destMatch) {
+  const destMatch = lowerText.match(/^(to|going\s+to|destination|dest)\s+(.+)/i);
+  if (destMatch && destMatch[2] && destMatch[2].length > 2) {
     return { type: 'destination', value: destMatch[2], confidence: 0.85, original: trimmed };
+  }
+  
+  const nameMatch = trimmed.match(/^(customer|caller|name|cust)\s*:?\s*(.+)/i);
+  if (nameMatch && nameMatch[2] && nameMatch[2].length > 2) {
+    return { type: 'name', value: nameMatch[2], confidence: 0.85, original: trimmed };
+  }
+  
+  const twoWordName = trimmed.match(/^([A-Z][a-z]+)\s+([A-Z][a-z]+)$/);
+  if (twoWordName && trimmed.length >= 5 && trimmed.length <= 40) {
+    const firstName = twoWordName[1].toLowerCase();
+    const isNotCity = !CITY_KEYWORDS.some(c => c.toLowerCase() === firstName || c.toLowerCase() === trimmed.toLowerCase());
+    const isNotVehicle = !Object.keys(VEHICLE_TYPE_KEYWORDS).some(v => v.toLowerCase() === trimmed.toLowerCase());
+    const isNotEvent = !EVENT_KEYWORDS.some(e => e.toLowerCase() === trimmed.toLowerCase());
+    if (isNotCity && isNotVehicle && isNotEvent) {
+      return { type: 'name', value: trimmed, confidence: 0.7, original: trimmed };
+    }
   }
 
   if (TIME_REGEX.test(trimmed)) {

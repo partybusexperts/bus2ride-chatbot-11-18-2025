@@ -37,6 +37,16 @@ const LEAD_STATUS_OPTIONS: { value: LeadStatus; label: string }[] = [
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
+const AGENTS = [
+  { id: '', name: 'Select Agent...' },
+  { id: 'agent1', name: 'Floyd' },
+  { id: 'agent2', name: 'Marcus' },
+  { id: 'agent3', name: 'Sarah' },
+  { id: 'agent4', name: 'Jennifer' },
+  { id: 'agent5', name: 'David' },
+  { id: 'agent6', name: 'Other' },
+];
+
 const TYPE_LABELS: Record<DetectedType, string> = {
   phone: 'Phone',
   email: 'Email',
@@ -51,7 +61,7 @@ const TYPE_LABELS: Record<DetectedType, string> = {
   dropoff_address: 'Drop-off',
   event_type: 'Event',
   vehicle_type: 'Vehicle Type',
-  name: 'Name',
+  name: 'Customer Name',
   website: 'Website',
   unknown: 'Unknown',
 };
@@ -299,10 +309,14 @@ export default function CallPad() {
       clearTimeout(parseTimeoutRef.current);
     }
     
-    if (smartInput.trim().length >= 3) {
+    const trimmed = smartInput.trim();
+    const segments = trimmed.split(',').map(s => s.trim()).filter(s => s.length > 0);
+    const hasCompleteSegment = segments.some(s => s.length >= 4);
+    
+    if (hasCompleteSegment && trimmed.length >= 4) {
       parseTimeoutRef.current = setTimeout(() => {
         parseInput(smartInput);
-      }, 1500);
+      }, 2500);
     }
     
     return () => {
@@ -857,14 +871,24 @@ export default function CallPad() {
       <div style={{ display: 'grid', gridTemplateColumns: '300px 280px 1fr', gap: '16px', minHeight: '600px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ background: '#fff', padding: '14px', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-            <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '10px', color: '#374151' }}>Agent & Caller</h3>
+            <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '10px', color: '#374151' }}>Agent & Customer</h3>
             <div style={{ display: 'grid', gap: '8px' }}>
               <div>
-                <label style={labelStyle}>Agent Name</label>
-                <input style={inputStyle} placeholder="Your name" value={confirmedData.agentName} onChange={(e) => setConfirmedData(prev => ({ ...prev, agentName: e.target.value }))} />
+                <label style={labelStyle}>Agent</label>
+                <select 
+                  style={inputStyle} 
+                  value={confirmedData.agentName} 
+                  onChange={(e) => setConfirmedData(prev => ({ ...prev, agentName: e.target.value }))}
+                >
+                  {AGENTS.map(agent => (
+                    <option key={agent.id} value={agent.name === 'Select Agent...' ? '' : agent.name}>
+                      {agent.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
-                <label style={labelStyle}>Caller Name</label>
+                <label style={labelStyle}>Customer Name</label>
                 <input style={inputStyle} placeholder="Customer name" value={confirmedData.callerName} onChange={(e) => setConfirmedData(prev => ({ ...prev, callerName: e.target.value }))} />
               </div>
               <div>
@@ -984,7 +1008,12 @@ export default function CallPad() {
                 <span style={{ fontSize: '12px', color: '#6b7280' }}>Balance</span>
                 <span style={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>${currentBalanceDue.toLocaleString()}</span>
               </div>
-              {daysUntilEvent <= 7 && daysUntilEvent !== Infinity && (
+              {daysUntilEvent === 0 && (
+                <div style={{ fontSize: '11px', color: '#fff', background: '#dc2626', padding: '8px 10px', borderRadius: '4px', fontWeight: 600 }}>
+                  SAME DAY BOOKING - Ask for CASH payment or consult manager!
+                </div>
+              )}
+              {daysUntilEvent > 0 && daysUntilEvent <= 7 && (
                 <div style={{ fontSize: '11px', color: '#dc2626', background: '#fef2f2', padding: '6px 8px', borderRadius: '4px' }}>
                   Event within 7 days - 100% deposit required
                 </div>
@@ -1038,22 +1067,51 @@ export default function CallPad() {
             />
           </div>
 
-          <button
-            style={{
-              padding: '12px 16px',
-              borderRadius: '8px',
-              border: 'none',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '14px',
-              background: '#10b981',
-              color: '#fff',
-            }}
-            onClick={handleSaveToZoho}
-            disabled={saving}
-          >
-            {saving ? "Saving..." : "Save to Zoho"}
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              style={{
+                flex: 1,
+                padding: '12px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: '14px',
+                background: '#10b981',
+                color: '#fff',
+              }}
+              onClick={handleSaveToZoho}
+              disabled={saving}
+            >
+              {saving ? "Saving..." : "Save to Zoho"}
+            </button>
+            
+            <button
+              style={{
+                flex: 1,
+                padding: '12px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                cursor: quotedVehicles.length > 0 && confirmedData.email ? 'pointer' : 'not-allowed',
+                fontWeight: 600,
+                fontSize: '14px',
+                background: quotedVehicles.length > 0 && confirmedData.email ? '#3b82f6' : '#9ca3af',
+                color: '#fff',
+                opacity: quotedVehicles.length > 0 && confirmedData.email ? 1 : 0.7,
+              }}
+              onClick={() => {
+                if (quotedVehicles.length > 0 && confirmedData.email) {
+                  alert('Send Quote feature coming soon! Will integrate with Zoho to email quote to customer.');
+                } else if (quotedVehicles.length === 0) {
+                  alert('Please quote at least one vehicle first.');
+                } else {
+                  alert('Please add customer email address.');
+                }
+              }}
+            >
+              Send Quote
+            </button>
+          </div>
           
           {saveMessage && (
             <div style={{ 
