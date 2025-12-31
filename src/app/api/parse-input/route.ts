@@ -19,6 +19,7 @@ type DetectedType =
   | 'destination'
   | 'dropoff_address'
   | 'event_type'
+  | 'vehicle_type'
   | 'name'
   | 'website'
   | 'unknown';
@@ -46,6 +47,38 @@ const EVENT_KEYWORDS = [
   'concert', 'party', 'quinceanera', 'anniversary', 'corporate', 'airport',
   'funeral', 'church', 'bar mitzvah', 'bat mitzvah', 'homecoming', 'formal',
 ];
+
+const VEHICLE_TYPE_KEYWORDS: Record<string, string> = {
+  'limousine': 'Limousine',
+  'limo': 'Limousine',
+  'stretch limo': 'Limousine',
+  'stretch': 'Limousine',
+  'party bus': 'Party Bus',
+  'partybus': 'Party Bus',
+  'limo bus': 'Limo Bus',
+  'limobus': 'Limo Bus',
+  'shuttle': 'Shuttle',
+  'shuttle bus': 'Shuttle',
+  'sprinter': 'Sprinter',
+  'mercedes sprinter': 'Sprinter',
+  'executive': 'Executive',
+  'executive van': 'Executive',
+  'charter': 'Charter Bus',
+  'charter bus': 'Charter Bus',
+  'coach': 'Charter Bus',
+  'motor coach': 'Charter Bus',
+  'sedan': 'Sedan',
+  'suv': 'SUV',
+  'escalade': 'SUV',
+  'navigator': 'SUV',
+  'hummer': 'Hummer',
+  'h2': 'Hummer',
+  'trolley': 'Trolley',
+  'vintage': 'Vintage',
+  'classic': 'Vintage',
+  'rolls royce': 'Rolls Royce',
+  'bentley': 'Bentley',
+};
 
 const CITY_KEYWORDS = [
   'phoenix', 'scottsdale', 'mesa', 'tempe', 'glendale', 'chandler', 'gilbert',
