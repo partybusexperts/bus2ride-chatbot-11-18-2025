@@ -375,22 +375,28 @@ export default function CallPad() {
     }
     
     if (chip.type === 'pickup_address') {
-      lookupPlace(chip.value, 'pickup');
-      const notePrefix = 'PU: ';
+      // First set the field with original value (e.g., "Mesa")
+      // Only replace with real address if lookup finds one
       setConfirmedData(prev => ({
         ...prev,
-        tripNotes: prev.tripNotes ? `${prev.tripNotes}\n${notePrefix}${chip.value}` : `${notePrefix}${chip.value}`,
+        pickupAddress: chip.value,
+        tripNotes: prev.tripNotes ? `${prev.tripNotes}\nPU: ${chip.value}` : `PU: ${chip.value}`,
       }));
+      // Try to look up real address - will only update if found
+      lookupPlace(chip.value, 'pickup');
       return;
     }
     
     if (chip.type === 'dropoff_address') {
-      lookupPlace(chip.value, 'dropoff');
-      const notePrefix = 'DO: ';
+      // First set the field with original value (e.g., "Mesa")
+      // Only replace with real address if lookup finds one
       setConfirmedData(prev => ({
         ...prev,
-        tripNotes: prev.tripNotes ? `${prev.tripNotes}\n${notePrefix}${chip.value}` : `${notePrefix}${chip.value}`,
+        dropoffAddress: chip.value,
+        tripNotes: prev.tripNotes ? `${prev.tripNotes}\nDO: ${chip.value}` : `DO: ${chip.value}`,
       }));
+      // Try to look up real address - will only update if found
+      lookupPlace(chip.value, 'dropoff');
       return;
     }
     
