@@ -2056,6 +2056,67 @@ export default function CallPad() {
                 </div>
               )}
               
+              {/* Hours adjuster - only show for non-transfer */}
+              {modalPriceType !== 'transfer' && (
+                <div style={{ background: '#f0f9ff', padding: '16px', borderRadius: '10px', border: '2px solid #0ea5e9', marginTop: '16px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#0369a1', marginBottom: '10px', textAlign: 'center' }}>ADJUST HOURS</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
+                    <button
+                      onClick={() => {
+                        const availableHours = modalPriceType === 'standard' 
+                          ? [3, 4, 5, 6, 7, 8, 9, 10].filter(h => selectedVehicle[`price_${h}hr`])
+                          : modalPriceType === 'prom'
+                          ? [6, 7, 8, 9, 10].filter(h => selectedVehicle[`prom_price_${h}hr`])
+                          : modalPriceType === 'before5pm'
+                          ? [3, 4, 5, 6, 7].filter(h => selectedVehicle[`before5pm_${h}hr`])
+                          : [5, 6, 7, 8, 9].filter(h => selectedVehicle[`april_may_weekend_${h}hr`]);
+                        const currentIdx = availableHours.indexOf(modalHours);
+                        if (currentIdx > 0) setModalHours(availableHours[currentIdx - 1]);
+                      }}
+                      style={{
+                        background: '#0369a1',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        width: '50px',
+                        height: '50px',
+                        fontSize: '28px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >−</button>
+                    <div style={{ textAlign: 'center', minWidth: '100px' }}>
+                      <div style={{ fontSize: '42px', fontWeight: 700, color: '#0369a1' }}>{modalHours}</div>
+                      <div style={{ fontSize: '14px', color: '#64748b', fontWeight: 600 }}>HOURS</div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const availableHours = modalPriceType === 'standard' 
+                          ? [3, 4, 5, 6, 7, 8, 9, 10].filter(h => selectedVehicle[`price_${h}hr`])
+                          : modalPriceType === 'prom'
+                          ? [6, 7, 8, 9, 10].filter(h => selectedVehicle[`prom_price_${h}hr`])
+                          : modalPriceType === 'before5pm'
+                          ? [3, 4, 5, 6, 7].filter(h => selectedVehicle[`before5pm_${h}hr`])
+                          : [5, 6, 7, 8, 9].filter(h => selectedVehicle[`april_may_weekend_${h}hr`]);
+                        const currentIdx = availableHours.indexOf(modalHours);
+                        if (currentIdx < availableHours.length - 1) setModalHours(availableHours[currentIdx + 1]);
+                      }}
+                      style={{
+                        background: '#0369a1',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        width: '50px',
+                        height: '50px',
+                        fontSize: '28px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >+</button>
+                  </div>
+                </div>
+              )}
+              
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
                 <div style={{ background: '#ecfdf5', padding: '16px', borderRadius: '10px', border: '3px solid #10b981' }}>
                   <div style={{ fontSize: '11px', color: '#10b981', fontWeight: 600, marginBottom: '4px' }}>
@@ -2071,17 +2132,17 @@ export default function CallPad() {
                   )}
                 </div>
                 
-                <div style={{ background: '#f9fafb', padding: '16px', borderRadius: '10px', border: '1px solid #e5e7eb' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>PAYMENT BREAKDOWN</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #e5e7eb' }}>
-                    <span style={{ color: '#6b7280', fontSize: '14px' }}>Deposit ({daysUntilEvent <= 7 ? '100%' : '50%'})</span>
-                    <span style={{ fontWeight: 700, color: '#92400e', fontSize: '16px' }}>
+                <div style={{ background: '#fef3c7', padding: '16px', borderRadius: '10px', border: '2px solid #f59e0b' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#92400e', marginBottom: '8px' }}>PAYMENT BREAKDOWN</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #fcd34d' }}>
+                    <span style={{ color: '#78350f', fontSize: '14px', fontWeight: 600 }}>Deposit {daysUntilEvent <= 7 ? '(100%)' : '(50%)'}</span>
+                    <span style={{ fontWeight: 700, color: '#b45309', fontSize: '20px' }}>
                       {modalPrice > 0 ? `$${modalDeposit.toLocaleString()}` : '---'}
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
-                    <span style={{ color: '#6b7280', fontSize: '14px' }}>Balance Due</span>
-                    <span style={{ fontWeight: 600, color: '#374151', fontSize: '16px' }}>
+                    <span style={{ color: '#78350f', fontSize: '14px' }}>Balance Due</span>
+                    <span style={{ fontWeight: 600, color: '#92400e', fontSize: '16px' }}>
                       {modalPrice > 0 ? `$${modalBalance.toLocaleString()}` : '---'}
                     </span>
                   </div>
