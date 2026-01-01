@@ -1621,14 +1621,25 @@ export default function CallPad() {
                 ? (loadingVehicles ? "Searching..." : "No vehicles found")
                 : "Enter a city or ZIP to see vehicles"}
             </div>
-          ) : (
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(3, 1fr)', 
-              gap: '12px',
-              alignContent: 'start',
-            }}>
-              {filteredVehicles.map((v) => (
+          ) : (() => {
+            // Categorize vehicles
+            const partyBuses = filteredVehicles.filter(v => {
+              const cat = (v.category || '').toLowerCase();
+              return cat.includes('party bus') || cat.includes('limo bus') || cat.includes('party-bus');
+            });
+            const limos = filteredVehicles.filter(v => {
+              const cat = (v.category || '').toLowerCase();
+              return (cat.includes('limo') || cat.includes('limousine') || cat.includes('stretch')) && 
+                     !cat.includes('party') && !cat.includes('bus');
+            });
+            const coaches = filteredVehicles.filter(v => {
+              const cat = (v.category || '').toLowerCase();
+              const isPartyBus = cat.includes('party bus') || cat.includes('limo bus') || cat.includes('party-bus');
+              const isLimo = (cat.includes('limo') || cat.includes('limousine') || cat.includes('stretch')) && !cat.includes('party') && !cat.includes('bus');
+              return !isPartyBus && !isLimo;
+            });
+            
+            const renderVehicleCard = (v: typeof filteredVehicles[0]) => (
                 <div
                   key={v.id}
                   style={{ 
@@ -1755,9 +1766,64 @@ export default function CallPad() {
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+            );
+            
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', alignItems: 'start' }}>
+                {/* Party Buses Column */}
+                <div>
+                  <div style={{ 
+                    fontSize: '11px', 
+                    fontWeight: 700, 
+                    color: '#f472b6', 
+                    marginBottom: '6px', 
+                    textAlign: 'center',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Party Buses ({partyBuses.length})
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {partyBuses.map(v => renderVehicleCard(v))}
+                  </div>
+                </div>
+                {/* Limos Column */}
+                <div>
+                  <div style={{ 
+                    fontSize: '11px', 
+                    fontWeight: 700, 
+                    color: '#a78bfa', 
+                    marginBottom: '6px', 
+                    textAlign: 'center',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Limousines ({limos.length})
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {limos.map(v => renderVehicleCard(v))}
+                  </div>
+                </div>
+                {/* Coach/Shuttle Column */}
+                <div>
+                  <div style={{ 
+                    fontSize: '11px', 
+                    fontWeight: 700, 
+                    color: '#60a5fa', 
+                    marginBottom: '6px', 
+                    textAlign: 'center',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Shuttle/Coach ({coaches.length})
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {coaches.map(v => renderVehicleCard(v))}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
 
