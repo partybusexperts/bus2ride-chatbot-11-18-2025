@@ -1623,20 +1623,23 @@ export default function CallPad() {
             </div>
           ) : (() => {
             // Categorize vehicles
-            const partyBuses = filteredVehicles.filter(v => {
-              const cat = (v.category || '').toLowerCase();
-              return cat.includes('party bus') || cat.includes('limo bus') || cat.includes('party-bus');
-            });
-            const limos = filteredVehicles.filter(v => {
-              const cat = (v.category || '').toLowerCase();
-              return (cat.includes('limo') || cat.includes('limousine') || cat.includes('stretch')) && 
-                     !cat.includes('party') && !cat.includes('bus');
-            });
+            const isPartyBusCategory = (cat: string) => {
+              return cat.includes('party bus') || cat.includes('limo bus') || cat.includes('party-bus') || cat.includes('partybus');
+            };
+            const isLimoCategory = (cat: string) => {
+              if (isPartyBusCategory(cat)) return false;
+              return cat.includes('limo') || cat.includes('limousine') || cat.includes('stretch') ||
+                     cat.includes('hummer') || cat.includes('escalade') || cat.includes('navigator') ||
+                     cat.includes('chrysler') || cat.includes('lincoln') || cat.includes('rolls') ||
+                     cat.includes('bentley') || cat.includes('mercedes') || cat.includes('sedan') ||
+                     cat.includes('suv') || cat.includes('towncar') || cat.includes('town car');
+            };
+            
+            const partyBuses = filteredVehicles.filter(v => isPartyBusCategory((v.category || '').toLowerCase()));
+            const limos = filteredVehicles.filter(v => isLimoCategory((v.category || '').toLowerCase()));
             const coaches = filteredVehicles.filter(v => {
               const cat = (v.category || '').toLowerCase();
-              const isPartyBus = cat.includes('party bus') || cat.includes('limo bus') || cat.includes('party-bus');
-              const isLimo = (cat.includes('limo') || cat.includes('limousine') || cat.includes('stretch')) && !cat.includes('party') && !cat.includes('bus');
-              return !isPartyBus && !isLimo;
+              return !isPartyBusCategory(cat) && !isLimoCategory(cat);
             });
             
             const renderVehicleCard = (v: typeof filteredVehicles[0]) => (
