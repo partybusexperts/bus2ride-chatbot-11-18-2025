@@ -1793,7 +1793,9 @@ export default function CallPad() {
         };
         
         const modalPrice = getModalPrice();
-        const modalDeposit = daysUntilEvent <= 7 ? modalPrice : Math.round(modalPrice * 0.5);
+        // Default to 50% deposit. Only use 100% if date is set AND event is within 7 days
+        const useFullDeposit = daysUntilEvent !== Infinity && daysUntilEvent <= 7;
+        const modalDeposit = useFullDeposit ? modalPrice : Math.round(modalPrice * 0.5);
         const modalBalance = modalPrice - modalDeposit;
         
         const getComparableVehicles = () => {
@@ -1859,9 +1861,32 @@ export default function CallPad() {
               width: '95%',
               maxHeight: '90vh',
               overflow: 'auto',
+              position: 'relative',
             }}
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Fixed close button that stays visible when scrolling */}
+            <button
+              onClick={() => setSelectedVehicle(null)}
+              style={{
+                position: 'sticky',
+                top: 0,
+                right: 0,
+                float: 'right',
+                background: '#dc2626',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '8px 16px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 700,
+                zIndex: 10,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              }}
+            >
+              ✕ Close
+            </button>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
               <div>
                 <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#111827', margin: 0 }}>
@@ -2153,7 +2178,7 @@ export default function CallPad() {
                 <div style={{ background: '#fef3c7', padding: '16px', borderRadius: '10px', border: '2px solid #f59e0b' }}>
                   <div style={{ fontSize: '12px', fontWeight: 700, color: '#92400e', marginBottom: '8px' }}>PAYMENT BREAKDOWN</div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #fcd34d' }}>
-                    <span style={{ color: '#78350f', fontSize: '14px', fontWeight: 600 }}>Deposit {daysUntilEvent <= 7 ? '(100%)' : '(50%)'}</span>
+                    <span style={{ color: '#78350f', fontSize: '14px', fontWeight: 600 }}>Deposit {useFullDeposit ? '(100%)' : '(50%)'}</span>
                     <span style={{ fontWeight: 700, color: '#b45309', fontSize: '20px' }}>
                       {modalPrice > 0 ? `$${modalDeposit.toLocaleString()}` : '---'}
                     </span>
