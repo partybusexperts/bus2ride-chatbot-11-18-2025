@@ -1687,21 +1687,50 @@ export default function CallPad() {
                     >
                       {v.name}
                     </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px', marginBottom: '6px' }}>
                       {v.capacity && (
-                        <span style={{ background: '#475569', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', color: '#cbd5e1' }}>
+                        <span style={{ background: '#475569', padding: '2px 5px', borderRadius: '3px', fontSize: '9px', color: '#cbd5e1' }}>
                           {v.capacity}
                         </span>
                       )}
-                      {v.category && (
-                        <span style={{ background: '#4338ca', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', color: '#c7d2fe' }}>
-                          {v.category}
+                      {[6, 7, 8, 9, 10].some(h => v[`prom_price_${h}hr`]) && (
+                        <span style={{ background: '#7c3aed', padding: '2px 5px', borderRadius: '3px', fontSize: '9px', color: '#e9d5ff', fontWeight: 600 }}>
+                          PROM
+                        </span>
+                      )}
+                      {[3, 4, 5, 6, 7].some(h => v[`before5pm_${h}hr`]) && (
+                        <span style={{ background: '#0891b2', padding: '2px 5px', borderRadius: '3px', fontSize: '9px', color: '#cffafe', fontWeight: 600 }}>
+                          &lt;5PM
+                        </span>
+                      )}
+                      {[5, 6, 7, 8, 9].some(h => v[`april_may_weekend_${h}hr`]) && (
+                        <span style={{ background: '#ca8a04', padding: '2px 5px', borderRadius: '3px', fontSize: '9px', color: '#fef9c3', fontWeight: 600 }}>
+                          APR/MAY
+                        </span>
+                      )}
+                      {v.transfer_price && (
+                        <span style={{ background: '#059669', padding: '2px 5px', borderRadius: '3px', fontSize: '9px', color: '#d1fae5', fontWeight: 600 }}>
+                          XFER
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: '15px', fontWeight: 700, color: '#34d399', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '15px', fontWeight: 700, color: '#34d399', marginBottom: '6px' }}>
                       {v.priceDisplay}
                     </div>
+                    {v.custom_instructions && (
+                      <div style={{ 
+                        fontSize: '9px', 
+                        color: '#fbbf24', 
+                        marginBottom: '6px', 
+                        padding: '4px 6px', 
+                        background: 'rgba(251,191,36,0.1)', 
+                        borderRadius: '4px',
+                        border: '1px solid rgba(251,191,36,0.3)',
+                        lineHeight: 1.3
+                      }}>
+                        {v.custom_instructions.length > 60 ? v.custom_instructions.substring(0, 60) + '...' : v.custom_instructions}
+                      </div>
+                    )}
                     <div style={{ display: 'flex', gap: '6px' }}>
                       <button
                         onClick={() => {
