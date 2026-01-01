@@ -41,7 +41,12 @@ const TIME_REGEX = /^(\d{1,2})(:\d{2})?\s*([ap]\.?m?\.?)$/i;
 const DATE_PATTERNS = [
   /^\d{1,2}\/\d{1,2}(\/\d{2,4})?$/,
   /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2}(st|nd|rd|th)?(,?\s*\d{2,4})?$/i,
-  /^(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(st|nd|rd|th)?\s*,?\s*\d{4}$/i,
+  /^(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(st|nd|rd|th)?\s*,?\s*\d{2,4}?$/i,
+  // Handle "on december 5", "on dec 5 2026", "on 12/5/2026"
+  /^on\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2}(st|nd|rd|th)?(,?\s*\d{2,4})?$/i,
+  /^on\s+\d{1,2}\/\d{1,2}(\/\d{2,4})?$/i,
+  // Handle "december 5th 2026", "dec 5, 2026"
+  /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2}(st|nd|rd|th)?,?\s+\d{4}$/i,
 ];
 const PASSENGERS_REGEX = /^(\d{1,3})\s*(people|passengers?|pax|guests|persons?)$/i;
 const PASSENGERS_SHORT_REGEX = /^(\d{1,2})$/;
