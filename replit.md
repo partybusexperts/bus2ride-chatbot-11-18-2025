@@ -124,17 +124,24 @@ The system recognizes vehicle preferences:
 - **Red/pink border/background** - Field is empty (missing info)
 
 ### Pricing Modal ($ button)
-Shows all vehicle info in an expanded modal:
-- **Photos** - All vehicle photos from image_main, image_2, image_3, and gallery_all
-- **All Pricing from Database** - Every non-null pricing tier from Supabase:
-  - Standard rates (3hr, 4hr, 5hr, 6hr, 7hr, 8hr, 9hr, 10hr)
-  - Prom rates (6hr, 7hr, 8hr, 9hr, 10hr)
-  - Before 5PM rates (3hr, 4hr, 5hr, 6hr, 7hr)
-  - April/May Weekend rates (5hr, 6hr, 7hr, 8hr, 9hr)
-  - One Way Transfer price
-- **Quote Calculation** - Current rate based on selected hours, per hour rate, deposit, balance due
+Shows all vehicle info in an expanded modal with interactive pricing selection:
+- **Photos** - Up to 4 vehicle photos displayed in grid
+- **Pricing Type Buttons** - Switch between pricing tiers:
+  - Standard (default)
+  - Prom (if available for city)
+  - Before 5PM (if available)
+  - Apr/May Weekend (if available)
+  - Transfer (one-way)
+- **Hour Selection Buttons** - Click to select different hours (3hr, 4hr, 5hr, etc.)
+- **Quote Calculation** - Live updates based on selected tier and hours:
+  - Per hour rate, Deposit amount, Balance due
+- **Similar Options** - Shows up to 5 comparable vehicles based on:
+  - Similar capacity (within 5-20 passengers)
+  - Similar category (limo, party bus, etc.)
+  - Similar price range
+  - Click any suggestion to view its pricing
 - **Custom Instructions** - Vehicle-specific notes if available
-Also shows: Per hour rate, Deposit amount, Balance due
+- **Add to Quote Button** - Shows selected price and adds to quoted vehicles
 
 ### AI Selling Points
 When an agent quotes a vehicle, OpenAI generates 3 concise selling points based on:

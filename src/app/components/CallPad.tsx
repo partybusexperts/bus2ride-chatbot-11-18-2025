@@ -190,6 +190,8 @@ export default function CallPad() {
   const [chips, setChips] = useState<DetectedChip[]>([]);
   const [parsingInput, setParsingInput] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
+  const [modalPriceType, setModalPriceType] = useState<'standard' | 'prom' | 'before5pm' | 'aprilmay' | 'transfer'>('standard');
+  const [modalHours, setModalHours] = useState<number>(4);
   
   const [confirmedData, setConfirmedData] = useState({
     agentName: "",
@@ -628,6 +630,25 @@ export default function CallPad() {
   function toggleQuoted(vehicle: any) {
     const wasQuoted = quotedVehicles.some(v => v.id === vehicle.id);
     
+    if (!wasQuoted) {
+      const displayPrice = vehicle.displayPrice;
+      const fallbackPrice = vehicle.price;
+      
+      const hasValidDisplayPrice = typeof displayPrice === 'number' && Number.isFinite(displayPrice) && displayPrice > 0;
+      const hasValidFallbackPrice = typeof fallbackPrice === 'number' && Number.isFinite(fallbackPrice) && fallbackPrice > 0;
+      
+      if (!hasValidDisplayPrice && !hasValidFallbackPrice) {
+        console.warn('Cannot add vehicle with no valid price:', vehicle.name, 'displayPrice:', displayPrice, 'price:', fallbackPrice);
+        return;
+      }
+    }
+    
+    const effectivePrice = (typeof vehicle.displayPrice === 'number' && vehicle.displayPrice > 0) 
+      ? vehicle.displayPrice 
+      : (typeof vehicle.price === 'number' && vehicle.price > 0) 
+        ? vehicle.price 
+        : 0;
+    
     setQuotedVehicles((prev) => {
       const exists = prev.find((v) => v.id === vehicle.id);
       if (exists) {
@@ -638,7 +659,7 @@ export default function CallPad() {
         name: vehicle.name,
         capacity: vehicle.capacity,
         priceDisplay: vehicle.priceDisplay,
-        price: vehicle.displayPrice || vehicle.price || 0,
+        price: effectivePrice,
         hours: vehicle.displayHours || vehicle.hours || rateHours,
       };
       return [...prev, qv];
@@ -757,6 +778,10 @@ export default function CallPad() {
     
     return filtered;
   }, [vehicles, vehicleFilters, sortBy, rateHours, getVehiclePrice]);
+
+  const hasTransferVehicles = useMemo(() => {
+    return vehicles.some(v => v.is_transfer === true || v.is_transfer === 'true');
+  }, [vehicles]);
 
   const getAIRecommendation = useCallback(async (vehicle: any) => {
     setLoadingRecommendation(true);
@@ -1504,14 +1529,16 @@ export default function CallPad() {
                 />
                 Car/SUV
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: vehicleFilters.oneWayTransfer ? '#fbbf24' : '#94a3b8', fontSize: '11px', cursor: 'pointer', fontWeight: vehicleFilters.oneWayTransfer ? 600 : 400 }}>
-                <input 
-                  type="checkbox" 
-                  checked={vehicleFilters.oneWayTransfer}
-                  onChange={(e) => setVehicleFilters(prev => ({ ...prev, oneWayTransfer: e.target.checked }))}
-                />
-                One Way Transfer
-              </label>
+              {hasTransferVehicles && (
+                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: vehicleFilters.oneWayTransfer ? '#fbbf24' : '#94a3b8', fontSize: '11px', cursor: 'pointer', fontWeight: vehicleFilters.oneWayTransfer ? 600 : 400 }}>
+                  <input 
+                    type="checkbox" 
+                    checked={vehicleFilters.oneWayTransfer}
+                    onChange={(e) => setVehicleFilters(prev => ({ ...prev, oneWayTransfer: e.target.checked }))}
+                  />
+                  One Way Transfer
+                </label>
+              )}
             </div>
           </div>
 
@@ -1611,23 +1638,65 @@ export default function CallPad() {
                     </div>
                     <div style={{ display: 'flex', gap: '6px' }}>
                       <button
-                        onClick={() => toggleQuoted(v)}
+                        onClick={() => {
+                          if (!isQuoted(v.id) && (!v.displayPrice || v.displayPrice <= 0)) {
+                            alert('This vehicle requires a call for pricing. Please use the $ button to view details.');
+                            return;
+                          }
+                          toggleQuoted(v);
+                        }}
+                        disabled={!isQuoted(v.id) && (!v.displayPrice || v.displayPrice <= 0)}
                         style={{
                           flex: 1,
                           padding: '8px',
                           borderRadius: '6px',
                           border: 'none',
-                          cursor: 'pointer',
+                          cursor: (!isQuoted(v.id) && (!v.displayPrice || v.displayPrice <= 0)) ? 'not-allowed' : 'pointer',
                           fontSize: '12px',
                           fontWeight: 600,
-                          background: isQuoted(v.id) ? '#10b981' : '#3b82f6',
+                          background: isQuoted(v.id) ? '#10b981' : (v.displayPrice && v.displayPrice > 0 ? '#3b82f6' : '#9ca3af'),
                           color: '#fff',
+                          opacity: (!isQuoted(v.id) && (!v.displayPrice || v.displayPrice <= 0)) ? 0.6 : 1,
                         }}
                       >
-                        {isQuoted(v.id) ? "Quoted" : "Quote"}
+                        {isQuoted(v.id) ? "Quoted" : (v.displayPrice && v.displayPrice > 0 ? "Quote" : "Call")}
                       </button>
                       <button
-                        onClick={() => setSelectedVehicle(v)}
+                        onClick={() => {
+                          setSelectedVehicle(v);
+                          const hasStd = [3, 4, 5, 6, 7, 8, 9, 10].some(h => v[`price_${h}hr`]);
+                          const hasProm = [6, 7, 8, 9, 10].some(h => v[`prom_price_${h}hr`]);
+                          const hasB5 = [3, 4, 5, 6, 7].some(h => v[`before5pm_${h}hr`]);
+                          const hasAM = [5, 6, 7, 8, 9].some(h => v[`april_may_weekend_${h}hr`]);
+                          const hasTr = !!v.transfer_price;
+                          
+                          let defaultType: 'standard' | 'prom' | 'before5pm' | 'aprilmay' | 'transfer' = 'standard';
+                          let defaultHours = rateHours;
+                          
+                          if (hasStd) {
+                            defaultType = 'standard';
+                            const stdHours = [3, 4, 5, 6, 7, 8, 9, 10].filter(h => v[`price_${h}hr`]);
+                            defaultHours = stdHours.includes(rateHours) ? rateHours : (stdHours[0] || 4);
+                          } else if (hasProm) {
+                            defaultType = 'prom';
+                            const promHours = [6, 7, 8, 9, 10].filter(h => v[`prom_price_${h}hr`]);
+                            defaultHours = promHours[0] || 6;
+                          } else if (hasB5) {
+                            defaultType = 'before5pm';
+                            const b5Hours = [3, 4, 5, 6, 7].filter(h => v[`before5pm_${h}hr`]);
+                            defaultHours = b5Hours[0] || 4;
+                          } else if (hasAM) {
+                            defaultType = 'aprilmay';
+                            const amHours = [5, 6, 7, 8, 9].filter(h => v[`april_may_weekend_${h}hr`]);
+                            defaultHours = amHours[0] || 5;
+                          } else if (hasTr) {
+                            defaultType = 'transfer';
+                            defaultHours = 0;
+                          }
+                          
+                          setModalPriceType(defaultType);
+                          setModalHours(defaultHours);
+                        }}
                         style={{
                           padding: '8px 10px',
                           borderRadius: '6px',
@@ -1659,35 +1728,72 @@ export default function CallPad() {
           ...(selectedVehicle.gallery_all ? selectedVehicle.gallery_all.split(',').map((u: string) => u.trim()) : [])
         ].filter(Boolean);
         
-        const allPricing: { label: string; value: number; hours?: number }[] = [];
+        const hasStandardPricing = [3, 4, 5, 6, 7, 8, 9, 10].some(h => selectedVehicle[`price_${h}hr`]);
+        const hasPromPricing = [6, 7, 8, 9, 10].some(h => selectedVehicle[`prom_price_${h}hr`]);
+        const hasBefore5pmPricing = [3, 4, 5, 6, 7].some(h => selectedVehicle[`before5pm_${h}hr`]);
+        const hasAprilMayPricing = [5, 6, 7, 8, 9].some(h => selectedVehicle[`april_may_weekend_${h}hr`]);
+        const hasTransferPricing = !!selectedVehicle.transfer_price;
         
-        const standardHours = [3, 4, 5, 6, 7, 8, 9, 10];
-        standardHours.forEach(h => {
-          const val = selectedVehicle[`price_${h}hr`];
-          if (val) allPricing.push({ label: `${h} Hour Rate`, value: val, hours: h });
-        });
+        const getAvailableHours = (type: string): number[] => {
+          switch(type) {
+            case 'standard': return [3, 4, 5, 6, 7, 8, 9, 10].filter(h => selectedVehicle[`price_${h}hr`]);
+            case 'prom': return [6, 7, 8, 9, 10].filter(h => selectedVehicle[`prom_price_${h}hr`]);
+            case 'before5pm': return [3, 4, 5, 6, 7].filter(h => selectedVehicle[`before5pm_${h}hr`]);
+            case 'aprilmay': return [5, 6, 7, 8, 9].filter(h => selectedVehicle[`april_may_weekend_${h}hr`]);
+            default: return [];
+          }
+        };
         
-        const promHours = [6, 7, 8, 9, 10];
-        promHours.forEach(h => {
-          const val = selectedVehicle[`prom_price_${h}hr`];
-          if (val) allPricing.push({ label: `Prom ${h}hr`, value: val, hours: h });
-        });
+        const getModalPrice = (): number => {
+          if (modalPriceType === 'transfer') return Number(selectedVehicle.transfer_price) || 0;
+          const prefix = modalPriceType === 'standard' ? 'price_' 
+            : modalPriceType === 'prom' ? 'prom_price_' 
+            : modalPriceType === 'before5pm' ? 'before5pm_' 
+            : 'april_may_weekend_';
+          const val = selectedVehicle[`${prefix}${modalHours}hr`];
+          return Number(val) || 0;
+        };
         
-        const before5pmHours = [3, 4, 5, 6, 7];
-        before5pmHours.forEach(h => {
-          const val = selectedVehicle[`before5pm_${h}hr`];
-          if (val) allPricing.push({ label: `Before 5PM ${h}hr`, value: val, hours: h });
-        });
+        const modalPrice = getModalPrice();
+        const modalDeposit = daysUntilEvent <= 7 ? modalPrice : Math.round(modalPrice * 0.5);
+        const modalBalance = modalPrice - modalDeposit;
         
-        const aprilMayHours = [5, 6, 7, 8, 9];
-        aprilMayHours.forEach(h => {
-          const val = selectedVehicle[`april_may_weekend_${h}hr`];
-          if (val) allPricing.push({ label: `Apr/May Wknd ${h}hr`, value: val, hours: h });
-        });
+        const getComparableVehicles = () => {
+          const currentCap = parseInt(selectedVehicle.capacity) || 0;
+          const currentCategory = (selectedVehicle.category || '').toLowerCase();
+          
+          const pool = vehicles.filter(v => v.id !== selectedVehicle.id);
+          const scored = pool.map(v => {
+            const cap = parseInt(v.capacity) || 0;
+            const cat = (v.category || '').toLowerCase();
+            const price = getVehiclePrice(v, modalHours);
+            
+            let score = 0;
+            const capDiff = Math.abs(cap - currentCap);
+            if (capDiff <= 5) score += 30;
+            else if (capDiff <= 10) score += 20;
+            else if (capDiff <= 20) score += 10;
+            
+            if (cat === currentCategory) score += 25;
+            else if ((cat.includes('limo') && currentCategory.includes('limo')) ||
+                     (cat.includes('bus') && currentCategory.includes('bus'))) score += 15;
+            
+            const priceDiff = Math.abs(price - modalPrice);
+            if (modalPrice > 0 && priceDiff / modalPrice < 0.2) score += 20;
+            else if (modalPrice > 0 && priceDiff / modalPrice < 0.4) score += 10;
+            
+            if (price > 0) score += 5;
+            
+            return { vehicle: v, score, price };
+          });
+          
+          return scored
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 5)
+            .map(s => ({ ...s.vehicle, displayPrice: s.price }));
+        };
         
-        if (selectedVehicle.transfer_price) {
-          allPricing.push({ label: 'One Way Transfer', value: selectedVehicle.transfer_price });
-        }
+        const comparableVehicles = getComparableVehicles();
         
         return (
         <div 
@@ -1711,7 +1817,7 @@ export default function CallPad() {
               background: '#fff',
               borderRadius: '12px',
               padding: '24px',
-              maxWidth: '900px',
+              maxWidth: '1100px',
               width: '95%',
               maxHeight: '90vh',
               overflow: 'auto',
@@ -1739,11 +1845,6 @@ export default function CallPad() {
                       {selectedVehicle.city}
                     </span>
                   )}
-                  {selectedVehicle.is_transfer && (
-                    <span style={{ background: '#fef3c7', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', color: '#92400e', fontWeight: 500 }}>
-                      Transfer Available
-                    </span>
-                  )}
                 </div>
               </div>
               <button
@@ -1767,15 +1868,15 @@ export default function CallPad() {
             
             {allPhotos.length > 0 && (
               <div style={{ marginBottom: '20px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: allPhotos.length === 1 ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
-                  {allPhotos.slice(0, 6).map((photo, idx) => (
+                <div style={{ display: 'grid', gridTemplateColumns: allPhotos.length === 1 ? '1fr' : 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px' }}>
+                  {allPhotos.slice(0, 4).map((photo, idx) => (
                     <img 
                       key={idx}
                       src={photo} 
                       alt={`${selectedVehicle.name} ${idx + 1}`}
                       style={{ 
                         width: '100%', 
-                        height: idx === 0 && allPhotos.length === 1 ? '300px' : '150px', 
+                        height: '120px', 
                         objectFit: 'cover', 
                         borderRadius: '8px',
                         cursor: 'pointer',
@@ -1787,34 +1888,125 @@ export default function CallPad() {
                     />
                   ))}
                 </div>
-                {allPhotos.length > 6 && (
-                  <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '6px', textAlign: 'center' }}>
-                    +{allPhotos.length - 6} more photos (click to view all)
-                  </div>
-                )}
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-              <div style={{ background: '#f9fafb', padding: '16px', borderRadius: '8px' }}>
-                <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#374151', marginBottom: '12px' }}>All Pricing from Database</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+              <div style={{ background: '#f0fdf4', padding: '16px', borderRadius: '8px', border: '1px solid #86efac' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#166534', marginBottom: '12px' }}>Select Pricing</h3>
                 
-                {allPricing.length > 0 ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
-                    {allPricing.map((p, idx) => (
-                      <div key={idx} style={{ 
-                        background: '#fff', 
-                        padding: '10px', 
-                        borderRadius: '6px', 
-                        border: p.hours === rateHours ? '2px solid #10b981' : '1px solid #e5e7eb' 
-                      }}>
-                        <div style={{ fontSize: '10px', color: '#6b7280', fontWeight: 500, textTransform: 'uppercase' }}>{p.label}</div>
-                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#111827' }}>${p.value.toLocaleString()}</div>
-                      </div>
-                    ))}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+                  {hasStandardPricing && (
+                    <button
+                      onClick={() => { setModalPriceType('standard'); setModalHours(getAvailableHours('standard')[0] || 4); }}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: modalPriceType === 'standard' ? '2px solid #16a34a' : '1px solid #d1d5db',
+                        background: modalPriceType === 'standard' ? '#dcfce7' : '#fff',
+                        color: modalPriceType === 'standard' ? '#166534' : '#374151',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Standard
+                    </button>
+                  )}
+                  {hasPromPricing && (
+                    <button
+                      onClick={() => { setModalPriceType('prom'); setModalHours(getAvailableHours('prom')[0] || 6); }}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: modalPriceType === 'prom' ? '2px solid #7c3aed' : '1px solid #d1d5db',
+                        background: modalPriceType === 'prom' ? '#ede9fe' : '#fff',
+                        color: modalPriceType === 'prom' ? '#5b21b6' : '#374151',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Prom
+                    </button>
+                  )}
+                  {hasBefore5pmPricing && (
+                    <button
+                      onClick={() => { setModalPriceType('before5pm'); setModalHours(getAvailableHours('before5pm')[0] || 4); }}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: modalPriceType === 'before5pm' ? '2px solid #ea580c' : '1px solid #d1d5db',
+                        background: modalPriceType === 'before5pm' ? '#fff7ed' : '#fff',
+                        color: modalPriceType === 'before5pm' ? '#9a3412' : '#374151',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Before 5PM
+                    </button>
+                  )}
+                  {hasAprilMayPricing && (
+                    <button
+                      onClick={() => { setModalPriceType('aprilmay'); setModalHours(getAvailableHours('aprilmay')[0] || 5); }}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: modalPriceType === 'aprilmay' ? '2px solid #db2777' : '1px solid #d1d5db',
+                        background: modalPriceType === 'aprilmay' ? '#fdf2f8' : '#fff',
+                        color: modalPriceType === 'aprilmay' ? '#9d174d' : '#374151',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Apr/May Wknd
+                    </button>
+                  )}
+                  {hasTransferPricing && (
+                    <button
+                      onClick={() => setModalPriceType('transfer')}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: modalPriceType === 'transfer' ? '2px solid #eab308' : '1px solid #d1d5db',
+                        background: modalPriceType === 'transfer' ? '#fef9c3' : '#fff',
+                        color: modalPriceType === 'transfer' ? '#854d0e' : '#374151',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Transfer
+                    </button>
+                  )}
+                </div>
+                
+                {modalPriceType !== 'transfer' && (
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '6px', fontWeight: 500 }}>SELECT HOURS</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {getAvailableHours(modalPriceType).map(h => (
+                        <button
+                          key={h}
+                          onClick={() => setModalHours(h)}
+                          style={{
+                            padding: '8px 14px',
+                            borderRadius: '6px',
+                            border: modalHours === h ? '2px solid #2563eb' : '1px solid #d1d5db',
+                            background: modalHours === h ? '#dbeafe' : '#fff',
+                            color: modalHours === h ? '#1d4ed8' : '#374151',
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {h}hr
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                ) : (
-                  <div style={{ color: '#9ca3af', fontSize: '13px' }}>No pricing available in database</div>
                 )}
               </div>
 
@@ -1822,27 +2014,33 @@ export default function CallPad() {
                 <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#374151', marginBottom: '12px' }}>Quote Calculation</h3>
                 
                 <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '2px solid #10b981', marginBottom: '12px' }}>
-                  <div style={{ fontSize: '11px', color: '#10b981', fontWeight: 600, marginBottom: '4px' }}>CURRENT RATE ({rateHours}HR)</div>
-                  <div style={{ fontSize: '24px', fontWeight: 700, color: '#111827' }}>{selectedVehicle.priceDisplay}</div>
+                  <div style={{ fontSize: '11px', color: '#10b981', fontWeight: 600, marginBottom: '4px' }}>
+                    {modalPriceType === 'transfer' ? 'ONE WAY TRANSFER' : `${modalPriceType.toUpperCase()} RATE (${modalHours}HR)`}
+                  </div>
+                  <div style={{ fontSize: '28px', fontWeight: 700, color: '#111827' }}>
+                    {modalPrice > 0 ? `$${modalPrice.toLocaleString()}` : 'Call for price'}
+                  </div>
                 </div>
                 
                 <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
+                  {modalPriceType !== 'transfer' && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
+                      <span style={{ color: '#6b7280', fontSize: '13px' }}>Per Hour Rate</span>
+                      <span style={{ fontWeight: 600, color: '#111827', fontSize: '13px' }}>
+                        {modalPrice > 0 ? `$${Math.round(modalPrice / modalHours).toLocaleString()}/hr` : '---'}
+                      </span>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
-                    <span style={{ color: '#6b7280', fontSize: '13px' }}>Per Hour Rate</span>
-                    <span style={{ fontWeight: 600, color: '#111827', fontSize: '13px' }}>
-                      ${selectedVehicle.displayPrice ? Math.round(selectedVehicle.displayPrice / rateHours).toLocaleString() : '---'}/hr
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
-                    <span style={{ color: '#6b7280', fontSize: '13px' }}>Deposit ({depositPercentage}%)</span>
+                    <span style={{ color: '#6b7280', fontSize: '13px' }}>Deposit ({daysUntilEvent <= 7 ? '100' : '50'}%)</span>
                     <span style={{ fontWeight: 600, color: '#92400e', fontSize: '13px' }}>
-                      ${selectedVehicle.displayPrice ? Math.round(selectedVehicle.displayPrice * (depositPercentage / 100)).toLocaleString() : '---'}
+                      {modalPrice > 0 ? `$${modalDeposit.toLocaleString()}` : '---'}
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
                     <span style={{ color: '#6b7280', fontSize: '13px' }}>Balance Due</span>
                     <span style={{ fontWeight: 600, color: '#374151', fontSize: '13px' }}>
-                      ${selectedVehicle.displayPrice ? Math.round(selectedVehicle.displayPrice * ((100 - depositPercentage) / 100)).toLocaleString() : '---'}
+                      {modalPrice > 0 ? `$${modalBalance.toLocaleString()}` : '---'}
                     </span>
                   </div>
                 </div>
@@ -1850,7 +2048,7 @@ export default function CallPad() {
             </div>
 
             {(selectedVehicle.description || selectedVehicle.custom_instructions) && (
-              <div style={{ marginTop: '16px', padding: '12px', background: '#fffbeb', borderRadius: '8px', border: '1px solid #fcd34d' }}>
+              <div style={{ marginBottom: '16px', padding: '12px', background: '#fffbeb', borderRadius: '8px', border: '1px solid #fcd34d' }}>
                 <div style={{ fontSize: '12px', fontWeight: 600, color: '#92400e', marginBottom: '4px' }}>Notes / Custom Instructions</div>
                 <div style={{ fontSize: '13px', color: '#78350f', lineHeight: 1.5 }}>
                   {selectedVehicle.custom_instructions || selectedVehicle.description}
@@ -1858,25 +2056,112 @@ export default function CallPad() {
               </div>
             )}
 
+            {comparableVehicles.length > 0 && (
+              <div style={{ marginBottom: '16px', padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#334155', marginBottom: '12px' }}>Similar Options for This Customer</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
+                  {comparableVehicles.map((cv: any) => (
+                    <div 
+                      key={cv.id}
+                      onClick={() => {
+                        const hasStd = [3, 4, 5, 6, 7, 8, 9, 10].some(h => cv[`price_${h}hr`]);
+                        const hasProm = [6, 7, 8, 9, 10].some(h => cv[`prom_price_${h}hr`]);
+                        const hasB5 = [3, 4, 5, 6, 7].some(h => cv[`before5pm_${h}hr`]);
+                        const hasAM = [5, 6, 7, 8, 9].some(h => cv[`april_may_weekend_${h}hr`]);
+                        const hasTr = !!cv.transfer_price;
+                        
+                        let defType: 'standard' | 'prom' | 'before5pm' | 'aprilmay' | 'transfer' = 'standard';
+                        let defHours = 4;
+                        
+                        if (hasStd) {
+                          defType = 'standard';
+                          const hrs = [3, 4, 5, 6, 7, 8, 9, 10].filter(h => cv[`price_${h}hr`]);
+                          defHours = hrs[0] || 4;
+                        } else if (hasProm) {
+                          defType = 'prom';
+                          const hrs = [6, 7, 8, 9, 10].filter(h => cv[`prom_price_${h}hr`]);
+                          defHours = hrs[0] || 6;
+                        } else if (hasB5) {
+                          defType = 'before5pm';
+                          const hrs = [3, 4, 5, 6, 7].filter(h => cv[`before5pm_${h}hr`]);
+                          defHours = hrs[0] || 4;
+                        } else if (hasAM) {
+                          defType = 'aprilmay';
+                          const hrs = [5, 6, 7, 8, 9].filter(h => cv[`april_may_weekend_${h}hr`]);
+                          defHours = hrs[0] || 5;
+                        } else if (hasTr) {
+                          defType = 'transfer';
+                          defHours = 0;
+                        }
+                        
+                        setSelectedVehicle(cv);
+                        setModalPriceType(defType);
+                        setModalHours(defHours);
+                      }}
+                      style={{ 
+                        background: '#fff', 
+                        borderRadius: '8px', 
+                        padding: '10px',
+                        cursor: 'pointer',
+                        border: '1px solid #e2e8f0',
+                        transition: 'all 0.15s',
+                      }}
+                      onMouseOver={(e) => (e.currentTarget.style.borderColor = '#3b82f6')}
+                      onMouseOut={(e) => (e.currentTarget.style.borderColor = '#e2e8f0')}
+                    >
+                      {cv.image && (
+                        <img 
+                          src={cv.image} 
+                          alt={cv.name}
+                          style={{ width: '100%', height: '60px', objectFit: 'cover', borderRadius: '4px', marginBottom: '6px' }}
+                        />
+                      )}
+                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#1e293b', lineHeight: 1.2, marginBottom: '4px' }}>
+                        {cv.name?.substring(0, 30)}{cv.name?.length > 30 ? '...' : ''}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '10px', color: '#64748b' }}>{cv.capacity}p</span>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: '#059669' }}>
+                          {cv.displayPrice > 0 ? `$${cv.displayPrice.toLocaleString()}` : 'Call'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <button
               onClick={() => {
-                toggleQuoted(selectedVehicle);
+                if (modalPrice <= 0 && !isQuoted(selectedVehicle.id)) {
+                  alert('This vehicle requires a call for pricing. Please contact management for a custom quote.');
+                  return;
+                }
+                const vehicleWithModalPrice = {
+                  ...selectedVehicle,
+                  displayPrice: modalPrice,
+                  priceDisplay: modalPrice > 0 ? `$${modalPrice.toLocaleString()}` : 'Call for price',
+                  displayHours: modalPriceType === 'transfer' ? 'transfer' : modalHours,
+                  priceType: modalPriceType,
+                };
+                toggleQuoted(vehicleWithModalPrice);
                 setSelectedVehicle(null);
               }}
+              disabled={modalPrice <= 0 && !isQuoted(selectedVehicle.id)}
               style={{
                 width: '100%',
                 padding: '14px',
                 borderRadius: '8px',
                 border: 'none',
-                cursor: 'pointer',
+                cursor: modalPrice <= 0 && !isQuoted(selectedVehicle.id) ? 'not-allowed' : 'pointer',
                 fontSize: '14px',
                 fontWeight: 600,
-                background: isQuoted(selectedVehicle.id) ? '#dc2626' : '#10b981',
+                background: isQuoted(selectedVehicle.id) ? '#dc2626' : (modalPrice > 0 ? '#10b981' : '#9ca3af'),
                 color: '#fff',
-                marginTop: '16px',
+                opacity: modalPrice <= 0 && !isQuoted(selectedVehicle.id) ? 0.6 : 1,
               }}
             >
-              {isQuoted(selectedVehicle.id) ? "Remove from Quote" : "Add to Quote"}
+              {isQuoted(selectedVehicle.id) ? "Remove from Quote" : (modalPrice > 0 ? `Add to Quote - $${modalPrice.toLocaleString()}` : "Call for Price - Cannot Quote")}
             </button>
           </div>
         </div>

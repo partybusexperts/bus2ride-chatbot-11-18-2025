@@ -22,37 +22,60 @@ export async function POST(request: Request) {
     const category = vehicle.category || '';
     const description = vehicle.description || vehicle.short_description || '';
     const instructions = vehicle.custom_instructions || '';
+    const amenities = vehicle.amenities || '';
+    const features = vehicle.features || '';
     
-    const prompt = `Generate 3 quick selling points for this vehicle. NO generic phrases. Be SPECIFIC to THIS vehicle.
+    const vehicleType = category.toLowerCase();
+    const isLimo = vehicleType.includes('limo') || vehicleType.includes('stretch');
+    const isPartyBus = vehicleType.includes('party') || vehicleType.includes('bus');
+    const isShuttle = vehicleType.includes('shuttle') || vehicleType.includes('sprinter');
+    const isSedan = vehicleType.includes('sedan') || vehicleType.includes('suv') || vehicleType.includes('car');
+    
+    const typeContext = isLimo 
+      ? 'This is a limousine - intimate, luxurious seating, good for small groups. NOT a dance floor vehicle.'
+      : isPartyBus 
+      ? 'This is a party bus - larger capacity, may have dance floor/pole, bar area, louder music capability.'
+      : isShuttle
+      ? 'This is a shuttle/sprinter - efficient point-to-point transport, professional, practical.'
+      : isSedan
+      ? 'This is a sedan/SUV - elegant, executive-style, intimate for small groups.'
+      : 'Transportation vehicle.';
+    
+    const prompt = `Generate 3 factual selling points for this vehicle. Be ACCURATE - do NOT invent features.
 
 VEHICLE: ${vehicleName}
 TYPE: ${category}
-FITS: ${capacity} passengers
-${description ? `DETAILS: ${description}` : ''}
-${instructions ? `NOTES: ${instructions}` : ''}
+CAPACITY: ${capacity} passengers
+${typeContext}
+${description ? `DESCRIPTION: ${description}` : ''}
+${amenities ? `AMENITIES: ${amenities}` : ''}
+${features ? `FEATURES: ${features}` : ''}
+${instructions ? `SPECIAL NOTES: ${instructions}` : ''}
 
-CUSTOMER NEEDS:
-- Event: ${tripContext?.eventType || 'event'}
-- Group: ${tripContext?.passengers || capacity} people
-- Area: ${tripContext?.city || 'local'}
+CUSTOMER INFO:
+- Event: ${tripContext?.eventType || 'transportation'}
+- Group size: ${tripContext?.passengers || 'unknown'} people
+- Location: ${tripContext?.city || 'local area'}
 
-RULES:
-1. Each point MAX 10 words
-2. Focus on what makes THIS vehicle special
-3. Mention capacity fit, vehicle features, or value
-4. NO filler words like "perfect", "great", "amazing"
-5. NO generic statements that could apply to any vehicle
-6. Start each with •
+STRICT RULES:
+1. ONLY mention features EXPLICITLY listed above - NEVER invent features
+2. If capacity is 10 or less, do NOT mention dancing - limos are NOT dance vehicles
+3. Party buses (20+ passengers) may have dance areas - only mention if described above
+4. Each point MAX 10 words
+5. Focus on: capacity fit, vehicle style, value proposition
+6. NO words: perfect, great, amazing, fantastic, ideal
+7. Start each with •
+8. If unsure about a feature, DO NOT mention it
 
-Examples of GOOD points:
-• Fits your group of 25 with room to spare
-• Built-in bar and dance pole included
-• Lowest price for a 30-passenger bus here
+GOOD examples for a 10-passenger limo:
+• Seats exactly 10 in luxury leather interior
+• Intimate setting for your ${tripContext?.eventType || 'event'}
+• Premium stretch limo at competitive rate
 
-Examples of BAD points (too generic):
-• Perfect for your special occasion
-• Great value for your group
-• Comfortable transportation`;
+BAD examples (fabricated features):
+• Dance the night away (FALSE for small limos)
+• Built-in dance pole (FALSE unless listed)
+• Standing room for dancing (FALSE for limos)`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
