@@ -954,9 +954,9 @@ export default function CallPad() {
         </div>
         
         {(pendingChips.length > 0 || autoPopulatedChips.length > 0) && (
-          <div style={{ marginTop: '12px' }}>
+          <div style={{ marginTop: '10px', maxHeight: '80px', overflowY: 'auto', overflowX: 'hidden' }}>
             {pendingChips.length > 0 && (
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
                 <button
                   onClick={confirmAllChips}
                   style={{
@@ -990,7 +990,7 @@ export default function CallPad() {
               </div>
             )}
             
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
               {chips.map(chip => {
                 const colors = TYPE_COLORS[chip.type];
                 const isAutoPopulated = chip.autoPopulated && chip.confirmed;
@@ -1015,13 +1015,14 @@ export default function CallPad() {
                     key={chip.id}
                     style={{
                       background: getBgColor(),
-                      border: `2px solid ${getBorderColor()}`,
-                      borderRadius: '20px',
-                      padding: '6px 12px',
+                      border: `1px solid ${getBorderColor()}`,
+                      borderRadius: '12px',
+                      padding: '3px 8px',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px',
+                      gap: '4px',
                       opacity: chip.confirmed ? 0.8 : 1,
+                      fontSize: '11px',
                     }}
                   >
                     {isUncertain && !chip.confirmed && (
