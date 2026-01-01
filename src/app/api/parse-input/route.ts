@@ -42,7 +42,7 @@ const DATE_PATTERNS = [
   /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2}(st|nd|rd|th)?(,?\s*\d{2,4})?$/i,
   /^(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(st|nd|rd|th)?\s*,?\s*\d{4}$/i,
 ];
-const PASSENGERS_REGEX = /^(\d{1,3})\s*(people|passengers|pax|guests|persons)$/i;
+const PASSENGERS_REGEX = /^(\d{1,3})\s*(people|passengers?|pax|guests|persons?)$/i;
 const PASSENGERS_SHORT_REGEX = /^(\d{1,2})$/;
 const HOURS_REGEX = /^(\d+(\.\d+)?)\s*(hours?|hrs?)?$/i;
 
@@ -94,6 +94,11 @@ const CITY_KEYWORDS = [
   'westmont', 'springfield', 'clinton', 'franklin', 'madison', 'georgetown',
   'greenville', 'bristol', 'auburn', 'oxford', 'riverside', 'fairfield',
   'manchester', 'columbia', 'lexington', 'nyc', 'la', 'sf', 'dc', 'philly',
+  'grand rapids', 'ann arbor', 'salt lake city', 'oklahoma city', 'fort worth',
+  'san jose', 'jacksonville', 'indianapolis', 'columbus', 'fort lauderdale',
+  'el paso', 'milwaukee', 'albuquerque', 'raleigh', 'omaha', 'virginia beach',
+  'colorado springs', 'long beach', 'oakland', 'sacramento', 'fresno', 'tulsa',
+  'cleveland', 'pittsburgh', 'cincinnati', 'bakersfield', 'wichita', 'arlington',
 ];
 
 const VENUE_KEYWORDS = [
