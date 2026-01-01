@@ -434,7 +434,19 @@ export default function CallPad() {
       
       if (data.items && data.items.length > 0) {
         const newChips: DetectedChip[] = data.items.map((item: any) => {
-          const shouldAutoPopulate = item.confidence >= AUTO_POPULATE_THRESHOLD && item.type !== 'unknown';
+          let shouldAutoPopulate = item.confidence >= AUTO_POPULATE_THRESHOLD && item.type !== 'unknown';
+          
+          // Don't auto-populate dates in the past - require agent confirmation
+          if (item.type === 'date' && shouldAutoPopulate) {
+            const parsedDate = parseDateString(item.value);
+            if (parsedDate) {
+              const daysUntil = calculateDaysUntilEvent(parsedDate);
+              if (daysUntil < 0) {
+                shouldAutoPopulate = false;
+              }
+            }
+          }
+          
           return {
             id: generateId(),
             type: item.type,
