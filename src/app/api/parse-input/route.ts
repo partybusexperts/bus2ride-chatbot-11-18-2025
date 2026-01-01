@@ -186,6 +186,20 @@ function detectPattern(text: string): DetectedItem | null {
     }
   }
   
+  // Handle "4pm pickup" or "4pm pick up" (time before pickup indicator)
+  const timeBeforePuMatch = lowerText.match(/^(\d{1,2})(:\d{2})?\s*(am|pm)?\s*(pu|up|p\.u\.|u\.p\.|p\/u|pickup|pick\s*-?\s*up)$/i);
+  if (timeBeforePuMatch) {
+    const timeVal = timeBeforePuMatch[1] + (timeBeforePuMatch[2] || '') + (timeBeforePuMatch[3] || 'pm');
+    return { type: 'time', value: timeVal, confidence: 0.92, original: trimmed };
+  }
+  
+  // Handle "4pm dropoff" or "4pm drop off"
+  const timeBeforeDoMatch = lowerText.match(/^(\d{1,2})(:\d{2})?\s*(am|pm)?\s*(do|d\.o\.|d\/o|dropoff|drop\s*-?\s*off)$/i);
+  if (timeBeforeDoMatch) {
+    const timeVal = timeBeforeDoMatch[1] + (timeBeforeDoMatch[2] || '') + (timeBeforeDoMatch[3] || 'pm');
+    return { type: 'time', value: timeVal, confidence: 0.92, original: trimmed };
+  }
+  
   const puMatch = lowerText.match(/^(pu|up|p\.u\.|u\.p\.|p\/u|pickup|pick\s*-?\s*up)\s*(at|@|:|-|–|is)?\s*(.+)/i);
   if (puMatch && puMatch[3]) {
     let rest = puMatch[3].trim();

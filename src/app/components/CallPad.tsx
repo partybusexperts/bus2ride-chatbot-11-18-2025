@@ -295,12 +295,15 @@ export default function CallPad() {
       const data = await res.json();
       
       if (data.found && data.fullAddress) {
+        // Format address with venue name first for readability
+        const formattedAddress = data.name ? `${data.name} - ${data.fullAddress}` : data.fullAddress;
+        
         if (context === 'pickup') {
-          setConfirmedData(prev => ({ ...prev, pickupAddress: data.fullAddress }));
+          setConfirmedData(prev => ({ ...prev, pickupAddress: formattedAddress }));
         } else if (context === 'dropoff') {
-          setConfirmedData(prev => ({ ...prev, dropoffAddress: data.fullAddress }));
+          setConfirmedData(prev => ({ ...prev, dropoffAddress: formattedAddress }));
         } else {
-          const stopNote = `Stop: ${data.name} - ${data.fullAddress}`;
+          const stopNote = `Stop: ${formattedAddress}`;
           setConfirmedData(prev => ({
             ...prev,
             tripNotes: prev.tripNotes ? `${prev.tripNotes}\n${stopNote}` : stopNote,
@@ -899,17 +902,19 @@ export default function CallPad() {
   };
 
   return (
-    <div style={{ background: '#f3f4f6', padding: '16px', borderRadius: '12px', paddingTop: '90px' }}>
+    <div style={{ background: '#f3f4f6', padding: '16px', borderRadius: '12px', paddingTop: '160px' }}>
       <div style={{ 
         background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #2d5a87 100%)',
         padding: '16px 20px',
-        borderRadius: '10px',
+        borderRadius: '0 0 10px 10px',
         position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
         zIndex: 100,
         boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+        maxHeight: '150px',
+        overflowY: 'auto',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <input
@@ -935,7 +940,7 @@ export default function CallPad() {
         </div>
         
         {(pendingChips.length > 0 || autoPopulatedChips.length > 0) && (
-          <div style={{ marginTop: '10px', maxHeight: '80px', overflowY: 'auto', overflowX: 'hidden' }}>
+          <div style={{ marginTop: '10px' }}>
             {pendingChips.length > 0 && (
               <div style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
                 <button
