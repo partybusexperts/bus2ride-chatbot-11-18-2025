@@ -411,7 +411,25 @@ function detectPattern(text: string): DetectedItem | null {
     return { type: 'place', value: trimmed, confidence: 0.9, original: trimmed };
   }
 
+  // Handle city + state patterns like "mesa az", "mesa arizona", "phoenix, az"
+  const STATE_ABBREVS = ['az', 'ca', 'tx', 'nv', 'co', 'fl', 'ga', 'il', 'ny', 'wa', 'or', 'pa', 'oh', 'mi', 'nc', 'tn', 'mo', 'mn', 'wi', 'in', 'md', 'va', 'nj', 'ma', 'ct', 'sc', 'al', 'la', 'ky', 'ok', 'ut', 'nm', 'ks', 'ne', 'ia', 'ar', 'ms', 'wv', 'id', 'hi', 'me', 'nh', 'ri', 'mt', 'de', 'sd', 'nd', 'ak', 'vt', 'wy', 'dc'];
+  const STATE_NAMES = ['arizona', 'california', 'texas', 'nevada', 'colorado', 'florida', 'georgia', 'illinois', 'new york', 'washington', 'oregon', 'pennsylvania', 'ohio', 'michigan', 'north carolina', 'tennessee', 'missouri', 'minnesota', 'wisconsin', 'indiana', 'maryland', 'virginia', 'new jersey', 'massachusetts', 'connecticut', 'south carolina', 'alabama', 'louisiana', 'kentucky', 'oklahoma', 'utah', 'new mexico', 'kansas', 'nebraska', 'iowa', 'arkansas', 'mississippi', 'west virginia', 'idaho', 'hawaii', 'maine', 'new hampshire', 'rhode island', 'montana', 'delaware', 'south dakota', 'north dakota', 'alaska', 'vermont', 'wyoming'];
+  
   for (const city of CITY_KEYWORDS) {
+    // Check for city + state abbreviation pattern (e.g., "mesa az", "mesa, az")
+    const cityStateAbbrevPattern = new RegExp(`^${city}[,\\s]+([a-z]{2})$`, 'i');
+    const cityStateMatch = lowerText.match(cityStateAbbrevPattern);
+    if (cityStateMatch && STATE_ABBREVS.includes(cityStateMatch[1].toLowerCase())) {
+      return { type: 'city', value: trimmed, confidence: 0.95, original: trimmed };
+    }
+    
+    // Check for city + state name pattern (e.g., "mesa arizona", "phoenix arizona")
+    for (const state of STATE_NAMES) {
+      if (lowerText === `${city} ${state}` || lowerText === `${city}, ${state}`) {
+        return { type: 'city', value: trimmed, confidence: 0.95, original: trimmed };
+      }
+    }
+    
     if (lowerText === city || lowerText.startsWith(city + ' ') || lowerText.includes(' ' + city)) {
       return { type: 'city', value: trimmed, confidence: 0.9, original: trimmed };
     }

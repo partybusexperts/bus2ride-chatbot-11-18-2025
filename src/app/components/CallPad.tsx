@@ -46,10 +46,10 @@ const LEAD_STATUS_OPTIONS: { value: LeadStatus; label: string }[] = [
 const AGENTS = [
   { id: '', name: 'Select Agent...' },
   { id: 'agent1', name: 'Floyd' },
-  { id: 'agent2', name: 'Marcus' },
-  { id: 'agent3', name: 'Sarah' },
-  { id: 'agent4', name: 'Jennifer' },
-  { id: 'agent5', name: 'David' },
+  { id: 'agent2', name: 'Rob' },
+  { id: 'agent3', name: 'Camille' },
+  { id: 'agent4', name: 'Shiela' },
+  { id: 'agent5', name: 'Henrietta' },
   { id: 'agent6', name: 'Other' },
 ];
 
