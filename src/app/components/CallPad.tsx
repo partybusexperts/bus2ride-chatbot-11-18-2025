@@ -793,7 +793,7 @@ export default function CallPad() {
   }, [vehicles, vehicleFilters, sortBy, rateHours, getVehiclePrice]);
 
   const hasTransferVehicles = useMemo(() => {
-    return vehicles.some(v => v.is_transfer === true || v.is_transfer === 'true' || v.transfer_price > 0);
+    return vehicles.some(v => v.is_transfer === true || v.is_transfer === 'true' || (v.transfer_price != null && Number(v.transfer_price) > 0));
   }, [vehicles]);
 
   const getAIRecommendation = useCallback(async (vehicle: any) => {

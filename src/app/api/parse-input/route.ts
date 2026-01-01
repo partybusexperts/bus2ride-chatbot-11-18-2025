@@ -39,7 +39,8 @@ const ZIP_REGEX = /^\d{5}(-\d{4})?$/;
 const TIME_REGEX = /^(\d{1,2})(:\d{2})?\s*(am|pm|AM|PM)?$/;
 const DATE_PATTERNS = [
   /^\d{1,2}\/\d{1,2}(\/\d{2,4})?$/,
-  /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2}(st|nd|rd|th)?(,?\s*\d{4})?$/i,
+  /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2}(st|nd|rd|th)?(,?\s*\d{2,4})?$/i,
+  /^(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(st|nd|rd|th)?\s*,?\s*\d{4}$/i,
 ];
 const PASSENGERS_REGEX = /^(\d{1,3})\s*(people|passengers|pax|guests|persons)$/i;
 const PASSENGERS_SHORT_REGEX = /^(\d{1,2})$/;
@@ -164,7 +165,7 @@ function detectPattern(text: string): DetectedItem | null {
     return text.replace(/([a-zA-Z])(\d+)$/, '$1').trim();
   };
   
-  const puPostfixMatch = lowerText.match(/^(.+?)\s+(is|=|->|as)\s*(pu|p\.u\.|p\/u|pickup|pick\s*-?\s*up)$/i);
+  const puPostfixMatch = lowerText.match(/^(.+?)\s+(is|=|->|as)\s*(pu|up|p\.u\.|u\.p\.|p\/u|pickup|pick\s*-?\s*up)$/i);
   if (puPostfixMatch && puPostfixMatch[1]) {
     let place = cleanTypoDigits(puPostfixMatch[1].trim());
     if (place.length > 1) {
@@ -180,7 +181,7 @@ function detectPattern(text: string): DetectedItem | null {
     }
   }
   
-  const puMatch = lowerText.match(/^(pu|p\.u\.|p\/u|pickup|pick\s*-?\s*up)\s*(at|@|:|-|–|is)?\s*(.+)/i);
+  const puMatch = lowerText.match(/^(pu|up|p\.u\.|u\.p\.|p\/u|pickup|pick\s*-?\s*up)\s*(at|@|:|-|–|is)?\s*(.+)/i);
   if (puMatch && puMatch[3]) {
     let rest = puMatch[3].trim();
     const timeCheck = rest.match(/^(\d{1,2})(:\d{2})?\s*(am|pm)?$/i);
@@ -216,7 +217,7 @@ function detectPattern(text: string): DetectedItem | null {
     return { type: 'name', value: nameMatch[2], confidence: 0.85, original: trimmed };
   }
   
-  const twoWordName = trimmed.match(/^([A-Z][a-z]+)\s+([A-Z][a-z]+)$/);
+  const twoWordName = trimmed.match(/^([A-Za-z]+)\s+([A-Za-z]+)$/);
   if (twoWordName && trimmed.length >= 5 && trimmed.length <= 40) {
     const firstName = twoWordName[1].toLowerCase();
     const lastName = twoWordName[2].toLowerCase();
@@ -226,8 +227,9 @@ function detectPattern(text: string): DetectedItem | null {
     const isNotVenue = !VENUE_KEYWORDS.some(v => firstName.includes(v) || lastName.includes(v) || trimmed.toLowerCase().includes(v));
     const isFirstNameCommon = COMMON_FIRST_NAMES.includes(firstName);
     if (isNotCity && isNotVehicle && isNotEvent && isNotVenue) {
+      const formattedName = twoWordName[1].charAt(0).toUpperCase() + twoWordName[1].slice(1).toLowerCase() + ' ' + twoWordName[2].charAt(0).toUpperCase() + twoWordName[2].slice(1).toLowerCase();
       const confidence = isFirstNameCommon ? 0.9 : 0.75;
-      return { type: 'name', value: trimmed, confidence, original: trimmed };
+      return { type: 'name', value: formattedName, confidence, original: trimmed };
     }
   }
   
