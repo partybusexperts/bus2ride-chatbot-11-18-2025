@@ -498,25 +498,6 @@ export default function CallPad() {
     }
   };
 
-  useEffect(() => {
-    if (parseTimeoutRef.current) {
-      clearTimeout(parseTimeoutRef.current);
-    }
-    
-    const trimmed = smartInput.trim();
-    const segments = trimmed.split(',').map(s => s.trim()).filter(s => s.length > 0);
-    const hasCompleteSegment = segments.some(s => s.length >= 4);
-    
-    if (hasCompleteSegment && trimmed.length >= 4) {
-      parseTimeoutRef.current = setTimeout(() => {
-        parseInput(smartInput);
-      }, 2500);
-    }
-    
-    return () => {
-      if (parseTimeoutRef.current) clearTimeout(parseTimeoutRef.current);
-    };
-  }, [smartInput, parseInput]);
 
   const confirmChip = useCallback((chipId: string) => {
     setChips(prev => {
