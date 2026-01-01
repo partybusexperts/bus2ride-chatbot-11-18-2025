@@ -160,27 +160,27 @@ function detectPattern(text: string): DetectedItem | null {
 
   const lowerText = trimmed.toLowerCase();
   
-  const puMatch = lowerText.match(/^(pu|p\/u|pickup|pick\s*-?\s*up)\s*(at|@)?\s*(.+)/i);
+  const puMatch = lowerText.match(/^(pu|p\.u\.|p\/u|pickup|pick\s*-?\s*up)\s*(at|@|:|-|–)?\s*(.+)/i);
   if (puMatch && puMatch[3]) {
     const rest = puMatch[3].trim();
     const timeCheck = rest.match(/^(\d{1,2})(:\d{2})?\s*(am|pm)?$/i);
     if (timeCheck) {
       return { type: 'time', value: rest, confidence: 0.9, original: trimmed };
     }
-    if (rest.length > 2) {
-      return { type: 'pickup_address', value: rest, confidence: 0.85, original: trimmed };
+    if (rest.length > 1) {
+      return { type: 'pickup_address', value: rest, confidence: 0.92, original: trimmed };
     }
   }
   
-  const doMatch = lowerText.match(/^(do|d\/o|dropoff|drop\s*-?\s*off)\s*(at|@)?\s*(.+)/i);
+  const doMatch = lowerText.match(/^(do|d\.o\.|d\/o|dropoff|drop\s*-?\s*off)\s*(at|@|:|-|–)?\s*(.+)/i);
   if (doMatch && doMatch[3]) {
     const rest = doMatch[3].trim();
     const timeCheck = rest.match(/^(\d{1,2})(:\d{2})?\s*(am|pm)?$/i);
     if (timeCheck) {
       return { type: 'time', value: rest, confidence: 0.9, original: trimmed };
     }
-    if (rest.length > 2) {
-      return { type: 'dropoff_address', value: rest, confidence: 0.85, original: trimmed };
+    if (rest.length > 1) {
+      return { type: 'dropoff_address', value: rest, confidence: 0.92, original: trimmed };
     }
   }
   
@@ -302,16 +302,25 @@ async function parseWithAI(text: string): Promise<DetectedItem[]> {
 
 Return JSON array of detected items. Each item has:
 - type: one of phone, email, zip, city, date, time, passengers, hours, pickup_address, destination, dropoff_address, event_type, name, website, unknown
-- value: the extracted/cleaned value
+- value: the extracted/cleaned value (WITHOUT the PU/DO prefix - just the place name)
 - confidence: 0-1 confidence score
 - original: the original text fragment
 
-For addresses, determine if it's pickup, destination, or dropoff based on context clues like "from", "to", "going to", "pick up at", "drop off at".
+IMPORTANT AGENT ABBREVIATIONS:
+- "PU" or "pu" = pickup (pickup_address)
+- "DO" or "do" = dropoff (dropoff_address)
+- Agents often write "pu topgolf" meaning pickup at TopGolf
+- Agents often write "do marriott" meaning dropoff at Marriott
+
+For addresses, determine if it's pickup, destination, or dropoff based on context clues like "from", "to", "going to", "pick up at", "drop off at", "PU", "DO".
 
 If text looks like a name (first last), mark as name.
 If text looks like a website/URL, mark as website.
 
 Examples:
+"pu topgolf" → pickup_address with value "topgolf" (confidence 0.95)
+"do marriott scottsdale" → dropoff_address with value "marriott scottsdale" (confidence 0.95)
+"pu 123 main street" → pickup_address with value "123 main street" (confidence 0.95)
 "walmart on frye and gilbert" → pickup_address (if mentioned first) or destination
 "john smith" → name
 "partybusquotes.com" → website
