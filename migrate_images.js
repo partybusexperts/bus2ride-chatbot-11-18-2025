@@ -6,8 +6,13 @@
 const { createClient } = require('@supabase/supabase-js');
 const fetch = require('node-fetch');
 
-// 🔧 CHANGE THIS ONE LINE ONLY
-const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV4bWl5Zml6ZXFicGVlaWtvZ3JlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzQ4Nzc2NiwiZXhwIjoyMDc5MDYzNzY2fQ.oUywWlO0pfPVFuOBPOzpsDZtMQgVvRdrAAsbnOoK6nc';
+// Service role key loaded from environment variable for security
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!SERVICE_ROLE_KEY) {
+  console.error('Error: SUPABASE_SERVICE_ROLE_KEY environment variable is not set.');
+  process.exit(1);
+}
 
 // DO NOT CHANGE ANYTHING ELSE BELOW ↓↓↓↓↓↓↓↓↓↓↓↓↓↓
 
