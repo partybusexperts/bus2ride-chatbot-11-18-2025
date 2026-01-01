@@ -1132,7 +1132,7 @@ export default function CallPad() {
         )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '300px 280px 1fr', gap: '16px', minHeight: '600px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '300px 280px 1fr', gap: '16px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ background: SECTION_STYLES.agentCustomer.bg, padding: '14px', borderRadius: '10px', border: `2px solid ${SECTION_STYLES.agentCustomer.border}` }}>
             <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '12px', color: SECTION_STYLES.agentCustomer.title }}>Agent & Customer</h3>
@@ -1613,8 +1613,6 @@ export default function CallPad() {
               display: 'grid', 
               gridTemplateColumns: 'repeat(3, 1fr)', 
               gap: '12px',
-              flex: 1,
-              overflowY: 'auto',
               alignContent: 'start',
             }}>
               {filteredVehicles.map((v) => (
