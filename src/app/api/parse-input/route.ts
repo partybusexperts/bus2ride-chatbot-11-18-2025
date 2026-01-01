@@ -160,25 +160,47 @@ function detectPattern(text: string): DetectedItem | null {
 
   const lowerText = trimmed.toLowerCase();
   
-  const puMatch = lowerText.match(/^(pu|p\.u\.|p\/u|pickup|pick\s*-?\s*up)\s*(at|@|:|-|–)?\s*(.+)/i);
+  const cleanTypoDigits = (text: string): string => {
+    return text.replace(/([a-zA-Z])(\d+)$/, '$1').trim();
+  };
+  
+  const puPostfixMatch = lowerText.match(/^(.+?)\s+(is|=|->|as)\s*(pu|p\.u\.|p\/u|pickup|pick\s*-?\s*up)$/i);
+  if (puPostfixMatch && puPostfixMatch[1]) {
+    let place = cleanTypoDigits(puPostfixMatch[1].trim());
+    if (place.length > 1) {
+      return { type: 'pickup_address', value: place, confidence: 0.92, original: trimmed };
+    }
+  }
+  
+  const doPostfixMatch = lowerText.match(/^(.+?)\s+(is|=|->|as)\s*(do|d\.o\.|d\/o|dropoff|drop\s*-?\s*off)$/i);
+  if (doPostfixMatch && doPostfixMatch[1]) {
+    let place = cleanTypoDigits(doPostfixMatch[1].trim());
+    if (place.length > 1) {
+      return { type: 'dropoff_address', value: place, confidence: 0.92, original: trimmed };
+    }
+  }
+  
+  const puMatch = lowerText.match(/^(pu|p\.u\.|p\/u|pickup|pick\s*-?\s*up)\s*(at|@|:|-|–|is)?\s*(.+)/i);
   if (puMatch && puMatch[3]) {
-    const rest = puMatch[3].trim();
+    let rest = puMatch[3].trim();
     const timeCheck = rest.match(/^(\d{1,2})(:\d{2})?\s*(am|pm)?$/i);
     if (timeCheck) {
       return { type: 'time', value: rest, confidence: 0.9, original: trimmed };
     }
+    rest = cleanTypoDigits(rest);
     if (rest.length > 1) {
       return { type: 'pickup_address', value: rest, confidence: 0.92, original: trimmed };
     }
   }
   
-  const doMatch = lowerText.match(/^(do|d\.o\.|d\/o|dropoff|drop\s*-?\s*off)\s*(at|@|:|-|–)?\s*(.+)/i);
+  const doMatch = lowerText.match(/^(do|d\.o\.|d\/o|dropoff|drop\s*-?\s*off)\s*(at|@|:|-|–|is)?\s*(.+)/i);
   if (doMatch && doMatch[3]) {
-    const rest = doMatch[3].trim();
+    let rest = doMatch[3].trim();
     const timeCheck = rest.match(/^(\d{1,2})(:\d{2})?\s*(am|pm)?$/i);
     if (timeCheck) {
       return { type: 'time', value: rest, confidence: 0.9, original: trimmed };
     }
+    rest = cleanTypoDigits(rest);
     if (rest.length > 1) {
       return { type: 'dropoff_address', value: rest, confidence: 0.92, original: trimmed };
     }
@@ -309,23 +331,28 @@ Return JSON array of detected items. Each item has:
 IMPORTANT AGENT ABBREVIATIONS:
 - "PU" or "pu" = pickup (pickup_address)
 - "DO" or "do" = dropoff (dropoff_address)
-- Agents often write "pu topgolf" meaning pickup at TopGolf
-- Agents often write "do marriott" meaning dropoff at Marriott
+- Agents use BOTH prefix and postfix patterns:
+  - PREFIX: "pu topgolf", "do marriott", "pu mesa"
+  - POSTFIX: "mesa is pu", "topgolf is do", "airport is dropoff"
 
-For addresses, determine if it's pickup, destination, or dropoff based on context clues like "from", "to", "going to", "pick up at", "drop off at", "PU", "DO".
+CRITICAL: Only strip trailing numbers that are FUSED to letters (typos like "chicago4" → "chicago", "mesa2" → "mesa"). KEEP numbers with spaces like "Terminal 4", "Gate 12", "Club 33".
+
+For addresses, determine if it's pickup, destination, or dropoff based on context clues like "from", "to", "going to", "pick up at", "drop off at", "PU", "DO", "is PU", "is DO".
 
 If text looks like a name (first last), mark as name.
 If text looks like a website/URL, mark as website.
 
 Examples:
 "pu topgolf" → pickup_address with value "topgolf" (confidence 0.95)
+"mesa is pu" → pickup_address with value "mesa" (confidence 0.95)
+"chicago is pickup" → pickup_address with value "chicago" (confidence 0.95)
 "do marriott scottsdale" → dropoff_address with value "marriott scottsdale" (confidence 0.95)
+"airport is do" → dropoff_address with value "airport" (confidence 0.95)
 "pu 123 main street" → pickup_address with value "123 main street" (confidence 0.95)
-"walmart on frye and gilbert" → pickup_address (if mentioned first) or destination
+"chicago4 is pu" → pickup_address with value "chicago" (strip the 4, confidence 0.95)
 "john smith" → name
 "partybusquotes.com" → website
-"going to the phoenician" → destination
-"pick them up at hotel" → pickup_address`,
+"going to the phoenician" → destination`,
         },
         {
           role: "user",
