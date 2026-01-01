@@ -1356,8 +1356,26 @@ export default function CallPad() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '150px', overflowY: 'auto' }}>
                 {quotedVehicles.map(v => (
-                  <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '6px 8px', background: '#ecfdf5', borderRadius: '4px' }}>
-                    <span style={{ color: '#047857', fontWeight: 500 }}>{v.name}</span>
+                  <div key={v.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', padding: '6px 8px', background: '#ecfdf5', borderRadius: '4px' }}>
+                    <button
+                      onClick={() => setQuotedVehicles(prev => prev.filter(qv => qv.id !== v.id))}
+                      style={{
+                        background: '#dc2626',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '18px',
+                        height: '18px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >✕</button>
+                    <span style={{ color: '#047857', fontWeight: 500, flex: 1 }}>{v.name}</span>
                     <span style={{ color: '#059669', fontWeight: 600 }}>{v.priceDisplay}</span>
                   </div>
                 ))}
