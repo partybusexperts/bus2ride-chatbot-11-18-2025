@@ -1912,159 +1912,136 @@ export default function CallPad() {
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-              <div style={{ background: '#f0fdf4', padding: '16px', borderRadius: '8px', border: '1px solid #86efac' }}>
-                <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#166534', marginBottom: '12px' }}>Select Pricing</h3>
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#166534', marginBottom: '12px' }}>All Available Pricing</h3>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+                {hasStandardPricing && (
+                  <div style={{ background: '#f0fdf4', padding: '12px', borderRadius: '8px', border: modalPriceType === 'standard' ? '2px solid #16a34a' : '1px solid #86efac' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#166534', marginBottom: '8px' }}>STANDARD RATES</div>
+                    <select
+                      value={modalPriceType === 'standard' ? modalHours : ''}
+                      onChange={(e) => { setModalPriceType('standard'); setModalHours(Number(e.target.value)); }}
+                      style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #86efac', fontSize: '13px', fontWeight: 600, background: '#fff' }}
+                    >
+                      <option value="">Select hours...</option>
+                      {getAvailableHours('standard').map(h => {
+                        const price = selectedVehicle[`price_${h}hr`];
+                        return <option key={h} value={h}>{h} hours - ${Number(price).toLocaleString()}</option>;
+                      })}
+                    </select>
+                  </div>
+                )}
                 
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
-                  {hasStandardPricing && (
-                    <button
-                      onClick={() => { setModalPriceType('standard'); setModalHours(getAvailableHours('standard')[0] || 4); }}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '6px',
-                        border: modalPriceType === 'standard' ? '2px solid #16a34a' : '1px solid #d1d5db',
-                        background: modalPriceType === 'standard' ? '#dcfce7' : '#fff',
-                        color: modalPriceType === 'standard' ? '#166534' : '#374151',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
+                {hasPromPricing && (
+                  <div style={{ background: '#faf5ff', padding: '12px', borderRadius: '8px', border: modalPriceType === 'prom' ? '2px solid #7c3aed' : '1px solid #c4b5fd' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#5b21b6', marginBottom: '8px' }}>PROM RATES</div>
+                    <select
+                      value={modalPriceType === 'prom' ? modalHours : ''}
+                      onChange={(e) => { setModalPriceType('prom'); setModalHours(Number(e.target.value)); }}
+                      style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #c4b5fd', fontSize: '13px', fontWeight: 600, background: '#fff' }}
                     >
-                      Standard
-                    </button>
-                  )}
-                  {hasPromPricing && (
-                    <button
-                      onClick={() => { setModalPriceType('prom'); setModalHours(getAvailableHours('prom')[0] || 6); }}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '6px',
-                        border: modalPriceType === 'prom' ? '2px solid #7c3aed' : '1px solid #d1d5db',
-                        background: modalPriceType === 'prom' ? '#ede9fe' : '#fff',
-                        color: modalPriceType === 'prom' ? '#5b21b6' : '#374151',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Prom
-                    </button>
-                  )}
-                  {hasBefore5pmPricing && (
-                    <button
-                      onClick={() => { setModalPriceType('before5pm'); setModalHours(getAvailableHours('before5pm')[0] || 4); }}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '6px',
-                        border: modalPriceType === 'before5pm' ? '2px solid #ea580c' : '1px solid #d1d5db',
-                        background: modalPriceType === 'before5pm' ? '#fff7ed' : '#fff',
-                        color: modalPriceType === 'before5pm' ? '#9a3412' : '#374151',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Before 5PM
-                    </button>
-                  )}
-                  {hasAprilMayPricing && (
-                    <button
-                      onClick={() => { setModalPriceType('aprilmay'); setModalHours(getAvailableHours('aprilmay')[0] || 5); }}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '6px',
-                        border: modalPriceType === 'aprilmay' ? '2px solid #db2777' : '1px solid #d1d5db',
-                        background: modalPriceType === 'aprilmay' ? '#fdf2f8' : '#fff',
-                        color: modalPriceType === 'aprilmay' ? '#9d174d' : '#374151',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Apr/May Wknd
-                    </button>
-                  )}
-                  {hasTransferPricing && (
-                    <button
-                      onClick={() => setModalPriceType('transfer')}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '6px',
-                        border: modalPriceType === 'transfer' ? '2px solid #eab308' : '1px solid #d1d5db',
-                        background: modalPriceType === 'transfer' ? '#fef9c3' : '#fff',
-                        color: modalPriceType === 'transfer' ? '#854d0e' : '#374151',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Transfer
-                    </button>
-                  )}
-                </div>
+                      <option value="">Select hours...</option>
+                      {getAvailableHours('prom').map(h => {
+                        const price = selectedVehicle[`prom_price_${h}hr`];
+                        return <option key={h} value={h}>{h} hours - ${Number(price).toLocaleString()}</option>;
+                      })}
+                    </select>
+                  </div>
+                )}
                 
-                {modalPriceType !== 'transfer' && (
-                  <div>
-                    <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '6px', fontWeight: 500 }}>SELECT HOURS</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                      {getAvailableHours(modalPriceType).map(h => (
-                        <button
-                          key={h}
-                          onClick={() => setModalHours(h)}
-                          style={{
-                            padding: '8px 14px',
-                            borderRadius: '6px',
-                            border: modalHours === h ? '2px solid #2563eb' : '1px solid #d1d5db',
-                            background: modalHours === h ? '#dbeafe' : '#fff',
-                            color: modalHours === h ? '#1d4ed8' : '#374151',
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          {h}hr
-                        </button>
-                      ))}
+                {hasBefore5pmPricing && (
+                  <div style={{ background: '#fff7ed', padding: '12px', borderRadius: '8px', border: modalPriceType === 'before5pm' ? '2px solid #ea580c' : '1px solid #fdba74' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#9a3412', marginBottom: '8px' }}>BEFORE 5PM RATES</div>
+                    <select
+                      value={modalPriceType === 'before5pm' ? modalHours : ''}
+                      onChange={(e) => { setModalPriceType('before5pm'); setModalHours(Number(e.target.value)); }}
+                      style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #fdba74', fontSize: '13px', fontWeight: 600, background: '#fff' }}
+                    >
+                      <option value="">Select hours...</option>
+                      {getAvailableHours('before5pm').map(h => {
+                        const price = selectedVehicle[`before5pm_${h}hr`];
+                        return <option key={h} value={h}>{h} hours - ${Number(price).toLocaleString()}</option>;
+                      })}
+                    </select>
+                  </div>
+                )}
+                
+                {hasAprilMayPricing && (
+                  <div style={{ background: '#fdf2f8', padding: '12px', borderRadius: '8px', border: modalPriceType === 'aprilmay' ? '2px solid #db2777' : '1px solid #f9a8d4' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#9d174d', marginBottom: '8px' }}>APR/MAY WEEKEND</div>
+                    <select
+                      value={modalPriceType === 'aprilmay' ? modalHours : ''}
+                      onChange={(e) => { setModalPriceType('aprilmay'); setModalHours(Number(e.target.value)); }}
+                      style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #f9a8d4', fontSize: '13px', fontWeight: 600, background: '#fff' }}
+                    >
+                      <option value="">Select hours...</option>
+                      {getAvailableHours('aprilmay').map(h => {
+                        const price = selectedVehicle[`april_may_weekend_${h}hr`];
+                        return <option key={h} value={h}>{h} hours - ${Number(price).toLocaleString()}</option>;
+                      })}
+                    </select>
+                  </div>
+                )}
+                
+                {hasTransferPricing && (
+                  <div 
+                    onClick={() => setModalPriceType('transfer')}
+                    style={{ 
+                      background: modalPriceType === 'transfer' ? '#fef9c3' : '#fffbeb', 
+                      padding: '12px', 
+                      borderRadius: '8px', 
+                      border: modalPriceType === 'transfer' ? '2px solid #eab308' : '1px solid #fcd34d',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#854d0e', marginBottom: '8px' }}>ONE WAY TRANSFER</div>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: '#78350f' }}>
+                      ${Number(selectedVehicle.transfer_price).toLocaleString()}
                     </div>
                   </div>
                 )}
               </div>
-
-              <div style={{ background: '#f9fafb', padding: '16px', borderRadius: '8px' }}>
-                <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#374151', marginBottom: '12px' }}>Quote Calculation</h3>
-                
-                <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '2px solid #10b981', marginBottom: '12px' }}>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div style={{ background: '#ecfdf5', padding: '16px', borderRadius: '8px', border: '2px solid #10b981' }}>
                   <div style={{ fontSize: '11px', color: '#10b981', fontWeight: 600, marginBottom: '4px' }}>
                     {modalPriceType === 'transfer' ? 'ONE WAY TRANSFER' : `${modalPriceType.toUpperCase()} RATE (${modalHours}HR)`}
                   </div>
-                  <div style={{ fontSize: '28px', fontWeight: 700, color: '#111827' }}>
+                  <div style={{ fontSize: '32px', fontWeight: 700, color: '#111827' }}>
                     {modalPrice > 0 ? `$${modalPrice.toLocaleString()}` : 'Call for price'}
                   </div>
-                </div>
-                
-                <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
-                  {modalPriceType !== 'transfer' && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
-                      <span style={{ color: '#6b7280', fontSize: '13px' }}>Per Hour Rate</span>
-                      <span style={{ fontWeight: 600, color: '#111827', fontSize: '13px' }}>
-                        {modalPrice > 0 ? `$${Math.round(modalPrice / modalHours).toLocaleString()}/hr` : '---'}
-                      </span>
+                  {modalPriceType !== 'transfer' && modalPrice > 0 && (
+                    <div style={{ fontSize: '13px', color: '#059669', marginTop: '4px' }}>
+                      ${Math.round(modalPrice / modalHours).toLocaleString()}/hour
                     </div>
                   )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
-                    <span style={{ color: '#6b7280', fontSize: '13px' }}>Deposit ({daysUntilEvent <= 7 ? '100' : '50'}%)</span>
-                    <span style={{ fontWeight: 600, color: '#92400e', fontSize: '13px' }}>
+                </div>
+                
+                <div style={{ background: '#f9fafb', padding: '16px', borderRadius: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #e5e7eb' }}>
+                    <span style={{ color: '#6b7280', fontSize: '13px' }}>Deposit ({daysUntilEvent <= 7 ? '100%' : '50%'})</span>
+                    <span style={{ fontWeight: 700, color: '#92400e', fontSize: '15px' }}>
                       {modalPrice > 0 ? `$${modalDeposit.toLocaleString()}` : '---'}
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
                     <span style={{ color: '#6b7280', fontSize: '13px' }}>Balance Due</span>
-                    <span style={{ fontWeight: 600, color: '#374151', fontSize: '13px' }}>
+                    <span style={{ fontWeight: 600, color: '#374151', fontSize: '15px' }}>
                       {modalPrice > 0 ? `$${modalBalance.toLocaleString()}` : '---'}
                     </span>
                   </div>
                 </div>
+              </div>
+            </div>
+            
+            <div style={{ marginBottom: '16px', padding: '14px', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #7dd3fc' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#0369a1', marginBottom: '8px' }}>VEHICLE DETAILS FOR AGENT</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px', fontSize: '13px' }}>
+                <div><span style={{ color: '#64748b' }}>Capacity:</span> <strong>{selectedVehicle.capacity || 'N/A'} passengers</strong></div>
+                <div><span style={{ color: '#64748b' }}>Category:</span> <strong>{selectedVehicle.category || 'N/A'}</strong></div>
+                <div><span style={{ color: '#64748b' }}>City:</span> <strong>{selectedVehicle.city || 'N/A'}</strong></div>
+                {selectedVehicle.tags && <div><span style={{ color: '#64748b' }}>Features:</span> <strong>{selectedVehicle.tags}</strong></div>}
               </div>
             </div>
 
@@ -2080,7 +2057,7 @@ export default function CallPad() {
             {comparableVehicles.length > 0 && (
               <div style={{ marginBottom: '16px', padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                 <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#334155', marginBottom: '12px' }}>Similar Options for This Customer</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
                   {comparableVehicles.map((cv: any) => (
                     <div 
                       key={cv.id}
@@ -2121,10 +2098,10 @@ export default function CallPad() {
                       }}
                       style={{ 
                         background: '#fff', 
-                        borderRadius: '8px', 
-                        padding: '10px',
+                        borderRadius: '10px', 
+                        padding: '12px',
                         cursor: 'pointer',
-                        border: '1px solid #e2e8f0',
+                        border: '2px solid #e2e8f0',
                         transition: 'all 0.15s',
                       }}
                       onMouseOver={(e) => (e.currentTarget.style.borderColor = '#3b82f6')}
@@ -2134,15 +2111,15 @@ export default function CallPad() {
                         <img 
                           src={cv.image} 
                           alt={cv.name}
-                          style={{ width: '100%', height: '60px', objectFit: 'cover', borderRadius: '4px', marginBottom: '6px' }}
+                          style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '6px', marginBottom: '8px' }}
                         />
                       )}
-                      <div style={{ fontSize: '11px', fontWeight: 600, color: '#1e293b', lineHeight: 1.2, marginBottom: '4px' }}>
-                        {cv.name?.substring(0, 30)}{cv.name?.length > 30 ? '...' : ''}
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b', lineHeight: 1.3, marginBottom: '6px' }}>
+                        {cv.name?.substring(0, 35)}{cv.name?.length > 35 ? '...' : ''}
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '10px', color: '#64748b' }}>{cv.capacity}p</span>
-                        <span style={{ fontSize: '12px', fontWeight: 700, color: '#059669' }}>
+                        <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>{cv.capacity} pass</span>
+                        <span style={{ fontSize: '14px', fontWeight: 700, color: '#059669' }}>
                           {cv.displayPrice > 0 ? `$${cv.displayPrice.toLocaleString()}` : 'Call'}
                         </span>
                       </div>
