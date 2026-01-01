@@ -924,6 +924,10 @@ export default function CallPad() {
         padding: '16px 20px',
         borderRadius: '10px',
         marginBottom: '16px',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <input
