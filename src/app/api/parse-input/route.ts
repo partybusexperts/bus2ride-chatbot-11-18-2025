@@ -314,7 +314,11 @@ function detectPattern(text: string): DetectedItem | null {
 
   const hoursMatch = trimmed.match(HOURS_REGEX);
   if (hoursMatch) {
-    return { type: 'hours', value: hoursMatch[1], confidence: 0.85, original: trimmed };
+    const hoursNum = parseFloat(hoursMatch[1]);
+    // Only accept hours up to 12 - anything more is likely a typo or phone number
+    if (hoursNum > 0 && hoursNum <= 12) {
+      return { type: 'hours', value: hoursMatch[1], confidence: 0.85, original: trimmed };
+    }
   }
 
   for (const event of EVENT_KEYWORDS) {
