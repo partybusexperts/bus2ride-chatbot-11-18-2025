@@ -359,15 +359,12 @@ export default function CallPad() {
         return newHistory;
       });
       
-      if (chip.type === 'zip') {
-        setConfirmedData(prev => ({ 
-          ...prev, 
-          cityOrZip: chip.value,
-          pickupAddress: prev.pickupAddress || chip.value
-        }));
-      } else {
-        setConfirmedData(prev => ({ ...prev, cityOrZip: chip.value }));
-      }
+      // Update both cityOrZip and pickupAddress when a new city/zip is entered
+      setConfirmedData(prev => ({ 
+        ...prev, 
+        cityOrZip: chip.value,
+        pickupAddress: chip.value
+      }));
       setCityDisambiguation(null);
       return;
     }
