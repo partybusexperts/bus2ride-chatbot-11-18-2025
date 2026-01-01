@@ -36,7 +36,8 @@ interface DetectedItem {
 const PHONE_REGEX = /^[\d\s\-\(\)\.]{10,}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ZIP_REGEX = /^\d{5}(-\d{4})?$/;
-const TIME_REGEX = /^(\d{1,2})(:\d{2})?\s*(am|pm|AM|PM)?$/;
+// Accept "5pm", "5p", "5 pm", "5:30pm", "5:30 p", etc.
+const TIME_REGEX = /^(\d{1,2})(:\d{2})?\s*([ap]\.?m?\.?)$/i;
 const DATE_PATTERNS = [
   /^\d{1,2}\/\d{1,2}(\/\d{2,4})?$/,
   /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2}(st|nd|rd|th)?(,?\s*\d{2,4})?$/i,
@@ -186,43 +187,68 @@ function detectPattern(text: string): DetectedItem | null {
     }
   }
   
-  // Handle "4pm pickup" or "4pm pick up" (time before pickup indicator)
-  const timeBeforePuMatch = lowerText.match(/^(\d{1,2})(:\d{2})?\s*(am|pm)?\s*(pu|up|p\.u\.|u\.p\.|p\/u|pickup|pick\s*-?\s*up)$/i);
+  // Handle "pick up time", "pu time", "pickup time" - detect as asking about time (not address)
+  const puTimeMatch = lowerText.match(/^(pu|up|p\.u\.|u\.p\.|p\/u|pickup|pick\s*-?\s*up)\s*(time|t)$/i);
+  if (puTimeMatch) {
+    // This is just "pickup time" without an actual time - skip, let other patterns handle
+    // Return null to fall through
+  }
+  
+  // Handle "5pm pu", "5p pickup", "5:30pm pick up" (time before pickup indicator)
+  const timeBeforePuMatch = lowerText.match(/^(\d{1,2})(:\d{2})?\s*([ap]\.?m?\.?)?\s*(pu|up|p\.u\.|u\.p\.|p\/u|pickup|pick\s*-?\s*up)$/i);
   if (timeBeforePuMatch) {
-    const timeVal = timeBeforePuMatch[1] + (timeBeforePuMatch[2] || '') + (timeBeforePuMatch[3] || 'pm');
+    const meridiem = timeBeforePuMatch[3] ? (timeBeforePuMatch[3].toLowerCase().startsWith('a') ? 'am' : 'pm') : 'pm';
+    const timeVal = timeBeforePuMatch[1] + (timeBeforePuMatch[2] || '') + meridiem;
     return { type: 'time', value: timeVal, confidence: 0.92, original: trimmed };
   }
   
-  // Handle "4pm dropoff" or "4pm drop off"
-  const timeBeforeDoMatch = lowerText.match(/^(\d{1,2})(:\d{2})?\s*(am|pm)?\s*(do|d\.o\.|d\/o|dropoff|drop\s*-?\s*off)$/i);
+  // Handle "5pm do", "5p dropoff", "5:30pm drop off"
+  const timeBeforeDoMatch = lowerText.match(/^(\d{1,2})(:\d{2})?\s*([ap]\.?m?\.?)?\s*(do|d\.o\.|d\/o|dropoff|drop\s*-?\s*off)$/i);
   if (timeBeforeDoMatch) {
-    const timeVal = timeBeforeDoMatch[1] + (timeBeforeDoMatch[2] || '') + (timeBeforeDoMatch[3] || 'pm');
+    const meridiem = timeBeforeDoMatch[3] ? (timeBeforeDoMatch[3].toLowerCase().startsWith('a') ? 'am' : 'pm') : 'pm';
+    const timeVal = timeBeforeDoMatch[1] + (timeBeforeDoMatch[2] || '') + meridiem;
     return { type: 'time', value: timeVal, confidence: 0.92, original: trimmed };
   }
   
   const puMatch = lowerText.match(/^(pu|up|p\.u\.|u\.p\.|p\/u|pickup|pick\s*-?\s*up)\s*(at|@|:|-|–|is)?\s*(.+)/i);
   if (puMatch && puMatch[3]) {
     let rest = puMatch[3].trim();
-    const timeCheck = rest.match(/^(\d{1,2})(:\d{2})?\s*(am|pm)?$/i);
-    if (timeCheck) {
-      return { type: 'time', value: rest, confidence: 0.9, original: trimmed };
-    }
-    rest = cleanTypoDigits(rest);
-    if (rest.length > 1) {
-      return { type: 'pickup_address', value: rest, confidence: 0.92, original: trimmed };
+    // Skip if rest is just "time" or "t"
+    if (rest === 'time' || rest === 't') {
+      // Fall through to other patterns
+    } else {
+      // Check for time patterns including shortened meridiem (5p, 5pm, 5:30p, etc.)
+      const timeCheck = rest.match(/^(\d{1,2})(:\d{2})?\s*([ap]\.?m?\.?)?$/i);
+      if (timeCheck) {
+        const meridiem = timeCheck[3] ? (timeCheck[3].toLowerCase().startsWith('a') ? 'am' : 'pm') : 'pm';
+        const timeVal = timeCheck[1] + (timeCheck[2] || '') + meridiem;
+        return { type: 'time', value: timeVal, confidence: 0.9, original: trimmed };
+      }
+      rest = cleanTypoDigits(rest);
+      if (rest.length > 1) {
+        return { type: 'pickup_address', value: rest, confidence: 0.92, original: trimmed };
+      }
     }
   }
   
   const doMatch = lowerText.match(/^(do|d\.o\.|d\/o|dropoff|drop\s*-?\s*off)\s*(at|@|:|-|–|is)?\s*(.+)/i);
   if (doMatch && doMatch[3]) {
     let rest = doMatch[3].trim();
-    const timeCheck = rest.match(/^(\d{1,2})(:\d{2})?\s*(am|pm)?$/i);
-    if (timeCheck) {
-      return { type: 'time', value: rest, confidence: 0.9, original: trimmed };
-    }
-    rest = cleanTypoDigits(rest);
-    if (rest.length > 1) {
-      return { type: 'dropoff_address', value: rest, confidence: 0.92, original: trimmed };
+    // Skip if rest is just "time" or "t"
+    if (rest === 'time' || rest === 't') {
+      // Fall through to other patterns
+    } else {
+      // Check for time patterns including shortened meridiem
+      const timeCheck = rest.match(/^(\d{1,2})(:\d{2})?\s*([ap]\.?m?\.?)?$/i);
+      if (timeCheck) {
+        const meridiem = timeCheck[3] ? (timeCheck[3].toLowerCase().startsWith('a') ? 'am' : 'pm') : 'pm';
+        const timeVal = timeCheck[1] + (timeCheck[2] || '') + meridiem;
+        return { type: 'time', value: timeVal, confidence: 0.9, original: trimmed };
+      }
+      rest = cleanTypoDigits(rest);
+      if (rest.length > 1) {
+        return { type: 'dropoff_address', value: rest, confidence: 0.92, original: trimmed };
+      }
     }
   }
   
