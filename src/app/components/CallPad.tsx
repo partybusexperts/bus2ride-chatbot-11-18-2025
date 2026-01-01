@@ -918,14 +918,15 @@ export default function CallPad() {
   };
 
   return (
-    <div style={{ background: '#f3f4f6', padding: '16px', borderRadius: '12px' }}>
+    <div style={{ background: '#f3f4f6', padding: '16px', borderRadius: '12px', paddingTop: '90px' }}>
       <div style={{ 
         background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #2d5a87 100%)',
         padding: '16px 20px',
         borderRadius: '10px',
-        marginBottom: '16px',
-        position: 'sticky',
+        position: 'fixed',
         top: 0,
+        left: 0,
+        right: 0,
         zIndex: 100,
         boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
       }}>
