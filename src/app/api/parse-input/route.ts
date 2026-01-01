@@ -193,6 +193,22 @@ function detectPattern(text: string): DetectedItem | null {
     }
   }
   
+  // Handle "pu time is 5pm", "pickup time is 5pm", "pu time 5pm"
+  const puTimeIsMatch = lowerText.match(/^(pu|up|p\.u\.|u\.p\.|p\/u|pickup|pick\s*-?\s*up)\s*time\s*(is|=|:)?\s*(\d{1,2})(:\d{2})?\s*([ap]\.?m?\.?)?$/i);
+  if (puTimeIsMatch) {
+    const meridiem = puTimeIsMatch[5] ? (puTimeIsMatch[5].toLowerCase().startsWith('a') ? 'am' : 'pm') : 'pm';
+    const timeVal = puTimeIsMatch[3] + (puTimeIsMatch[4] || '') + meridiem;
+    return { type: 'time', value: timeVal, confidence: 0.92, original: trimmed };
+  }
+  
+  // Handle "do time is 5pm", "dropoff time is 5pm"
+  const doTimeIsMatch = lowerText.match(/^(do|d\.o\.|d\/o|dropoff|drop\s*-?\s*off)\s*time\s*(is|=|:)?\s*(\d{1,2})(:\d{2})?\s*([ap]\.?m?\.?)?$/i);
+  if (doTimeIsMatch) {
+    const meridiem = doTimeIsMatch[5] ? (doTimeIsMatch[5].toLowerCase().startsWith('a') ? 'am' : 'pm') : 'pm';
+    const timeVal = doTimeIsMatch[3] + (doTimeIsMatch[4] || '') + meridiem;
+    return { type: 'time', value: timeVal, confidence: 0.92, original: trimmed };
+  }
+  
   // Handle "pick up time", "pu time", "pickup time" - detect as asking about time (not address)
   const puTimeMatch = lowerText.match(/^(pu|up|p\.u\.|u\.p\.|p\/u|pickup|pick\s*-?\s*up)\s*(time|t)$/i);
   if (puTimeMatch) {
