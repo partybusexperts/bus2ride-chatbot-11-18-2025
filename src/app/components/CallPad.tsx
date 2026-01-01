@@ -521,7 +521,37 @@ export default function CallPad() {
   }, [applyChipToData]);
 
   const rejectChip = useCallback((chipId: string) => {
-    setChips(prev => prev.filter(c => c.id !== chipId));
+    setChips(prev => {
+      const chip = prev.find(c => c.id === chipId);
+      if (chip && chip.confirmed) {
+        const fieldMap: Partial<Record<DetectedType, keyof typeof confirmedData>> = {
+          phone: 'phone',
+          email: 'email',
+          zip: 'cityOrZip',
+          city: 'cityOrZip',
+          date: 'date',
+          time: 'pickupTime',
+          passengers: 'passengers',
+          hours: 'hours',
+          pickup_address: 'pickupAddress',
+          dropoff_address: 'dropoffAddress',
+          event_type: 'eventType',
+          vehicle_type: 'vehicleType',
+          name: 'callerName',
+          website: 'websiteUrl',
+        };
+        const field = fieldMap[chip.type];
+        if (field) {
+          setConfirmedData(prevData => ({ ...prevData, [field]: '' }));
+        }
+        if (chip.type === 'city' || chip.type === 'zip') {
+          setConfirmedData(prevData => ({ ...prevData, cityOrZip: '' }));
+          setHistoryCities(prevHistory => prevHistory.filter(c => c.value.toLowerCase() !== chip.value.toLowerCase()));
+          setCityDisambiguation(null);
+        }
+      }
+      return prev.filter(c => c.id !== chipId);
+    });
   }, []);
 
   const confirmAllChips = useCallback(() => {
@@ -677,14 +707,6 @@ export default function CallPad() {
   const dayOfWeek = useMemo(() => getDayOfWeek(confirmedData.date), [confirmedData.date]);
   const daysUntilEvent = useMemo(() => calculateDaysUntilEvent(confirmedData.date), [confirmedData.date]);
   
-  const lastQuotedVehicle = useMemo(() => {
-    return quotedVehicles.length > 0 ? quotedVehicles[quotedVehicles.length - 1] : null;
-  }, [quotedVehicles]);
-
-  const currentVehiclePrice = useMemo(() => {
-    return lastQuotedVehicle?.price || 0;
-  }, [lastQuotedVehicle]);
-
   const totalQuotedPrice = useMemo(() => {
     return quotedVehicles.reduce((sum, v) => sum + (v.price || 0), 0);
   }, [quotedVehicles]);
@@ -692,15 +714,6 @@ export default function CallPad() {
   const depositPercentage = useMemo(() => {
     return daysUntilEvent <= 7 ? 100 : 50;
   }, [daysUntilEvent]);
-
-  const currentDepositAmount = useMemo(() => {
-    if (currentVehiclePrice === 0) return 0;
-    return daysUntilEvent <= 7 ? currentVehiclePrice : Math.round(currentVehiclePrice * 0.5);
-  }, [currentVehiclePrice, daysUntilEvent]);
-
-  const currentBalanceDue = useMemo(() => {
-    return currentVehiclePrice - currentDepositAmount;
-  }, [currentVehiclePrice, currentDepositAmount]);
 
   const depositAmount = useMemo(() => {
     if (totalQuotedPrice === 0) return 0;
@@ -1062,6 +1075,24 @@ export default function CallPad() {
                     {chip.confirmed && !isAutoPopulated && (
                       <span style={{ fontSize: '10px', color: '#16a34a', fontWeight: 600 }}>CONFIRMED</span>
                     )}
+                    {chip.confirmed && (
+                      <button
+                        onClick={() => rejectChip(chip.id)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: 0,
+                          color: '#9ca3af',
+                          fontSize: '14px',
+                          lineHeight: 1,
+                          marginLeft: '2px',
+                        }}
+                        title="Remove"
+                      >
+                        ×
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -1223,6 +1254,14 @@ export default function CallPad() {
                 <div>
                   <label style={labelStyle}>Hours</label>
                   <input style={getInputStyle(confirmedData.hours)} type="number" placeholder="#" value={confirmedData.hours} onChange={(e) => setConfirmedData(prev => ({ ...prev, hours: e.target.value }))} />
+                  {(() => {
+                    const hoursValue = Number(confirmedData.hours);
+                    return Number.isFinite(hoursValue) && hoursValue > 12;
+                  })() && (
+                    <div style={{ fontSize: '11px', color: '#dc2626', background: '#fef2f2', padding: '4px 8px', borderRadius: '4px', marginTop: '4px' }}>
+                      Over 12 hours - verify this is correct (not a phone number?)
+                    </div>
+                  )}
                 </div>
               </div>
               <div>
@@ -1301,46 +1340,6 @@ export default function CallPad() {
                 ))}
               </div>
             )}
-          </div>
-
-          <div style={{ background: '#fff', padding: '14px', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-            <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '10px', color: '#374151' }}>
-              Current Vehicle Pricing
-              {lastQuotedVehicle && (
-                <span style={{ marginLeft: '6px', fontWeight: 400, color: '#6b7280', fontSize: '11px' }}>
-                  ({lastQuotedVehicle.name})
-                </span>
-              )}
-            </h3>
-            <div style={{ display: 'grid', gap: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 10px', background: '#f9fafb', borderRadius: '6px' }}>
-                <span style={{ fontSize: '12px', color: '#6b7280' }}>Price</span>
-                <span style={{ fontSize: '16px', fontWeight: 700, color: '#111827' }}>${currentVehiclePrice.toLocaleString()}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 10px', background: '#fef3c7', borderRadius: '6px' }}>
-                <span style={{ fontSize: '12px', color: '#92400e' }}>Deposit ({depositPercentage}%)</span>
-                <span style={{ fontSize: '16px', fontWeight: 700, color: '#92400e' }}>${currentDepositAmount.toLocaleString()}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 10px', background: '#f9fafb', borderRadius: '6px' }}>
-                <span style={{ fontSize: '12px', color: '#6b7280' }}>Balance</span>
-                <span style={{ fontSize: '14px', fontWeight: 600, color: '#374151' }}>${currentBalanceDue.toLocaleString()}</span>
-              </div>
-              {daysUntilEvent === 0 && (
-                <div style={{ fontSize: '11px', color: '#fff', background: '#dc2626', padding: '8px 10px', borderRadius: '4px', fontWeight: 600 }}>
-                  SAME DAY BOOKING - Ask for CASH payment or consult manager!
-                </div>
-              )}
-              {daysUntilEvent > 0 && daysUntilEvent <= 7 && (
-                <div style={{ fontSize: '11px', color: '#dc2626', background: '#fef2f2', padding: '6px 8px', borderRadius: '4px' }}>
-                  Event within 7 days - 100% deposit required
-                </div>
-              )}
-              {quotedVehicles.length > 1 && (
-                <div style={{ fontSize: '11px', color: '#6b7280', background: '#f3f4f6', padding: '6px 8px', borderRadius: '4px', marginTop: '4px' }}>
-                  {quotedVehicles.length} vehicles quoted (Total: ${totalQuotedPrice.toLocaleString()})
-                </div>
-              )}
-            </div>
           </div>
 
           <div style={{ background: SECTION_STYLES.payment.bg, padding: '14px', borderRadius: '10px', border: `2px solid ${SECTION_STYLES.payment.border}` }}>
