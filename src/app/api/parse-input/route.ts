@@ -219,17 +219,21 @@ function detectPattern(text: string): DetectedItem | null {
   const twoWordName = trimmed.match(/^([A-Z][a-z]+)\s+([A-Z][a-z]+)$/);
   if (twoWordName && trimmed.length >= 5 && trimmed.length <= 40) {
     const firstName = twoWordName[1].toLowerCase();
+    const lastName = twoWordName[2].toLowerCase();
     const isNotCity = !CITY_KEYWORDS.some(c => c.toLowerCase() === firstName || c.toLowerCase() === trimmed.toLowerCase());
     const isNotVehicle = !Object.keys(VEHICLE_TYPE_KEYWORDS).some(v => v.toLowerCase() === trimmed.toLowerCase());
     const isNotEvent = !EVENT_KEYWORDS.some(e => e.toLowerCase() === trimmed.toLowerCase());
-    if (isNotCity && isNotVehicle && isNotEvent) {
-      return { type: 'name', value: trimmed, confidence: 0.7, original: trimmed };
+    const isNotVenue = !VENUE_KEYWORDS.some(v => firstName.includes(v) || lastName.includes(v) || trimmed.toLowerCase().includes(v));
+    const isFirstNameCommon = COMMON_FIRST_NAMES.includes(firstName);
+    if (isNotCity && isNotVehicle && isNotEvent && isNotVenue) {
+      const confidence = isFirstNameCommon ? 0.9 : 0.75;
+      return { type: 'name', value: trimmed, confidence, original: trimmed };
     }
   }
   
   if (COMMON_FIRST_NAMES.includes(lowerText)) {
     const capitalizedName = trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
-    return { type: 'name', value: capitalizedName, confidence: 0.85, original: trimmed };
+    return { type: 'name', value: capitalizedName, confidence: 0.88, original: trimmed };
   }
 
   if (TIME_REGEX.test(trimmed)) {
@@ -327,6 +331,13 @@ Return JSON array of detected items. Each item has:
 - value: the extracted/cleaned value (WITHOUT the PU/DO prefix - just the place name)
 - confidence: 0-1 confidence score
 - original: the original text fragment
+
+IMPORTANT - NAMES vs VENUES:
+- Two capitalized words like "David Spade", "John Smith", "Mary Johnson" are PERSON NAMES, not venues
+- Only mark as venue/place if it contains venue keywords like hotel, bar, restaurant, airport, TopGolf, etc.
+- "David Spade" = name (confidence 0.9)
+- "Dave and Busters" = place (contains venue words)
+- "John Marriott" = name (even though Marriott is a hotel, "John Marriott" is a person)
 
 IMPORTANT AGENT ABBREVIATIONS:
 - "PU" or "pu" = pickup (pickup_address)

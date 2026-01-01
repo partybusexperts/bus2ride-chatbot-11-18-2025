@@ -793,7 +793,7 @@ export default function CallPad() {
   }, [vehicles, vehicleFilters, sortBy, rateHours, getVehiclePrice]);
 
   const hasTransferVehicles = useMemo(() => {
-    return vehicles.some(v => v.is_transfer === true || v.is_transfer === 'true');
+    return vehicles.some(v => v.is_transfer === true || v.is_transfer === 'true' || v.transfer_price > 0);
   }, [vehicles]);
 
   const getAIRecommendation = useCallback(async (vehicle: any) => {
@@ -980,12 +980,28 @@ export default function CallPad() {
               {chips.map(chip => {
                 const colors = TYPE_COLORS[chip.type];
                 const isAutoPopulated = chip.autoPopulated && chip.confirmed;
+                const isLowConfidence = chip.confidence < 0.8 && !chip.confirmed;
+                const isUncertain = chip.confidence < 0.6;
+                
+                const getBorderColor = () => {
+                  if (isAutoPopulated) return '#16a34a';
+                  if (isUncertain) return '#dc2626';
+                  if (isLowConfidence) return '#f59e0b';
+                  return colors.border;
+                };
+                
+                const getBgColor = () => {
+                  if (isUncertain) return '#fef2f2';
+                  if (isLowConfidence) return '#fffbeb';
+                  return colors.bg;
+                };
+                
                 return (
                   <div
                     key={chip.id}
                     style={{
-                      background: isAutoPopulated ? colors.bg : colors.bg,
-                      border: `2px solid ${isAutoPopulated ? '#16a34a' : colors.border}`,
+                      background: getBgColor(),
+                      border: `2px solid ${getBorderColor()}`,
                       borderRadius: '20px',
                       padding: '6px 12px',
                       display: 'flex',
@@ -994,6 +1010,12 @@ export default function CallPad() {
                       opacity: chip.confirmed ? 0.8 : 1,
                     }}
                   >
+                    {isUncertain && !chip.confirmed && (
+                      <span style={{ fontSize: '12px', color: '#dc2626' }} title="Low confidence - please verify">&#9888;</span>
+                    )}
+                    {isLowConfidence && !isUncertain && !chip.confirmed && (
+                      <span style={{ fontSize: '12px', color: '#f59e0b' }} title="Verify this detection">?</span>
+                    )}
                     {isAutoPopulated && (
                       <span style={{ fontSize: '12px', color: '#16a34a' }}>&#10003;</span>
                     )}
