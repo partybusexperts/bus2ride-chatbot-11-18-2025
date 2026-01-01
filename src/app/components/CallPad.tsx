@@ -1913,121 +1913,176 @@ export default function CallPad() {
             )}
 
             <div style={{ marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#166534', marginBottom: '12px' }}>All Available Pricing</h3>
+              {hasStandardPricing && (
+                <div style={{ background: '#f0fdf4', padding: '16px', borderRadius: '10px', border: '2px solid #86efac', marginBottom: '12px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#166534', marginBottom: '10px' }}>STANDARD RATES</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: '8px' }}>
+                    {[3, 4, 5, 6, 7, 8, 9, 10].map(h => {
+                      const price = selectedVehicle[`price_${h}hr`];
+                      if (!price) return null;
+                      const isSelected = modalPriceType === 'standard' && modalHours === h;
+                      return (
+                        <button
+                          key={h}
+                          onClick={() => { setModalPriceType('standard'); setModalHours(h); }}
+                          style={{
+                            padding: '10px 8px',
+                            borderRadius: '8px',
+                            border: isSelected ? '3px solid #16a34a' : '1px solid #bbf7d0',
+                            background: isSelected ? '#dcfce7' : '#fff',
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                          }}
+                        >
+                          <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>{h} hours</div>
+                          <div style={{ fontSize: '16px', fontWeight: 700, color: '#166534' }}>${Number(price).toLocaleString()}</div>
+                          <div style={{ fontSize: '10px', color: '#059669' }}>${Math.round(Number(price) / h)}/hr</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>
-                {hasStandardPricing && (
-                  <div style={{ background: '#f0fdf4', padding: '12px', borderRadius: '8px', border: modalPriceType === 'standard' ? '2px solid #16a34a' : '1px solid #86efac' }}>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#166534', marginBottom: '8px' }}>STANDARD RATES</div>
-                    <select
-                      value={modalPriceType === 'standard' ? modalHours : ''}
-                      onChange={(e) => { setModalPriceType('standard'); setModalHours(Number(e.target.value)); }}
-                      style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #86efac', fontSize: '13px', fontWeight: 600, background: '#fff' }}
-                    >
-                      <option value="">Select hours...</option>
-                      {getAvailableHours('standard').map(h => {
-                        const price = selectedVehicle[`price_${h}hr`];
-                        return <option key={h} value={h}>{h} hours - ${Number(price).toLocaleString()}</option>;
-                      })}
-                    </select>
+              {hasPromPricing && (
+                <div style={{ background: '#faf5ff', padding: '16px', borderRadius: '10px', border: '2px solid #c4b5fd', marginBottom: '12px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#5b21b6', marginBottom: '10px' }}>PROM RATES</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: '8px' }}>
+                    {[6, 7, 8, 9, 10].map(h => {
+                      const price = selectedVehicle[`prom_price_${h}hr`];
+                      if (!price) return null;
+                      const isSelected = modalPriceType === 'prom' && modalHours === h;
+                      return (
+                        <button
+                          key={h}
+                          onClick={() => { setModalPriceType('prom'); setModalHours(h); }}
+                          style={{
+                            padding: '10px 8px',
+                            borderRadius: '8px',
+                            border: isSelected ? '3px solid #7c3aed' : '1px solid #ddd6fe',
+                            background: isSelected ? '#ede9fe' : '#fff',
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                          }}
+                        >
+                          <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>{h} hours</div>
+                          <div style={{ fontSize: '16px', fontWeight: 700, color: '#5b21b6' }}>${Number(price).toLocaleString()}</div>
+                          <div style={{ fontSize: '10px', color: '#7c3aed' }}>${Math.round(Number(price) / h)}/hr</div>
+                        </button>
+                      );
+                    })}
                   </div>
-                )}
-                
-                {hasPromPricing && (
-                  <div style={{ background: '#faf5ff', padding: '12px', borderRadius: '8px', border: modalPriceType === 'prom' ? '2px solid #7c3aed' : '1px solid #c4b5fd' }}>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#5b21b6', marginBottom: '8px' }}>PROM RATES</div>
-                    <select
-                      value={modalPriceType === 'prom' ? modalHours : ''}
-                      onChange={(e) => { setModalPriceType('prom'); setModalHours(Number(e.target.value)); }}
-                      style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #c4b5fd', fontSize: '13px', fontWeight: 600, background: '#fff' }}
-                    >
-                      <option value="">Select hours...</option>
-                      {getAvailableHours('prom').map(h => {
-                        const price = selectedVehicle[`prom_price_${h}hr`];
-                        return <option key={h} value={h}>{h} hours - ${Number(price).toLocaleString()}</option>;
-                      })}
-                    </select>
-                  </div>
-                )}
-                
-                {hasBefore5pmPricing && (
-                  <div style={{ background: '#fff7ed', padding: '12px', borderRadius: '8px', border: modalPriceType === 'before5pm' ? '2px solid #ea580c' : '1px solid #fdba74' }}>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#9a3412', marginBottom: '8px' }}>BEFORE 5PM RATES</div>
-                    <select
-                      value={modalPriceType === 'before5pm' ? modalHours : ''}
-                      onChange={(e) => { setModalPriceType('before5pm'); setModalHours(Number(e.target.value)); }}
-                      style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #fdba74', fontSize: '13px', fontWeight: 600, background: '#fff' }}
-                    >
-                      <option value="">Select hours...</option>
-                      {getAvailableHours('before5pm').map(h => {
-                        const price = selectedVehicle[`before5pm_${h}hr`];
-                        return <option key={h} value={h}>{h} hours - ${Number(price).toLocaleString()}</option>;
-                      })}
-                    </select>
-                  </div>
-                )}
-                
-                {hasAprilMayPricing && (
-                  <div style={{ background: '#fdf2f8', padding: '12px', borderRadius: '8px', border: modalPriceType === 'aprilmay' ? '2px solid #db2777' : '1px solid #f9a8d4' }}>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#9d174d', marginBottom: '8px' }}>APR/MAY WEEKEND</div>
-                    <select
-                      value={modalPriceType === 'aprilmay' ? modalHours : ''}
-                      onChange={(e) => { setModalPriceType('aprilmay'); setModalHours(Number(e.target.value)); }}
-                      style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #f9a8d4', fontSize: '13px', fontWeight: 600, background: '#fff' }}
-                    >
-                      <option value="">Select hours...</option>
-                      {getAvailableHours('aprilmay').map(h => {
-                        const price = selectedVehicle[`april_may_weekend_${h}hr`];
-                        return <option key={h} value={h}>{h} hours - ${Number(price).toLocaleString()}</option>;
-                      })}
-                    </select>
-                  </div>
-                )}
-                
-                {hasTransferPricing && (
-                  <div 
-                    onClick={() => setModalPriceType('transfer')}
-                    style={{ 
-                      background: modalPriceType === 'transfer' ? '#fef9c3' : '#fffbeb', 
-                      padding: '12px', 
-                      borderRadius: '8px', 
-                      border: modalPriceType === 'transfer' ? '2px solid #eab308' : '1px solid #fcd34d',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#854d0e', marginBottom: '8px' }}>ONE WAY TRANSFER</div>
-                    <div style={{ fontSize: '18px', fontWeight: 700, color: '#78350f' }}>
-                      ${Number(selectedVehicle.transfer_price).toLocaleString()}
-                    </div>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div style={{ background: '#ecfdf5', padding: '16px', borderRadius: '8px', border: '2px solid #10b981' }}>
+              {hasBefore5pmPricing && (
+                <div style={{ background: '#fff7ed', padding: '16px', borderRadius: '10px', border: '2px solid #fdba74', marginBottom: '12px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#9a3412', marginBottom: '10px' }}>BEFORE 5PM RATES (Daytime Discount)</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: '8px' }}>
+                    {[3, 4, 5, 6, 7].map(h => {
+                      const price = selectedVehicle[`before5pm_${h}hr`];
+                      if (!price) return null;
+                      const isSelected = modalPriceType === 'before5pm' && modalHours === h;
+                      return (
+                        <button
+                          key={h}
+                          onClick={() => { setModalPriceType('before5pm'); setModalHours(h); }}
+                          style={{
+                            padding: '10px 8px',
+                            borderRadius: '8px',
+                            border: isSelected ? '3px solid #ea580c' : '1px solid #fed7aa',
+                            background: isSelected ? '#ffedd5' : '#fff',
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                          }}
+                        >
+                          <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>{h} hours</div>
+                          <div style={{ fontSize: '16px', fontWeight: 700, color: '#9a3412' }}>${Number(price).toLocaleString()}</div>
+                          <div style={{ fontSize: '10px', color: '#ea580c' }}>${Math.round(Number(price) / h)}/hr</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              
+              {hasAprilMayPricing && (
+                <div style={{ background: '#fdf2f8', padding: '16px', borderRadius: '10px', border: '2px solid #f9a8d4', marginBottom: '12px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#9d174d', marginBottom: '10px' }}>APRIL/MAY WEEKEND RATES</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: '8px' }}>
+                    {[5, 6, 7, 8, 9].map(h => {
+                      const price = selectedVehicle[`april_may_weekend_${h}hr`];
+                      if (!price) return null;
+                      const isSelected = modalPriceType === 'aprilmay' && modalHours === h;
+                      return (
+                        <button
+                          key={h}
+                          onClick={() => { setModalPriceType('aprilmay'); setModalHours(h); }}
+                          style={{
+                            padding: '10px 8px',
+                            borderRadius: '8px',
+                            border: isSelected ? '3px solid #db2777' : '1px solid #fbcfe8',
+                            background: isSelected ? '#fce7f3' : '#fff',
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                          }}
+                        >
+                          <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: 500 }}>{h} hours</div>
+                          <div style={{ fontSize: '16px', fontWeight: 700, color: '#9d174d' }}>${Number(price).toLocaleString()}</div>
+                          <div style={{ fontSize: '10px', color: '#db2777' }}>${Math.round(Number(price) / h)}/hr</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              
+              {hasTransferPricing && (
+                <div 
+                  onClick={() => setModalPriceType('transfer')}
+                  style={{ 
+                    background: modalPriceType === 'transfer' ? '#fef9c3' : '#fffbeb', 
+                    padding: '16px', 
+                    borderRadius: '10px', 
+                    border: modalPriceType === 'transfer' ? '3px solid #eab308' : '2px solid #fcd34d',
+                    cursor: 'pointer',
+                    marginBottom: '12px',
+                  }}
+                >
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#854d0e', marginBottom: '6px' }}>ONE WAY TRANSFER</div>
+                  <div style={{ fontSize: '24px', fontWeight: 700, color: '#78350f' }}>
+                    ${Number(selectedVehicle.transfer_price).toLocaleString()}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#a16207' }}>Click to select for quote</div>
+                </div>
+              )}
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
+                <div style={{ background: '#ecfdf5', padding: '16px', borderRadius: '10px', border: '3px solid #10b981' }}>
                   <div style={{ fontSize: '11px', color: '#10b981', fontWeight: 600, marginBottom: '4px' }}>
-                    {modalPriceType === 'transfer' ? 'ONE WAY TRANSFER' : `${modalPriceType.toUpperCase()} RATE (${modalHours}HR)`}
+                    SELECTED FOR QUOTE: {modalPriceType === 'transfer' ? 'ONE WAY TRANSFER' : `${modalPriceType.toUpperCase()} (${modalHours}HR)`}
                   </div>
-                  <div style={{ fontSize: '32px', fontWeight: 700, color: '#111827' }}>
-                    {modalPrice > 0 ? `$${modalPrice.toLocaleString()}` : 'Call for price'}
+                  <div style={{ fontSize: '36px', fontWeight: 700, color: '#111827' }}>
+                    {modalPrice > 0 ? `$${modalPrice.toLocaleString()}` : 'Select a price above'}
                   </div>
                   {modalPriceType !== 'transfer' && modalPrice > 0 && (
-                    <div style={{ fontSize: '13px', color: '#059669', marginTop: '4px' }}>
+                    <div style={{ fontSize: '14px', color: '#059669', marginTop: '4px', fontWeight: 600 }}>
                       ${Math.round(modalPrice / modalHours).toLocaleString()}/hour
                     </div>
                   )}
                 </div>
                 
-                <div style={{ background: '#f9fafb', padding: '16px', borderRadius: '8px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #e5e7eb' }}>
-                    <span style={{ color: '#6b7280', fontSize: '13px' }}>Deposit ({daysUntilEvent <= 7 ? '100%' : '50%'})</span>
-                    <span style={{ fontWeight: 700, color: '#92400e', fontSize: '15px' }}>
+                <div style={{ background: '#f9fafb', padding: '16px', borderRadius: '10px', border: '1px solid #e5e7eb' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '8px' }}>PAYMENT BREAKDOWN</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #e5e7eb' }}>
+                    <span style={{ color: '#6b7280', fontSize: '14px' }}>Deposit ({daysUntilEvent <= 7 ? '100%' : '50%'})</span>
+                    <span style={{ fontWeight: 700, color: '#92400e', fontSize: '16px' }}>
                       {modalPrice > 0 ? `$${modalDeposit.toLocaleString()}` : '---'}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
-                    <span style={{ color: '#6b7280', fontSize: '13px' }}>Balance Due</span>
-                    <span style={{ fontWeight: 600, color: '#374151', fontSize: '15px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0' }}>
+                    <span style={{ color: '#6b7280', fontSize: '14px' }}>Balance Due</span>
+                    <span style={{ fontWeight: 600, color: '#374151', fontSize: '16px' }}>
                       {modalPrice > 0 ? `$${modalBalance.toLocaleString()}` : '---'}
                     </span>
                   </div>
@@ -2035,14 +2090,19 @@ export default function CallPad() {
               </div>
             </div>
             
-            <div style={{ marginBottom: '16px', padding: '14px', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #7dd3fc' }}>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: '#0369a1', marginBottom: '8px' }}>VEHICLE DETAILS FOR AGENT</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px', fontSize: '13px' }}>
-                <div><span style={{ color: '#64748b' }}>Capacity:</span> <strong>{selectedVehicle.capacity || 'N/A'} passengers</strong></div>
-                <div><span style={{ color: '#64748b' }}>Category:</span> <strong>{selectedVehicle.category || 'N/A'}</strong></div>
-                <div><span style={{ color: '#64748b' }}>City:</span> <strong>{selectedVehicle.city || 'N/A'}</strong></div>
-                {selectedVehicle.tags && <div><span style={{ color: '#64748b' }}>Features:</span> <strong>{selectedVehicle.tags}</strong></div>}
+            <div style={{ marginBottom: '16px', padding: '14px', background: '#f0f9ff', borderRadius: '10px', border: '2px solid #7dd3fc' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#0369a1', marginBottom: '10px' }}>VEHICLE DETAILS FOR AGENT</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', fontSize: '14px' }}>
+                <div><span style={{ color: '#64748b' }}>Capacity:</span> <strong style={{ color: '#0369a1' }}>{selectedVehicle.capacity || 'N/A'} passengers</strong></div>
+                <div><span style={{ color: '#64748b' }}>Category:</span> <strong style={{ color: '#0369a1' }}>{selectedVehicle.category || 'N/A'}</strong></div>
+                <div><span style={{ color: '#64748b' }}>City:</span> <strong style={{ color: '#0369a1' }}>{selectedVehicle.city || 'N/A'}</strong></div>
+                {selectedVehicle.tags && <div><span style={{ color: '#64748b' }}>Features:</span> <strong style={{ color: '#0369a1' }}>{selectedVehicle.tags}</strong></div>}
               </div>
+              {selectedVehicle.short_description && (
+                <div style={{ marginTop: '10px', padding: '10px', background: '#e0f2fe', borderRadius: '6px', fontSize: '13px', color: '#0c4a6e', lineHeight: 1.5 }}>
+                  <strong>Description:</strong> {selectedVehicle.short_description}
+                </div>
+              )}
             </div>
 
             {(selectedVehicle.description || selectedVehicle.custom_instructions) && (
