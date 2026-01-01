@@ -48,7 +48,8 @@ const DATE_PATTERNS = [
   // Handle "december 5th 2026", "dec 5, 2026"
   /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2}(st|nd|rd|th)?,?\s+\d{4}$/i,
 ];
-const PASSENGERS_REGEX = /^(\d{1,3})\s*(people|passengers?|pax|guests|persons?)$/i;
+// Handle typos like "poeple", "passangers", "peolpe", "ppl"
+const PASSENGERS_REGEX = /^(\d{1,3})\s*(people|poeple|peolpe|ppl|passengers?|passangers?|pax|guests?|persons?)$/i;
 const PASSENGERS_SHORT_REGEX = /^(\d{1,2})$/;
 const HOURS_REGEX = /^(\d+(\.\d+)?)\s*(hours?|hrs?)?$/i;
 
