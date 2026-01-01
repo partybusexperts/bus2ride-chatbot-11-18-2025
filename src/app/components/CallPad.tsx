@@ -232,7 +232,8 @@ export default function CallPad() {
     partyBus: true,
     limo: true,
     shuttle: true,
-    other: true,
+    carSuv: true,
+    oneWayTransfer: false,
   });
   const [historyCities, setHistoryCities] = useState<HistoryCity[]>([]);
   const [lookingUpPlace, setLookingUpPlace] = useState(false);
@@ -637,8 +638,8 @@ export default function CallPad() {
         name: vehicle.name,
         capacity: vehicle.capacity,
         priceDisplay: vehicle.priceDisplay,
-        price: vehicle.price || 0,
-        hours: vehicle.hours,
+        price: vehicle.displayPrice || vehicle.price || 0,
+        hours: vehicle.displayHours || vehicle.hours || rateHours,
       };
       return [...prev, qv];
     });
@@ -689,6 +690,13 @@ export default function CallPad() {
     return totalQuotedPrice - depositAmount;
   }, [totalQuotedPrice, depositAmount]);
 
+  const getVehiclePrice = useCallback((v: any, hours: number): number => {
+    const priceKey = `price_${hours}hr`;
+    const rawPrice = v[priceKey] || v.price_4hr || v.price;
+    const numPrice = Number(rawPrice);
+    return isNaN(numPrice) ? 0 : numPrice;
+  }, []);
+
   const filteredVehicles = useMemo(() => {
     let filtered = vehicles.filter(v => {
       const category = (v.category || '').toLowerCase();
@@ -696,30 +704,44 @@ export default function CallPad() {
       
       const isPartyBus = category.includes('party bus') || category.includes('limo bus') || 
                          name.includes('party bus') || name.includes('limo bus');
-      const isLimo = !isPartyBus && (
+      const isCarSuv = category.includes('sedan') || category.includes('suv') || 
+                       category.includes('hummer') || category.includes('escalade') ||
+                       name.includes('sedan') || name.includes('suv') || name.includes('escalade');
+      const isLimo = !isPartyBus && !isCarSuv && (
         category.includes('limo') || category.includes('limousine') || 
-        name.includes('limousine') || name.includes('stretch limo') ||
-        (category.includes('sedan') || category.includes('suv') || category.includes('hummer'))
+        name.includes('limousine') || name.includes('stretch limo')
       );
       const isShuttle = category.includes('shuttle') || category.includes('sprinter') || 
                         category.includes('executive') || category.includes('coach') ||
                         category.includes('charter') || category.includes('mini coach') ||
                         name.includes('shuttle') || name.includes('sprinter') || name.includes('coach');
+      const isTransfer = v.is_transfer === true || v.is_transfer === 'true';
+      
+      if (vehicleFilters.oneWayTransfer && !isTransfer) return false;
       
       if (isPartyBus && !vehicleFilters.partyBus) return false;
       if (isLimo && !vehicleFilters.limo) return false;
       if (isShuttle && !vehicleFilters.shuttle) return false;
-      if (!isPartyBus && !isLimo && !isShuttle && !vehicleFilters.other) return false;
+      if (isCarSuv && !vehicleFilters.carSuv) return false;
+      if (!isPartyBus && !isLimo && !isShuttle && !isCarSuv) return false;
       
       return true;
+    }).map(v => {
+      const displayPrice = getVehiclePrice(v, rateHours);
+      return {
+        ...v,
+        displayPrice,
+        priceDisplay: displayPrice > 0 ? `$${displayPrice.toLocaleString()}` : 'Call for price',
+        displayHours: rateHours,
+      };
     });
     
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'price_low':
-          return (a.price || 0) - (b.price || 0);
+          return (a.displayPrice || 0) - (b.displayPrice || 0);
         case 'price_high':
-          return (b.price || 0) - (a.price || 0);
+          return (b.displayPrice || 0) - (a.displayPrice || 0);
         case 'capacity_high':
           const capA = parseInt(a.capacity) || 0;
           const capB = parseInt(b.capacity) || 0;
@@ -734,7 +756,7 @@ export default function CallPad() {
     });
     
     return filtered;
-  }, [vehicles, vehicleFilters, sortBy]);
+  }, [vehicles, vehicleFilters, sortBy, rateHours, getVehiclePrice]);
 
   const getAIRecommendation = useCallback(async (vehicle: any) => {
     setLoadingRecommendation(true);
@@ -818,6 +840,16 @@ export default function CallPad() {
 
   const pendingChips = chips.filter(c => !c.confirmed);
   const autoPopulatedChips = chips.filter(c => c.autoPopulated);
+
+  const getInputStyle = (value: string): React.CSSProperties => ({
+    width: '100%',
+    padding: '8px 10px',
+    border: value?.trim() ? '2px solid #22c55e' : '2px solid #fca5a5',
+    borderRadius: '6px',
+    fontSize: '13px',
+    outline: 'none',
+    background: value?.trim() ? '#f0fdf4' : '#fef2f2',
+  });
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
@@ -1043,15 +1075,15 @@ export default function CallPad() {
               </div>
               <div>
                 <label style={labelStyle}>Customer Name</label>
-                <input style={inputStyle} placeholder="Customer name" value={confirmedData.callerName} onChange={(e) => setConfirmedData(prev => ({ ...prev, callerName: e.target.value }))} />
+                <input style={getInputStyle(confirmedData.callerName)} placeholder="Customer name" value={confirmedData.callerName} onChange={(e) => setConfirmedData(prev => ({ ...prev, callerName: e.target.value }))} />
               </div>
               <div>
                 <label style={labelStyle}>Phone</label>
-                <input style={inputStyle} placeholder="Phone number" value={confirmedData.phone} onChange={(e) => setConfirmedData(prev => ({ ...prev, phone: e.target.value }))} />
+                <input style={getInputStyle(confirmedData.phone)} placeholder="Phone number" value={confirmedData.phone} onChange={(e) => setConfirmedData(prev => ({ ...prev, phone: e.target.value }))} />
               </div>
               <div>
                 <label style={labelStyle}>Email</label>
-                <input style={inputStyle} placeholder="Email address" value={confirmedData.email} onChange={(e) => setConfirmedData(prev => ({ ...prev, email: e.target.value }))} />
+                <input style={getInputStyle(confirmedData.email)} placeholder="Email address" value={confirmedData.email} onChange={(e) => setConfirmedData(prev => ({ ...prev, email: e.target.value }))} />
               </div>
             </div>
           </div>
@@ -1061,7 +1093,7 @@ export default function CallPad() {
             <div style={{ display: 'grid', gap: '8px' }}>
               <div>
                 <label style={labelStyle}>City / ZIP</label>
-                <input style={inputStyle} placeholder="Service area" value={confirmedData.cityOrZip} onChange={(e) => setConfirmedData(prev => ({ ...prev, cityOrZip: e.target.value }))} />
+                <input style={getInputStyle(confirmedData.cityOrZip)} placeholder="Service area" value={confirmedData.cityOrZip} onChange={(e) => setConfirmedData(prev => ({ ...prev, cityOrZip: e.target.value }))} />
                 {historyCities.filter(c => !c.active).length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
                     {historyCities.filter(c => !c.active).map((city) => (
@@ -1161,21 +1193,21 @@ export default function CallPad() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <div>
                   <label style={labelStyle}>Passengers</label>
-                  <input style={inputStyle} type="number" placeholder="#" value={confirmedData.passengers} onChange={(e) => setConfirmedData(prev => ({ ...prev, passengers: e.target.value }))} />
+                  <input style={getInputStyle(confirmedData.passengers)} type="number" placeholder="#" value={confirmedData.passengers} onChange={(e) => setConfirmedData(prev => ({ ...prev, passengers: e.target.value }))} />
                 </div>
                 <div>
                   <label style={labelStyle}>Hours</label>
-                  <input style={inputStyle} type="number" placeholder="#" value={confirmedData.hours} onChange={(e) => setConfirmedData(prev => ({ ...prev, hours: e.target.value }))} />
+                  <input style={getInputStyle(confirmedData.hours)} type="number" placeholder="#" value={confirmedData.hours} onChange={(e) => setConfirmedData(prev => ({ ...prev, hours: e.target.value }))} />
                 </div>
               </div>
               <div>
                 <label style={labelStyle}>Event Type</label>
-                <input style={inputStyle} placeholder="Prom, Wedding..." value={confirmedData.eventType} onChange={(e) => setConfirmedData(prev => ({ ...prev, eventType: e.target.value }))} />
+                <input style={getInputStyle(confirmedData.eventType)} placeholder="Prom, Wedding..." value={confirmedData.eventType} onChange={(e) => setConfirmedData(prev => ({ ...prev, eventType: e.target.value }))} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <div>
                   <label style={labelStyle}>Date</label>
-                  <input style={inputStyle} type="date" value={confirmedData.date} onChange={(e) => setConfirmedData(prev => ({ ...prev, date: e.target.value }))} />
+                  <input style={getInputStyle(confirmedData.date)} type="date" value={confirmedData.date} onChange={(e) => setConfirmedData(prev => ({ ...prev, date: e.target.value }))} />
                 </div>
                 <div>
                   <label style={labelStyle}>Day</label>
@@ -1184,7 +1216,7 @@ export default function CallPad() {
               </div>
               <div>
                 <label style={labelStyle}>Pickup Time</label>
-                <input style={inputStyle} type="time" value={confirmedData.pickupTime} onChange={(e) => setConfirmedData(prev => ({ ...prev, pickupTime: e.target.value }))} />
+                <input style={getInputStyle(confirmedData.pickupTime)} type="time" value={confirmedData.pickupTime} onChange={(e) => setConfirmedData(prev => ({ ...prev, pickupTime: e.target.value }))} />
               </div>
             </div>
           </div>
@@ -1194,11 +1226,11 @@ export default function CallPad() {
             <div style={{ display: 'grid', gap: '8px' }}>
               <div>
                 <label style={labelStyle}>Pickup Address</label>
-                <input style={inputStyle} placeholder="Pickup location" value={confirmedData.pickupAddress} onChange={(e) => setConfirmedData(prev => ({ ...prev, pickupAddress: e.target.value }))} />
+                <input style={getInputStyle(confirmedData.pickupAddress)} placeholder="Pickup location" value={confirmedData.pickupAddress} onChange={(e) => setConfirmedData(prev => ({ ...prev, pickupAddress: e.target.value }))} />
               </div>
               <div>
                 <label style={labelStyle}>Drop-off Address</label>
-                <input style={inputStyle} placeholder="Final drop-off" value={confirmedData.dropoffAddress} onChange={(e) => setConfirmedData(prev => ({ ...prev, dropoffAddress: e.target.value }))} />
+                <input style={getInputStyle(confirmedData.dropoffAddress)} placeholder="Final drop-off" value={confirmedData.dropoffAddress} onChange={(e) => setConfirmedData(prev => ({ ...prev, dropoffAddress: e.target.value }))} />
               </div>
             </div>
           </div>
@@ -1383,8 +1415,35 @@ export default function CallPad() {
               Vehicle Gallery
               {loadingVehicles && <span style={{ fontWeight: 400, color: '#94a3b8', marginLeft: '8px' }}>Searching...</span>}
             </h3>
-            <div style={{ fontSize: '12px', color: '#94a3b8' }}>
-              {filteredVehicles.length} of {vehicles.length} vehicles
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button
+                onClick={() => {
+                  const searchQuery = `${confirmedData.passengers || 20} passenger party bus limo rental ${confirmedData.cityOrZip || ''}`;
+                  const alertMsg = `MANAGER ALERT:\n\nCustomer needs:\n- ${confirmedData.passengers || '?'} passengers\n- ${confirmedData.eventType || 'Event'}\n- ${confirmedData.cityOrZip || 'Unknown location'}\n- ${confirmedData.date || 'Date TBD'}\n\nSearch vendors for availability.\n\nSearch query: "${searchQuery}"`;
+                  if (confirm(alertMsg + '\n\nOpen web search?')) {
+                    window.open(`https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`, '_blank');
+                  }
+                }}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: '#f59e0b',
+                  color: '#fff',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+                title="Search web for more vehicles & alert manager"
+              >
+                Find More Vehicles
+              </button>
+              <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                {filteredVehicles.length} of {vehicles.length} vehicles
+              </div>
             </div>
           </div>
 
@@ -1440,10 +1499,18 @@ export default function CallPad() {
               <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#94a3b8', fontSize: '11px', cursor: 'pointer' }}>
                 <input 
                   type="checkbox" 
-                  checked={vehicleFilters.other}
-                  onChange={(e) => setVehicleFilters(prev => ({ ...prev, other: e.target.checked }))}
+                  checked={vehicleFilters.carSuv}
+                  onChange={(e) => setVehicleFilters(prev => ({ ...prev, carSuv: e.target.checked }))}
                 />
-                Other
+                Car/SUV
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: vehicleFilters.oneWayTransfer ? '#fbbf24' : '#94a3b8', fontSize: '11px', cursor: 'pointer', fontWeight: vehicleFilters.oneWayTransfer ? 600 : 400 }}>
+                <input 
+                  type="checkbox" 
+                  checked={vehicleFilters.oneWayTransfer}
+                  onChange={(e) => setVehicleFilters(prev => ({ ...prev, oneWayTransfer: e.target.checked }))}
+                />
+                One Way Transfer
               </label>
             </div>
           </div>
@@ -1584,7 +1651,45 @@ export default function CallPad() {
         </div>
       </div>
 
-      {selectedVehicle && (
+      {selectedVehicle && (() => {
+        const allPhotos = [
+          selectedVehicle.image,
+          selectedVehicle.image_2,
+          selectedVehicle.image_3,
+          ...(selectedVehicle.gallery_all ? selectedVehicle.gallery_all.split(',').map((u: string) => u.trim()) : [])
+        ].filter(Boolean);
+        
+        const allPricing: { label: string; value: number; hours?: number }[] = [];
+        
+        const standardHours = [3, 4, 5, 6, 7, 8, 9, 10];
+        standardHours.forEach(h => {
+          const val = selectedVehicle[`price_${h}hr`];
+          if (val) allPricing.push({ label: `${h} Hour Rate`, value: val, hours: h });
+        });
+        
+        const promHours = [6, 7, 8, 9, 10];
+        promHours.forEach(h => {
+          const val = selectedVehicle[`prom_price_${h}hr`];
+          if (val) allPricing.push({ label: `Prom ${h}hr`, value: val, hours: h });
+        });
+        
+        const before5pmHours = [3, 4, 5, 6, 7];
+        before5pmHours.forEach(h => {
+          const val = selectedVehicle[`before5pm_${h}hr`];
+          if (val) allPricing.push({ label: `Before 5PM ${h}hr`, value: val, hours: h });
+        });
+        
+        const aprilMayHours = [5, 6, 7, 8, 9];
+        aprilMayHours.forEach(h => {
+          const val = selectedVehicle[`april_may_weekend_${h}hr`];
+          if (val) allPricing.push({ label: `Apr/May Wknd ${h}hr`, value: val, hours: h });
+        });
+        
+        if (selectedVehicle.transfer_price) {
+          allPricing.push({ label: 'One Way Transfer', value: selectedVehicle.transfer_price });
+        }
+        
+        return (
         <div 
           style={{
             position: 'fixed',
@@ -1592,11 +1697,12 @@ export default function CallPad() {
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'rgba(0,0,0,0.7)',
+            background: 'rgba(0,0,0,0.85)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 1000,
+            padding: '20px',
           }}
           onClick={() => setSelectedVehicle(null)}
         >
@@ -1605,27 +1711,51 @@ export default function CallPad() {
               background: '#fff',
               borderRadius: '12px',
               padding: '24px',
-              maxWidth: '500px',
-              width: '90%',
-              maxHeight: '80vh',
+              maxWidth: '900px',
+              width: '95%',
+              maxHeight: '90vh',
               overflow: 'auto',
             }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#111827', margin: 0 }}>
-                {selectedVehicle.name}
-              </h2>
+              <div>
+                <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#111827', margin: 0 }}>
+                  {selectedVehicle.name}
+                </h2>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
+                  {selectedVehicle.capacity && (
+                    <span style={{ background: '#e0e7ff', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', color: '#3730a3', fontWeight: 500 }}>
+                      {selectedVehicle.capacity} passengers
+                    </span>
+                  )}
+                  {selectedVehicle.category && (
+                    <span style={{ background: '#f3e8ff', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', color: '#6b21a8', fontWeight: 500 }}>
+                      {selectedVehicle.category}
+                    </span>
+                  )}
+                  {selectedVehicle.city && (
+                    <span style={{ background: '#d1fae5', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', color: '#065f46', fontWeight: 500 }}>
+                      {selectedVehicle.city}
+                    </span>
+                  )}
+                  {selectedVehicle.is_transfer && (
+                    <span style={{ background: '#fef3c7', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', color: '#92400e', fontWeight: 500 }}>
+                      Transfer Available
+                    </span>
+                  )}
+                </div>
+              </div>
               <button
                 onClick={() => setSelectedVehicle(null)}
                 style={{
                   background: '#f3f4f6',
                   border: 'none',
                   borderRadius: '50%',
-                  width: '32px',
-                  height: '32px',
+                  width: '36px',
+                  height: '36px',
                   cursor: 'pointer',
-                  fontSize: '18px',
+                  fontSize: '20px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1635,116 +1765,123 @@ export default function CallPad() {
               </button>
             </div>
             
-            {selectedVehicle.image && (
-              <img 
-                src={selectedVehicle.image} 
-                alt={selectedVehicle.name}
-                style={{ width: '100%', height: '200px', objectFit: 'cover', borderRadius: '8px', marginBottom: '16px' }}
-              />
+            {allPhotos.length > 0 && (
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: allPhotos.length === 1 ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
+                  {allPhotos.slice(0, 6).map((photo, idx) => (
+                    <img 
+                      key={idx}
+                      src={photo} 
+                      alt={`${selectedVehicle.name} ${idx + 1}`}
+                      style={{ 
+                        width: '100%', 
+                        height: idx === 0 && allPhotos.length === 1 ? '300px' : '150px', 
+                        objectFit: 'cover', 
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => {
+                        setPhotoModalVehicle(selectedVehicle);
+                        setPhotoModalIndex(idx);
+                      }}
+                    />
+                  ))}
+                </div>
+                {allPhotos.length > 6 && (
+                  <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '6px', textAlign: 'center' }}>
+                    +{allPhotos.length - 6} more photos (click to view all)
+                  </div>
+                )}
+              </div>
             )}
 
-            <div style={{ display: 'grid', gap: '12px' }}>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {selectedVehicle.capacity && (
-                  <span style={{ background: '#e0e7ff', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', color: '#3730a3', fontWeight: 500 }}>
-                    {selectedVehicle.capacity} passengers
-                  </span>
-                )}
-                {selectedVehicle.category && (
-                  <span style={{ background: '#f3e8ff', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', color: '#6b21a8', fontWeight: 500 }}>
-                    {selectedVehicle.category}
-                  </span>
-                )}
-                {selectedVehicle.city && (
-                  <span style={{ background: '#d1fae5', padding: '4px 12px', borderRadius: '20px', fontSize: '13px', color: '#065f46', fontWeight: 500 }}>
-                    {selectedVehicle.city}
-                  </span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div style={{ background: '#f9fafb', padding: '16px', borderRadius: '8px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#374151', marginBottom: '12px' }}>All Pricing from Database</h3>
+                
+                {allPricing.length > 0 ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                    {allPricing.map((p, idx) => (
+                      <div key={idx} style={{ 
+                        background: '#fff', 
+                        padding: '10px', 
+                        borderRadius: '6px', 
+                        border: p.hours === rateHours ? '2px solid #10b981' : '1px solid #e5e7eb' 
+                      }}>
+                        <div style={{ fontSize: '10px', color: '#6b7280', fontWeight: 500, textTransform: 'uppercase' }}>{p.label}</div>
+                        <div style={{ fontSize: '18px', fontWeight: 700, color: '#111827' }}>${p.value.toLocaleString()}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ color: '#9ca3af', fontSize: '13px' }}>No pricing available in database</div>
                 )}
               </div>
 
               <div style={{ background: '#f9fafb', padding: '16px', borderRadius: '8px' }}>
-                <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#374151', marginBottom: '12px' }}>All Pricing Tiers</h3>
+                <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#374151', marginBottom: '12px' }}>Quote Calculation</h3>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '16px' }}>
-                  <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '2px solid #10b981' }}>
-                    <div style={{ fontSize: '11px', color: '#10b981', fontWeight: 600, marginBottom: '4px' }}>STANDARD</div>
-                    <div style={{ fontSize: '20px', fontWeight: 700, color: '#111827' }}>{selectedVehicle.priceDisplay}</div>
-                    <div style={{ fontSize: '11px', color: '#6b7280' }}>{selectedVehicle.hours || 4} hours</div>
-                  </div>
-                  <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-                    <div style={{ fontSize: '11px', color: '#ec4899', fontWeight: 600, marginBottom: '4px' }}>PROM RATE</div>
-                    <div style={{ fontSize: '20px', fontWeight: 700, color: '#111827' }}>
-                      ${selectedVehicle.price ? Math.round(selectedVehicle.price * 1.15).toLocaleString() : '---'}
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#6b7280' }}>{selectedVehicle.hours || 4} hours (+15%)</div>
-                  </div>
-                  <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-                    <div style={{ fontSize: '11px', color: '#f59e0b', fontWeight: 600, marginBottom: '4px' }}>BEFORE 5 PM</div>
-                    <div style={{ fontSize: '20px', fontWeight: 700, color: '#111827' }}>
-                      ${selectedVehicle.price ? Math.round(selectedVehicle.price * 0.9).toLocaleString() : '---'}
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#6b7280' }}>{selectedVehicle.hours || 4} hours (-10%)</div>
-                  </div>
-                  <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-                    <div style={{ fontSize: '11px', color: '#8b5cf6', fontWeight: 600, marginBottom: '4px' }}>AFTER 5 PM</div>
-                    <div style={{ fontSize: '20px', fontWeight: 700, color: '#111827' }}>
-                      ${selectedVehicle.price ? Math.round(selectedVehicle.price * 1.1).toLocaleString() : '---'}
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#6b7280' }}>{selectedVehicle.hours || 4} hours (+10%)</div>
-                  </div>
+                <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '2px solid #10b981', marginBottom: '12px' }}>
+                  <div style={{ fontSize: '11px', color: '#10b981', fontWeight: 600, marginBottom: '4px' }}>CURRENT RATE ({rateHours}HR)</div>
+                  <div style={{ fontSize: '24px', fontWeight: 700, color: '#111827' }}>{selectedVehicle.priceDisplay}</div>
                 </div>
-
+                
                 <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
                     <span style={{ color: '#6b7280', fontSize: '13px' }}>Per Hour Rate</span>
                     <span style={{ fontWeight: 600, color: '#111827', fontSize: '13px' }}>
-                      ${selectedVehicle.price && selectedVehicle.hours ? Math.round(selectedVehicle.price / selectedVehicle.hours) : '---'}/hr
+                      ${selectedVehicle.displayPrice ? Math.round(selectedVehicle.displayPrice / rateHours).toLocaleString() : '---'}/hr
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
                     <span style={{ color: '#6b7280', fontSize: '13px' }}>Deposit ({depositPercentage}%)</span>
                     <span style={{ fontWeight: 600, color: '#92400e', fontSize: '13px' }}>
-                      ${selectedVehicle.price ? Math.round(selectedVehicle.price * (depositPercentage / 100)).toLocaleString() : '---'}
+                      ${selectedVehicle.displayPrice ? Math.round(selectedVehicle.displayPrice * (depositPercentage / 100)).toLocaleString() : '---'}
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
                     <span style={{ color: '#6b7280', fontSize: '13px' }}>Balance Due</span>
                     <span style={{ fontWeight: 600, color: '#374151', fontSize: '13px' }}>
-                      ${selectedVehicle.price ? Math.round(selectedVehicle.price * ((100 - depositPercentage) / 100)).toLocaleString() : '---'}
+                      ${selectedVehicle.displayPrice ? Math.round(selectedVehicle.displayPrice * ((100 - depositPercentage) / 100)).toLocaleString() : '---'}
                     </span>
                   </div>
                 </div>
               </div>
-
-              {selectedVehicle.description && (
-                <div style={{ fontSize: '13px', color: '#6b7280', lineHeight: 1.6 }}>
-                  {selectedVehicle.description}
-                </div>
-              )}
-
-              <button
-                onClick={() => {
-                  toggleQuoted(selectedVehicle);
-                  setSelectedVehicle(null);
-                }}
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  background: isQuoted(selectedVehicle.id) ? '#dc2626' : '#10b981',
-                  color: '#fff',
-                }}
-              >
-                {isQuoted(selectedVehicle.id) ? "Remove from Quote" : "Add to Quote"}
-              </button>
             </div>
+
+            {(selectedVehicle.description || selectedVehicle.custom_instructions) && (
+              <div style={{ marginTop: '16px', padding: '12px', background: '#fffbeb', borderRadius: '8px', border: '1px solid #fcd34d' }}>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: '#92400e', marginBottom: '4px' }}>Notes / Custom Instructions</div>
+                <div style={{ fontSize: '13px', color: '#78350f', lineHeight: 1.5 }}>
+                  {selectedVehicle.custom_instructions || selectedVehicle.description}
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={() => {
+                toggleQuoted(selectedVehicle);
+                setSelectedVehicle(null);
+              }}
+              style={{
+                width: '100%',
+                padding: '14px',
+                borderRadius: '8px',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 600,
+                background: isQuoted(selectedVehicle.id) ? '#dc2626' : '#10b981',
+                color: '#fff',
+                marginTop: '16px',
+              }}
+            >
+              {isQuoted(selectedVehicle.id) ? "Remove from Quote" : "Add to Quote"}
+            </button>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {photoModalVehicle && (() => {
         const photos = [photoModalVehicle.image, photoModalVehicle.image_2, photoModalVehicle.image_3, photoModalVehicle.image_4].filter(Boolean);

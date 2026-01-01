@@ -114,15 +114,26 @@ The system recognizes vehicle preferences:
 
 ### Gallery Filters
 - **Sort by** - Price Low to High, Price High to Low, Capacity
-- **Rate Focus** - 3hr, 4hr, 5hr, 6hr, 8hr rate options
-- **Vehicle Type Checkboxes** - Party Bus, Limo, Shuttle, Other
+- **Rate Focus** - 3hr, 4hr, 5hr, 6hr, 8hr rate options (dynamically updates all vehicle prices)
+- **Vehicle Type Checkboxes** - Party Bus, Limo, Shuttle, Car/SUV
+- **One Way Transfer** - Filter for transfer-capable vehicles only
+- **Find More Vehicles** - Button to search web for vendors and alert manager
+
+### Color-Coded Fields
+- **Green border/background** - Field is filled with data
+- **Red/pink border/background** - Field is empty (missing info)
 
 ### Pricing Modal ($ button)
-Shows all pricing tiers at once in a 2x2 grid:
-- **Standard** - Base price (highlighted)
-- **Prom Rate** - +15% for prom events
-- **Before 5 PM** - -10% for daytime events
-- **After 5 PM** - +10% for evening events
+Shows all vehicle info in an expanded modal:
+- **Photos** - All vehicle photos from image_main, image_2, image_3, and gallery_all
+- **All Pricing from Database** - Every non-null pricing tier from Supabase:
+  - Standard rates (3hr, 4hr, 5hr, 6hr, 7hr, 8hr, 9hr, 10hr)
+  - Prom rates (6hr, 7hr, 8hr, 9hr, 10hr)
+  - Before 5PM rates (3hr, 4hr, 5hr, 6hr, 7hr)
+  - April/May Weekend rates (5hr, 6hr, 7hr, 8hr, 9hr)
+  - One Way Transfer price
+- **Quote Calculation** - Current rate based on selected hours, per hour rate, deposit, balance due
+- **Custom Instructions** - Vehicle-specific notes if available
 Also shows: Per hour rate, Deposit amount, Balance due
 
 ### AI Selling Points
