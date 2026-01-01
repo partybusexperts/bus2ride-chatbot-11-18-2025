@@ -226,7 +226,6 @@ export default function HomePage() {
   const [globalRateType, setGlobalRateType] = useState<RateType | null>(null);
   const [pricingPreviewId, setPricingPreviewId] = useState<string | null>(null);
   const [expandedRateBuckets, setExpandedRateBuckets] = useState<Record<string, boolean>>({});
-  const [showCallPad, setShowCallPad] = useState(true);
 
   const before5pmEligible = useMemo(() => {
     if (!vehicles.length) return false;
@@ -1033,91 +1032,18 @@ export default function HomePage() {
             boxShadow: '0 30px 60px rgba(6,10,24,0.55)',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
-            <div>
-              <h1 style={{ fontSize: 34, marginBottom: 8, fontWeight: 700 }}>Bus2Ride Vehicle Finder</h1>
-              <p style={{ marginBottom: 16, fontSize: 15, color: 'rgba(226,232,240,0.85)' }}>
-                Plug in any ZIP/postal or city to preview the exact inventory, rates, and transfer coverage your chatbot presents to riders.
-              </p>
-              <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 12, color: 'rgba(226,232,240,0.8)' }}>
-                <span>Hover a card for instant rate cards & transfer intel.</span>
-                <span>Toggle Standard / Prom / Before 5 PM globally or per vehicle.</span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowCallPad(!showCallPad)}
-              style={{
-                padding: '10px 20px',
-                borderRadius: '8px',
-                border: 'none',
-                background: showCallPad ? '#ef4444' : '#10b981',
-                color: 'white',
-                cursor: 'pointer',
-                fontWeight: 600,
-                fontSize: '14px',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {showCallPad ? 'Hide Call Pad' : 'Show Call Pad'}
-            </button>
+          <div>
+            <h1 style={{ fontSize: 34, marginBottom: 8, fontWeight: 700 }}>Bus2Ride Smart Call Pad</h1>
+            <p style={{ marginBottom: 8, fontSize: 15, color: 'rgba(226,232,240,0.85)' }}>
+              Type anything in the input bar - phone numbers, cities, dates, venues. The system auto-detects and fills fields.
+            </p>
           </div>
         </section>
 
-        {showCallPad && (
-          <section style={{ marginBottom: 24 }}>
-            <CallPad />
-          </section>
-        )}
+        <section style={{ marginBottom: 24 }}>
+          <CallPad />
+        </section>
 
-        {!showCallPad && (
-          <div
-            style={{
-              background: 'white',
-              borderRadius: 22,
-              padding: '20px 24px',
-              boxShadow: '0 25px 60px rgba(15,23,42,0.15)',
-              marginBottom: 24,
-            }}
-          >
-            <form
-              onSubmit={handleSearch}
-              style={{ marginBottom: 0, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}
-            >
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Enter ZIP/postal or city (e.g. 85249, R2C, Phoenix)"
-                style={{
-                  flex: '1 1 220px',
-                  padding: '12px 16px',
-                  fontSize: 16,
-                  borderRadius: 999,
-                  border: '1px solid #cbd5f5',
-                  background: '#f8fafc',
-                }}
-              />
-              <button
-                type="submit"
-                style={{
-                  padding: '12px 22px',
-                  fontSize: 16,
-                  borderRadius: 999,
-                  border: 'none',
-                  background: 'linear-gradient(120deg, #2563eb, #7c3aed)',
-                  color: 'white',
-                  cursor: 'pointer',
-                  boxShadow: '0 12px 25px rgba(79,70,229,0.35)',
-                  whiteSpace: 'nowrap',
-                  fontWeight: 600,
-                }}
-              >
-                {loading ? 'Searching…' : 'Search'}
-              </button>
-            </form>
-          </div>
-        )}
       <section
         style={{
           border: '1px solid rgba(15,23,42,0.08)',

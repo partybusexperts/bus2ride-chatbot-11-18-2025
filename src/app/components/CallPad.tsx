@@ -63,7 +63,7 @@ const TYPE_LABELS: Record<DetectedType, string> = {
   passengers: 'Passengers',
   hours: 'Hours',
   pickup_address: 'Pickup',
-  destination: 'Destination',
+  destination: 'Trip Note',
   dropoff_address: 'Drop-off',
   event_type: 'Event',
   vehicle_type: 'Vehicle Type',
@@ -71,7 +71,16 @@ const TYPE_LABELS: Record<DetectedType, string> = {
   website: 'Website',
   place: 'Place/Venue',
   stop: 'Trip Stop',
-  unknown: 'Unknown',
+  unknown: 'Trip Note',
+};
+
+const SECTION_STYLES = {
+  agentCustomer: { bg: '#eff6ff', border: '#3b82f6', title: '#1e40af' },
+  tripDetails: { bg: '#f0fdf4', border: '#22c55e', title: '#166534' },
+  locations: { bg: '#fefce8', border: '#eab308', title: '#854d0e' },
+  quotedSummary: { bg: '#faf5ff', border: '#a855f7', title: '#6b21a8' },
+  payment: { bg: '#ecfeff', border: '#06b6d4', title: '#0e7490' },
+  leadStatus: { bg: '#fef2f2', border: '#ef4444', title: '#991b1b' },
 };
 
 const TYPE_COLORS: Record<DetectedType, { bg: string; text: string; border: string }> = {
@@ -270,7 +279,7 @@ export default function CallPad() {
     return null;
   };
 
-  const lookupPlace = useCallback(async (placeName: string, context: 'pickup' | 'destination' | 'stop' = 'stop', overrideLocation?: string) => {
+  const lookupPlace = useCallback(async (placeName: string, context: 'pickup' | 'dropoff' | 'stop' = 'stop', overrideLocation?: string) => {
     const extractedCity = extractCityFromText(placeName);
     const nearLocation = overrideLocation || extractedCity || confirmedData.cityOrZip || 'Arizona';
     setLookingUpPlace(true);
@@ -285,6 +294,8 @@ export default function CallPad() {
       if (data.found && data.fullAddress) {
         if (context === 'pickup') {
           setConfirmedData(prev => ({ ...prev, pickupAddress: data.fullAddress }));
+        } else if (context === 'dropoff') {
+          setConfirmedData(prev => ({ ...prev, dropoffAddress: data.fullAddress }));
         } else {
           const stopNote = `Stop: ${data.name} - ${data.fullAddress}`;
           setConfirmedData(prev => ({
@@ -348,6 +359,34 @@ export default function CallPad() {
     
     if (chip.type === 'place' || chip.type === 'stop') {
       lookupPlace(chip.value, 'stop');
+      return;
+    }
+    
+    if (chip.type === 'pickup_address') {
+      lookupPlace(chip.value, 'pickup');
+      const notePrefix = 'PU: ';
+      setConfirmedData(prev => ({
+        ...prev,
+        tripNotes: prev.tripNotes ? `${prev.tripNotes}\n${notePrefix}${chip.value}` : `${notePrefix}${chip.value}`,
+      }));
+      return;
+    }
+    
+    if (chip.type === 'dropoff_address') {
+      lookupPlace(chip.value, 'dropoff');
+      const notePrefix = 'DO: ';
+      setConfirmedData(prev => ({
+        ...prev,
+        tripNotes: prev.tripNotes ? `${prev.tripNotes}\n${notePrefix}${chip.value}` : `${notePrefix}${chip.value}`,
+      }));
+      return;
+    }
+    
+    if (chip.type === 'destination' || chip.type === 'unknown') {
+      setConfirmedData(prev => ({
+        ...prev,
+        tripNotes: prev.tripNotes ? `${prev.tripNotes}\n${chip.value}` : chip.value,
+      }));
       return;
     }
     
@@ -807,71 +846,6 @@ export default function CallPad() {
         borderRadius: '10px',
         marginBottom: '16px',
       }}>
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
-          gap: '12px',
-          marginBottom: '16px',
-          background: 'rgba(255,255,255,0.05)',
-          padding: '12px',
-          borderRadius: '8px',
-        }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>Location</div>
-            <div style={{ fontSize: '14px', color: confirmedData.cityOrZip ? '#60a5fa' : '#475569', fontWeight: 600 }}>
-              {confirmedData.cityOrZip || '---'}
-            </div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>Event</div>
-            <div style={{ fontSize: '14px', color: confirmedData.eventType ? '#a78bfa' : '#475569', fontWeight: 600 }}>
-              {confirmedData.eventType || '---'}
-            </div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>Date</div>
-            <div style={{ fontSize: '14px', color: confirmedData.date ? '#fbbf24' : '#475569', fontWeight: 600 }}>
-              {confirmedData.date ? `${confirmedData.date} (${dayOfWeek.slice(0,3)})` : '---'}
-            </div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>Passengers</div>
-            <div style={{ fontSize: '14px', color: confirmedData.passengers ? '#34d399' : '#475569', fontWeight: 600 }}>
-              {confirmedData.passengers || '---'}
-            </div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>Hours</div>
-            <div style={{ fontSize: '14px', color: confirmedData.hours ? '#34d399' : '#475569', fontWeight: 600 }}>
-              {confirmedData.hours || '---'}
-            </div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>Vehicles</div>
-            <div style={{ fontSize: '14px', color: vehicles.length > 0 ? '#22d3ee' : '#475569', fontWeight: 600 }}>
-              {vehicles.length}
-            </div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>Quoted</div>
-            <div style={{ fontSize: '14px', color: quotedVehicles.length > 0 ? '#4ade80' : '#475569', fontWeight: 600 }}>
-              {quotedVehicles.length}
-            </div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>Current Price</div>
-            <div style={{ fontSize: '14px', color: currentVehiclePrice > 0 ? '#4ade80' : '#475569', fontWeight: 700 }}>
-              ${currentVehiclePrice.toLocaleString()}
-            </div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>Deposit</div>
-            <div style={{ fontSize: '14px', color: currentDepositAmount > 0 ? '#fbbf24' : '#475569', fontWeight: 700 }}>
-              ${currentDepositAmount.toLocaleString()}
-            </div>
-          </div>
-        </div>
-
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <input
             ref={inputRef}
@@ -1041,22 +1015,31 @@ export default function CallPad() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '300px 280px 1fr', gap: '16px', minHeight: '600px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ background: '#fff', padding: '14px', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-            <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '10px', color: '#374151' }}>Agent & Customer</h3>
+          <div style={{ background: SECTION_STYLES.agentCustomer.bg, padding: '14px', borderRadius: '10px', border: `2px solid ${SECTION_STYLES.agentCustomer.border}` }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '12px', color: SECTION_STYLES.agentCustomer.title }}>Agent & Customer</h3>
             <div style={{ display: 'grid', gap: '8px' }}>
               <div>
                 <label style={labelStyle}>Agent</label>
-                <select 
-                  style={inputStyle} 
-                  value={confirmedData.agentName} 
-                  onChange={(e) => setConfirmedData(prev => ({ ...prev, agentName: e.target.value }))}
-                >
-                  {AGENTS.map(agent => (
-                    <option key={agent.id} value={agent.name === 'Select Agent...' ? '' : agent.name}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                  {AGENTS.filter(a => a.id !== '').map(agent => (
+                    <button
+                      key={agent.id}
+                      onClick={() => setConfirmedData(prev => ({ ...prev, agentName: agent.name }))}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: confirmedData.agentName === agent.name ? '2px solid #3b82f6' : '1px solid #d1d5db',
+                        background: confirmedData.agentName === agent.name ? '#dbeafe' : '#fff',
+                        color: confirmedData.agentName === agent.name ? '#1e40af' : '#374151',
+                        fontSize: '12px',
+                        fontWeight: confirmedData.agentName === agent.name ? 700 : 500,
+                        cursor: 'pointer',
+                      }}
+                    >
                       {agent.name}
-                    </option>
+                    </button>
                   ))}
-                </select>
+                </div>
               </div>
               <div>
                 <label style={labelStyle}>Customer Name</label>
@@ -1073,8 +1056,8 @@ export default function CallPad() {
             </div>
           </div>
 
-          <div style={{ background: '#fff', padding: '14px', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-            <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '10px', color: '#374151' }}>Trip Details</h3>
+          <div style={{ background: SECTION_STYLES.tripDetails.bg, padding: '14px', borderRadius: '10px', border: `2px solid ${SECTION_STYLES.tripDetails.border}` }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '12px', color: SECTION_STYLES.tripDetails.title }}>Trip Details</h3>
             <div style={{ display: 'grid', gap: '8px' }}>
               <div>
                 <label style={labelStyle}>City / ZIP</label>
@@ -1206,8 +1189,8 @@ export default function CallPad() {
             </div>
           </div>
 
-          <div style={{ background: '#fff', padding: '14px', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-            <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '10px', color: '#374151' }}>Locations</h3>
+          <div style={{ background: SECTION_STYLES.locations.bg, padding: '14px', borderRadius: '10px', border: `2px solid ${SECTION_STYLES.locations.border}` }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '12px', color: SECTION_STYLES.locations.title }}>Locations</h3>
             <div style={{ display: 'grid', gap: '8px' }}>
               <div>
                 <label style={labelStyle}>Pickup Address</label>
@@ -1237,8 +1220,8 @@ export default function CallPad() {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ background: '#fff', padding: '14px', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-            <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '10px', color: '#374151' }}>
+          <div style={{ background: SECTION_STYLES.quotedSummary.bg, padding: '14px', borderRadius: '10px', border: `2px solid ${SECTION_STYLES.quotedSummary.border}` }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '12px', color: SECTION_STYLES.quotedSummary.title }}>
               Quoted Summary
               {quotedVehicles.length > 0 && (
                 <span style={{ marginLeft: '8px', background: '#16a34a', color: '#fff', padding: '2px 8px', borderRadius: '10px', fontSize: '11px' }}>
@@ -1303,8 +1286,8 @@ export default function CallPad() {
             </div>
           </div>
 
-          <div style={{ background: '#fff', padding: '14px', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-            <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '10px', color: '#374151' }}>Payment</h3>
+          <div style={{ background: SECTION_STYLES.payment.bg, padding: '14px', borderRadius: '10px', border: `2px solid ${SECTION_STYLES.payment.border}` }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '12px', color: SECTION_STYLES.payment.title }}>Payment</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
                 <input type="checkbox" checked={confirmedData.tipIncluded} onChange={(e) => setConfirmedData(prev => ({ ...prev, tipIncluded: e.target.checked }))} />
@@ -1321,8 +1304,8 @@ export default function CallPad() {
             </div>
           </div>
 
-          <div style={{ background: '#fff', padding: '14px', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-            <h3 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '10px', color: '#374151' }}>Lead Status</h3>
+          <div style={{ background: SECTION_STYLES.leadStatus.bg, padding: '14px', borderRadius: '10px', border: `2px solid ${SECTION_STYLES.leadStatus.border}` }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '12px', color: SECTION_STYLES.leadStatus.title }}>Lead Status</h3>
             <select
               style={inputStyle}
               value={leadStatus}

@@ -41,7 +41,8 @@ const DATE_PATTERNS = [
   /^\d{1,2}\/\d{1,2}(\/\d{2,4})?$/,
   /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2}(st|nd|rd|th)?(,?\s*\d{4})?$/i,
 ];
-const PASSENGERS_REGEX = /^(\d+)\s*(people|passengers|pax|guests|persons)?$/i;
+const PASSENGERS_REGEX = /^(\d{1,3})\s*(people|passengers|pax|guests|persons)$/i;
+const PASSENGERS_SHORT_REGEX = /^(\d{1,2})$/;
 const HOURS_REGEX = /^(\d+(\.\d+)?)\s*(hours?|hrs?)?$/i;
 
 const EVENT_KEYWORDS = [
@@ -102,6 +103,9 @@ const VENUE_KEYWORDS = [
   'arena', 'stadium', 'amphitheater', 'theater', 'theatre', 'venue',
   'country club', 'golf course', 'spa', 'salon', 'church', 'chapel',
   'airport', 'terminal', 'station', 'mall', 'plaza', 'center', 'centre',
+  'field', 'park', 'ballpark', 'coliseum', 'dome', 'garden', 'gardens',
+  'wrigley', 'fenway', 'yankee', 'dodger', 'soldier field', 'lambeau',
+  'churchill downs', 'belmont', 'keeneland', 'saratoga',
 ];
 
 const COMMON_FIRST_NAMES = [
@@ -124,8 +128,11 @@ function detectPattern(text: string): DetectedItem | null {
   const trimmed = text.trim();
   if (!trimmed) return null;
   
-  const digitsOnly = trimmed.replace(/\D/g, '');
-  if (digitsOnly.length === 10 || digitsOnly.length === 11) {
+  const phoneClean = trimmed.replace(/^(phone|call|contact|cell|tel|mobile|#)[\s:]*|[\s:]+$/gi, '');
+  const digitsOnly = phoneClean.replace(/\D/g, '');
+  const hasValidPhoneChars = /^[\d\s\-\(\)\.]+$/.test(phoneClean);
+  
+  if (hasValidPhoneChars && (digitsOnly.length === 10 || digitsOnly.length === 11)) {
     const formatted = digitsOnly.length === 11 && digitsOnly[0] === '1'
       ? digitsOnly.slice(1)
       : digitsOnly;
@@ -137,6 +144,10 @@ function detectPattern(text: string): DetectedItem | null {
         original: trimmed,
       };
     }
+  }
+  
+  if (hasValidPhoneChars && digitsOnly.length > 11) {
+    return null;
   }
 
   if (EMAIL_REGEX.test(trimmed)) {
@@ -211,7 +222,15 @@ function detectPattern(text: string): DetectedItem | null {
 
   const passMatch = trimmed.match(PASSENGERS_REGEX);
   if (passMatch) {
-    return { type: 'passengers', value: passMatch[1], confidence: 0.85, original: trimmed };
+    return { type: 'passengers', value: passMatch[1], confidence: 0.9, original: trimmed };
+  }
+  
+  const passShortMatch = trimmed.match(PASSENGERS_SHORT_REGEX);
+  if (passShortMatch) {
+    const num = parseInt(passShortMatch[1], 10);
+    if (num >= 2 && num <= 99) {
+      return { type: 'passengers', value: passShortMatch[1], confidence: 0.85, original: trimmed };
+    }
   }
 
   const hoursMatch = trimmed.match(HOURS_REGEX);

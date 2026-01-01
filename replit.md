@@ -22,9 +22,23 @@ The Call Pad uses a modern three-panel layout with AI-powered smart input parsin
 
 ### Layout
 - **Smart Input Bar** - Single input at top for typing anything (phone, address, city, dates, etc.)
-- **Left Panel** - Agent & Caller details, Trip details, Locations
-- **Middle Panel** - Quoted Summary, Pricing, Payment, Lead Status, Notes
+- **Left Panel** - Agent & Customer (blue), Trip Details (green), Locations (yellow)
+- **Middle Panel** - Quoted Summary (purple), Pricing, Payment (cyan), Lead Status (red)
 - **Right Panel** - Large 3-column Vehicle Gallery (dark theme)
+
+### Color-Coded Sections
+Each section has a unique background and border color for easy agent identification:
+- **Agent & Customer** - Blue (#eff6ff, #3b82f6)
+- **Trip Details** - Green (#f0fdf4, #22c55e)
+- **Locations** - Yellow (#fefce8, #eab308)
+- **Quoted Summary** - Purple (#faf5ff, #a855f7)
+- **Payment** - Cyan (#ecfeff, #06b6d4)
+- **Lead Status** - Red (#fef2f2, #ef4444)
+
+### Agent Quick-Select
+Instead of a dropdown, agents click their name button for one-tap selection:
+- Floyd, Marcus, Sarah, Jennifer, David, Other
+- Selected agent is highlighted with blue border and background
 
 ### Smart Input Parsing
 Type comma-separated entries in the main input box. Example:
@@ -41,7 +55,7 @@ The system auto-detects:
 - **Passenger counts** - "30 people", "30 passengers"
 - **Hours** - "5 hours", "5 hrs"
 - **Event types** - Wedding, Prom, Birthday, etc.
-- **Addresses** - "pu at [location]", "to [destination]", "do at [dropoff]"
+- **Addresses** - "pu at [location]", "do at [dropoff]" (adds to Trip Notes AND populates field)
 - **Places/Venues** - TopGolf, bars, restaurants, hotels detected and looked up via OpenAI
 - **Complex addresses** - Uses OpenAI for address parsing
 
