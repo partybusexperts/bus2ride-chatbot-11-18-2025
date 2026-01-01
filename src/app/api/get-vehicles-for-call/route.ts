@@ -224,7 +224,7 @@ export async function POST(req: Request) {
       return capA - capB;
     });
 
-    const formattedVehicles = vehicles.map((v) => {
+    const formattedVehicles = vehicles.map((v: any) => {
       const priceInfo = getPriceForHours(v, hours);
       const capacityStr = v.capacity ? `${v.capacity} Passenger` : '';
       
@@ -238,8 +238,39 @@ export async function POST(req: Request) {
           ? `$${priceInfo.price.toLocaleString()} for ${priceInfo.hours} hours`
           : 'Price varies',
         image: v.image_main || v.image_2 || v.image_3 || null,
+        image_2: v.image_2 || null,
+        image_3: v.image_3 || null,
+        gallery_all: v.gallery_all || null,
         category: v.category || null,
         city: v.city || null,
+        short_description: v.short_description || null,
+        tags: v.tags || null,
+        custom_instructions: v.custom_instructions || null,
+        price_3hr: v.price_3hr || null,
+        price_4hr: v.price_4hr || null,
+        price_5hr: v.price_5hr || null,
+        price_6hr: v.price_6hr || null,
+        price_7hr: v.price_7hr || null,
+        price_8hr: v.price_8hr || null,
+        price_9hr: v.price_9hr || null,
+        price_10hr: v.price_10hr || null,
+        prom_price_6hr: v.prom_price_6hr || null,
+        prom_price_7hr: v.prom_price_7hr || null,
+        prom_price_8hr: v.prom_price_8hr || null,
+        prom_price_9hr: v.prom_price_9hr || null,
+        prom_price_10hr: v.prom_price_10hr || null,
+        before5pm_3hr: v.before5pm_3hr || null,
+        before5pm_4hr: v.before5pm_4hr || null,
+        before5pm_5hr: v.before5pm_5hr || null,
+        before5pm_6hr: v.before5pm_6hr || null,
+        before5pm_7hr: v.before5pm_7hr || null,
+        april_may_weekend_5hr: v.april_may_weekend_5hr || null,
+        april_may_weekend_6hr: v.april_may_weekend_6hr || null,
+        april_may_weekend_7hr: v.april_may_weekend_7hr || null,
+        april_may_weekend_8hr: v.april_may_weekend_8hr || null,
+        april_may_weekend_9hr: v.april_may_weekend_9hr || null,
+        transfer_price: v.transfer_price || null,
+        is_transfer: v.is_transfer || false,
       };
     });
 
