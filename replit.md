@@ -177,31 +177,41 @@ Displayed in a cyan panel above the vehicle gallery
 - **Send Quote** - Emails quote to customer (requires quoted vehicles + email address)
 
 ### Lead Status
-- Options: New, Not Quoted, Quoted, Booked, Closed, Cancelled
-- Auto-sets to "Quoted" when saving with quoted vehicles
+- Options: Quoted (default), Not Quoted, Spam, Not Interested, Pending Closed, Closed, Cancellation
+- Defaults to "Quoted" when vehicles are quoted
 
 ## Zoho CRM Integration
-The app now has full Zoho CRM integration for lead management.
+The app has full Zoho CRM integration for lead management.
 
 ### How It Works
 1. **Save to Zoho** button first checks if customer exists by phone or email
-2. If **new customer**: Creates a new lead in Zoho with all call data
-3. If **existing customer**: Shows a confirmation modal with proposed changes
-   - Displays old value vs. new value for each field that would change
-   - Agent can approve or cancel the update
-   - Shows changes like: "85249 → Chandler, AZ 85249"
+2. If **new customer**: Creates a new lead in Zoho with all call data, displays clickable link to view lead
+3. If **existing customer**: Shows a confirmation modal with side-by-side comparison
+   - Current values shown (crossed out in red when selected for update)
+   - New values shown on right (green when selected)
+   - **Individual field selection** - Agent selects which fields to update via checkboxes
+   - "Select All" and "Deselect All" buttons for bulk actions
+   - Button shows "Update X Fields" with selected count
+4. After save: Displays clickable "View Lead in Zoho" link
 
 ### Zoho API Endpoints
 - `src/app/api/zoho/auth/route.ts` - OAuth token management (refresh token flow)
 - `src/app/api/zoho/find-lead/route.ts` - Search leads by phone or email
-- `src/app/api/zoho/save-call/route.ts` - Create or update leads
+- `src/app/api/zoho/save-call/route.ts` - Create or update leads with selective field updates
+- `src/app/api/zoho/test-auth/route.ts` - Test authentication status
+- `src/app/settings/page.tsx` - Settings page for Zoho diagnostics
 
-### Lead Data Mapped to Zoho
+### Lead Data Mapped to Zoho Fields
 - First_Name, Last_Name (parsed from caller name)
 - Email, Phone
-- City (from cityOrZip)
-- Street (from pickup address)
-- Description (trip notes, quoted vehicles, pricing summary)
+- Pick_Up_Address, Drop_Off_Address
+- Party_Size (passengers)
+- Hours_Needed
+- Event_Types
+- Event_Date, Day_of_Week (auto-calculated)
+- Pick_Up_Time
+- Trip_Notes
+- Vehicles_Quoted_Pricing (quoted vehicle summary)
 - Lead_Status
 
 ## Environment Variables Required

@@ -44,15 +44,16 @@ interface PendingConfirmation {
   timestamp: number;
 }
 
-type LeadStatus = 'new' | 'not_quoted' | 'quoted' | 'booked' | 'closed' | 'cancelled';
+type LeadStatus = 'quoted' | 'not_quoted' | 'spam' | 'not_interested' | 'pending_closed' | 'closed' | 'cancellation';
 
 const LEAD_STATUS_OPTIONS: { value: LeadStatus; label: string }[] = [
-  { value: 'new', label: 'New' },
-  { value: 'not_quoted', label: 'Not Quoted' },
   { value: 'quoted', label: 'Quoted' },
-  { value: 'booked', label: 'Booked' },
+  { value: 'not_quoted', label: 'Not Quoted' },
+  { value: 'spam', label: 'Spam' },
+  { value: 'not_interested', label: 'Not Interested' },
+  { value: 'pending_closed', label: 'Pending Closed' },
   { value: 'closed', label: 'Closed' },
-  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'cancellation', label: 'Cancellation' },
 ];
 
 const AGENTS = [
@@ -232,7 +233,9 @@ export default function CallPad() {
   const [quotedVehicles, setQuotedVehicles] = useState<QuotedVehicle[]>([]);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
   const [vehicleMessage, setVehicleMessage] = useState("");
-  const [leadStatus, setLeadStatus] = useState<LeadStatus>('new');
+  const [leadStatus, setLeadStatus] = useState<LeadStatus>('quoted');
+  const [zohoLeadUrl, setZohoLeadUrl] = useState<string | null>(null);
+  const [selectedFieldsToUpdate, setSelectedFieldsToUpdate] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [photoModalVehicle, setPhotoModalVehicle] = useState<any>(null);
@@ -258,7 +261,7 @@ export default function CallPad() {
   const [zohoUpdateConfirmation, setZohoUpdateConfirmation] = useState<{
     show: boolean;
     lead: any;
-    changes: Array<{ field: string; oldValue: string; newValue: string }>;
+    changes: Array<{ field: string; fieldKey: string; oldValue: string; newValue: string }>;
   } | null>(null);
 
   const AMBIGUOUS_CITIES: Record<string, string[]> = {
@@ -928,8 +931,10 @@ export default function CallPad() {
   async function handleSaveToZoho() {
     setSaving(true);
     setSaveMessage("");
+    setZohoLeadUrl(null);
 
     const finalLeadStatus: LeadStatus = quotedVehicles.length > 0 ? 'quoted' : leadStatus;
+    const day = confirmedData.date ? getDayOfWeek(confirmedData.date) : "";
 
     const callData = {
       callerName: confirmedData.callerName,
@@ -939,6 +944,7 @@ export default function CallPad() {
       pickupAddress: confirmedData.pickupAddress,
       dropoffAddress: confirmedData.dropoffAddress,
       date: confirmedData.date,
+      day,
       pickupTime: confirmedData.pickupTime,
       passengers: confirmedData.passengers,
       hours: confirmedData.hours,
@@ -968,14 +974,20 @@ export default function CallPad() {
           setZohoExistingLead(existingLead);
           
           // Calculate what fields will change
-          const changes: Array<{ field: string; oldValue: string; newValue: string }> = [];
+          const changes: Array<{ field: string; fieldKey: string; oldValue: string; newValue: string }> = [];
           
-          const fieldMappings: Array<{ label: string; zohoField: string; newValue: string }> = [
-            { label: 'Name', zohoField: 'Full_Name', newValue: confirmedData.callerName },
-            { label: 'Phone', zohoField: 'Phone', newValue: confirmedData.phone },
-            { label: 'Email', zohoField: 'Email', newValue: confirmedData.email },
-            { label: 'City', zohoField: 'City', newValue: confirmedData.cityOrZip },
-            { label: 'Pickup Address', zohoField: 'Street', newValue: confirmedData.pickupAddress },
+          const fieldMappings: Array<{ label: string; fieldKey: string; zohoField: string; newValue: string }> = [
+            { label: 'Customer Name', fieldKey: 'callerName', zohoField: 'Full_Name', newValue: confirmedData.callerName },
+            { label: 'Phone', fieldKey: 'phone', zohoField: 'Phone', newValue: confirmedData.phone },
+            { label: 'Email', fieldKey: 'email', zohoField: 'Email', newValue: confirmedData.email },
+            { label: 'Pickup Address', fieldKey: 'pickupAddress', zohoField: 'Pick_Up_Address', newValue: confirmedData.pickupAddress },
+            { label: 'Drop-Off Address', fieldKey: 'dropoffAddress', zohoField: 'Drop_Off_Address', newValue: confirmedData.dropoffAddress },
+            { label: 'Passengers', fieldKey: 'passengers', zohoField: 'Party_Size', newValue: confirmedData.passengers },
+            { label: 'Hours', fieldKey: 'hours', zohoField: 'Hours_Needed', newValue: confirmedData.hours },
+            { label: 'Event Type', fieldKey: 'eventType', zohoField: 'Event_Types', newValue: confirmedData.eventType },
+            { label: 'Event Date', fieldKey: 'date', zohoField: 'Event_Date', newValue: confirmedData.date },
+            { label: 'Pickup Time', fieldKey: 'pickupTime', zohoField: 'Pick_Up_Time', newValue: confirmedData.pickupTime },
+            { label: 'Trip Notes', fieldKey: 'tripNotes', zohoField: 'Trip_Notes', newValue: confirmedData.tripNotes },
           ];
           
           for (const mapping of fieldMappings) {
@@ -984,6 +996,7 @@ export default function CallPad() {
             if (newValue && oldValue !== newValue) {
               changes.push({
                 field: mapping.label,
+                fieldKey: mapping.fieldKey,
                 oldValue: oldValue || '(empty)',
                 newValue,
               });
@@ -991,7 +1004,8 @@ export default function CallPad() {
           }
           
           if (changes.length > 0) {
-            // Show confirmation dialog
+            // Show confirmation dialog with all fields pre-selected
+            setSelectedFieldsToUpdate(new Set(changes.map(c => c.fieldKey)));
             setZohoUpdateConfirmation({
               show: true,
               lead: existingLead,
@@ -1025,7 +1039,10 @@ export default function CallPad() {
 
       if (!saveRes.ok) throw new Error("Zoho create error");
       const result = await saveRes.json();
-      setSaveMessage(`New lead created in Zoho (ID: ${result.leadId || 'success'})`);
+      if (result.leadUrl) {
+        setZohoLeadUrl(result.leadUrl);
+      }
+      setSaveMessage(`New lead created in Zoho`);
       setLeadStatus(finalLeadStatus);
     } catch (err) {
       console.error(err);
@@ -1040,6 +1057,7 @@ export default function CallPad() {
     
     setSaving(true);
     const finalLeadStatus: LeadStatus = quotedVehicles.length > 0 ? 'quoted' : leadStatus;
+    const day = confirmedData.date ? getDayOfWeek(confirmedData.date) : "";
     
     const callData = {
       callerName: confirmedData.callerName,
@@ -1049,6 +1067,7 @@ export default function CallPad() {
       pickupAddress: confirmedData.pickupAddress,
       dropoffAddress: confirmedData.dropoffAddress,
       date: confirmedData.date,
+      day,
       pickupTime: confirmedData.pickupTime,
       passengers: confirmedData.passengers,
       hours: confirmedData.hours,
@@ -1062,15 +1081,26 @@ export default function CallPad() {
       agent: confirmedData.agentName,
     };
     
+    const fieldsToUpdate = Array.from(selectedFieldsToUpdate);
+    
     try {
       const saveRes = await fetch("/api/zoho/save-call", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "update", leadId: zohoUpdateConfirmation.lead.id, data: callData }),
+        body: JSON.stringify({ 
+          mode: "update", 
+          leadId: zohoUpdateConfirmation.lead.id, 
+          fieldsToUpdate: fieldsToUpdate.length > 0 ? fieldsToUpdate : undefined,
+          data: callData 
+        }),
       });
       
       if (!saveRes.ok) throw new Error("Zoho update error");
-      setSaveMessage("Lead updated in Zoho");
+      const result = await saveRes.json();
+      if (result.leadUrl) {
+        setZohoLeadUrl(result.leadUrl);
+      }
+      setSaveMessage(`Lead updated in Zoho (${fieldsToUpdate.length} field${fieldsToUpdate.length !== 1 ? 's' : ''} changed)`);
       setLeadStatus(finalLeadStatus);
     } catch (err) {
       console.error(err);
@@ -1078,12 +1108,36 @@ export default function CallPad() {
     } finally {
       setSaving(false);
       setZohoUpdateConfirmation(null);
+      setSelectedFieldsToUpdate(new Set());
     }
   }
   
   function cancelZohoUpdate() {
     setZohoUpdateConfirmation(null);
+    setSelectedFieldsToUpdate(new Set());
     setSaveMessage("Update cancelled");
+  }
+  
+  function toggleFieldSelection(fieldKey: string) {
+    setSelectedFieldsToUpdate(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(fieldKey)) {
+        newSet.delete(fieldKey);
+      } else {
+        newSet.add(fieldKey);
+      }
+      return newSet;
+    });
+  }
+  
+  function selectAllFields() {
+    if (zohoUpdateConfirmation?.changes) {
+      setSelectedFieldsToUpdate(new Set(zohoUpdateConfirmation.changes.map(c => c.fieldKey)));
+    }
+  }
+  
+  function deselectAllFields() {
+    setSelectedFieldsToUpdate(new Set());
   }
 
   const pendingChips = chips.filter(c => !c.confirmed);
@@ -1800,6 +1854,22 @@ export default function CallPad() {
               textAlign: 'center'
             }}>
               {saveMessage}
+              {zohoLeadUrl && (
+                <a 
+                  href={zohoLeadUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{ 
+                    display: 'block', 
+                    marginTop: '4px', 
+                    color: '#3b82f6', 
+                    textDecoration: 'underline',
+                    fontWeight: 500,
+                  }}
+                >
+                  View Lead in Zoho →
+                </a>
+              )}
             </div>
           )}
         </div>
@@ -2987,9 +3057,9 @@ export default function CallPad() {
               background: '#fff',
               borderRadius: '12px',
               padding: '24px',
-              maxWidth: '500px',
-              width: '90%',
-              maxHeight: '80vh',
+              maxWidth: '600px',
+              width: '95%',
+              maxHeight: '85vh',
               overflow: 'auto',
             }}
             onClick={(e) => e.stopPropagation()}
@@ -2997,46 +3067,137 @@ export default function CallPad() {
             <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px', color: '#1f2937' }}>
               Existing Customer Found
             </h2>
-            <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '16px' }}>
-              This phone/email matches an existing lead in Zoho. The following information will be updated:
+            <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '12px' }}>
+              This phone/email matches an existing lead. Select which fields to update:
             </p>
             
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+              <button
+                onClick={selectAllFields}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid #3b82f6',
+                  background: '#eff6ff',
+                  color: '#1d4ed8',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                Select All
+              </button>
+              <button
+                onClick={deselectAllFields}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid #d1d5db',
+                  background: '#f9fafb',
+                  color: '#6b7280',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                Deselect All
+              </button>
+            </div>
+            
             <div style={{ 
-              background: '#fef3c7', 
-              border: '1px solid #f59e0b', 
+              background: '#f9fafb', 
+              border: '1px solid #e5e7eb', 
               borderRadius: '8px', 
-              padding: '12px',
               marginBottom: '16px',
+              overflow: 'hidden',
             }}>
-              {zohoUpdateConfirmation.changes.map((change, idx) => (
-                <div key={idx} style={{ 
-                  padding: '8px 0', 
-                  borderBottom: idx < zohoUpdateConfirmation.changes.length - 1 ? '1px solid #fcd34d' : 'none',
-                }}>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#92400e', marginBottom: '4px' }}>
-                    {change.field}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ 
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '40px 140px 1fr 30px 1fr',
+                padding: '10px 12px',
+                background: '#f3f4f6',
+                borderBottom: '1px solid #e5e7eb',
+                fontSize: '11px',
+                fontWeight: 600,
+                color: '#6b7280',
+                textTransform: 'uppercase',
+              }}>
+                <span></span>
+                <span>Field</span>
+                <span>Current Value</span>
+                <span></span>
+                <span>New Value</span>
+              </div>
+              
+              {zohoUpdateConfirmation.changes.map((change, idx) => {
+                const isSelected = selectedFieldsToUpdate.has(change.fieldKey);
+                return (
+                  <div 
+                    key={idx} 
+                    onClick={() => toggleFieldSelection(change.fieldKey)}
+                    style={{ 
+                      display: 'grid',
+                      gridTemplateColumns: '40px 140px 1fr 30px 1fr',
+                      padding: '12px',
+                      borderBottom: idx < zohoUpdateConfirmation.changes.length - 1 ? '1px solid #e5e7eb' : 'none',
+                      background: isSelected ? '#f0fdf4' : '#fff',
+                      cursor: 'pointer',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={isSelected}
+                        onChange={() => toggleFieldSelection(change.fieldKey)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                      />
+                    </div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
+                      {change.field}
+                    </div>
+                    <div style={{ 
                       fontSize: '13px', 
                       color: '#dc2626', 
-                      textDecoration: 'line-through',
-                      flex: 1,
+                      textDecoration: isSelected ? 'line-through' : 'none',
+                      opacity: isSelected ? 0.6 : 1,
+                      wordBreak: 'break-word',
                     }}>
                       {change.oldValue}
-                    </span>
-                    <span style={{ color: '#9ca3af' }}>→</span>
-                    <span style={{ 
+                    </div>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      color: isSelected ? '#22c55e' : '#d1d5db',
+                      fontSize: '16px',
+                    }}>
+                      →
+                    </div>
+                    <div style={{ 
                       fontSize: '13px', 
-                      color: '#16a34a', 
-                      fontWeight: 500,
-                      flex: 1,
+                      color: isSelected ? '#16a34a' : '#9ca3af',
+                      fontWeight: isSelected ? 500 : 400,
+                      wordBreak: 'break-word',
                     }}>
                       {change.newValue}
-                    </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
+            </div>
+            
+            <div style={{ 
+              fontSize: '13px', 
+              color: '#6b7280', 
+              marginBottom: '16px',
+              padding: '10px',
+              background: '#f0f9ff',
+              borderRadius: '6px',
+              border: '1px solid #bae6fd',
+            }}>
+              <strong>{selectedFieldsToUpdate.size}</strong> of {zohoUpdateConfirmation.changes.length} fields selected for update
             </div>
             
             <div style={{ display: 'flex', gap: '12px' }}>
@@ -3058,21 +3219,21 @@ export default function CallPad() {
               </button>
               <button
                 onClick={() => confirmZohoUpdate()}
-                disabled={saving}
+                disabled={saving || selectedFieldsToUpdate.size === 0}
                 style={{
                   flex: 1,
                   padding: '12px',
                   borderRadius: '8px',
                   border: 'none',
-                  background: '#10b981',
+                  background: selectedFieldsToUpdate.size > 0 ? '#10b981' : '#9ca3af',
                   color: '#fff',
                   fontSize: '14px',
                   fontWeight: 600,
-                  cursor: saving ? 'not-allowed' : 'pointer',
+                  cursor: saving || selectedFieldsToUpdate.size === 0 ? 'not-allowed' : 'pointer',
                   opacity: saving ? 0.7 : 1,
                 }}
               >
-                {saving ? 'Updating...' : 'Update Lead'}
+                {saving ? 'Updating...' : `Update ${selectedFieldsToUpdate.size} Field${selectedFieldsToUpdate.size !== 1 ? 's' : ''}`}
               </button>
             </div>
           </div>
