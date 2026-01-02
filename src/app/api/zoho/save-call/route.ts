@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
         success: true,
         mode: "updated",
         leadId,
-        leadUrl: `https://crm.zoho.com/crm/org/tab/Leads/${leadId}`,
+        leadUrl: `https://crm.zoho.com/crm/tab/Leads/${leadId}`,
         result: result.data?.[0],
       });
     } else {
@@ -186,12 +186,13 @@ export async function POST(request: NextRequest) {
 
       const result = await response.json();
       const newLeadId = result.data?.[0]?.details?.id;
+      console.log("Zoho create result:", JSON.stringify(result, null, 2));
 
       return NextResponse.json({
         success: true,
         mode: "created",
         leadId: newLeadId,
-        leadUrl: newLeadId ? `https://crm.zoho.com/crm/org/tab/Leads/${newLeadId}` : null,
+        leadUrl: newLeadId ? `https://crm.zoho.com/crm/tab/Leads/${newLeadId}` : null,
         result: result.data?.[0],
       });
     }
