@@ -173,23 +173,45 @@ Displayed in a cyan panel above the vehicle gallery
 - Selected agent tracked for Zoho integration
 
 ### Action Buttons
-- **Save to Zoho** - Saves call data to Zoho CRM (stub, ready for integration)
+- **Save to Zoho** - Saves call data to Zoho CRM with smart duplicate detection
 - **Send Quote** - Emails quote to customer (requires quoted vehicles + email address)
 
 ### Lead Status
 - Options: New, Not Quoted, Quoted, Booked, Closed, Cancelled
 - Auto-sets to "Quoted" when saving with quoted vehicles
 
-Note: Zoho integration endpoints are currently stubs. To enable real Zoho integration, you'll need:
-- A Zoho OAuth app with access/refresh tokens
-- Real field API names for custom fields
-- Replace stub endpoints with actual Zoho API calls
+## Zoho CRM Integration
+The app now has full Zoho CRM integration for lead management.
+
+### How It Works
+1. **Save to Zoho** button first checks if customer exists by phone or email
+2. If **new customer**: Creates a new lead in Zoho with all call data
+3. If **existing customer**: Shows a confirmation modal with proposed changes
+   - Displays old value vs. new value for each field that would change
+   - Agent can approve or cancel the update
+   - Shows changes like: "85249 → Chandler, AZ 85249"
+
+### Zoho API Endpoints
+- `src/app/api/zoho/auth/route.ts` - OAuth token management (refresh token flow)
+- `src/app/api/zoho/find-lead/route.ts` - Search leads by phone or email
+- `src/app/api/zoho/save-call/route.ts` - Create or update leads
+
+### Lead Data Mapped to Zoho
+- First_Name, Last_Name (parsed from caller name)
+- Email, Phone
+- City (from cityOrZip)
+- Street (from pickup address)
+- Description (trip notes, quoted vehicles, pricing summary)
+- Lead_Status
 
 ## Environment Variables Required
 - `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
 - `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key
 - `AI_INTEGRATIONS_OPENAI_API_KEY` - OpenAI API key (auto-provided by Replit AI Integrations)
 - `AI_INTEGRATIONS_OPENAI_BASE_URL` - OpenAI base URL (auto-provided by Replit AI Integrations)
+- `ZOHO_CLIENT_ID` - Zoho OAuth Client ID
+- `ZOHO_CLIENT_SECRET` - Zoho OAuth Client Secret
+- `ZOHO_REFRESH_TOKEN` - Zoho OAuth Refresh Token (for token refresh flow)
 
 ## Development
 The app runs on port 5000 with:
@@ -204,7 +226,7 @@ npm run start
 ```
 
 ## Technology Stack
-- Next.js 16.0.3 with Turbopack
+- Next.js 16.1.1 with Turbopack
 - React 19
 - Supabase for database
 - TypeScript
