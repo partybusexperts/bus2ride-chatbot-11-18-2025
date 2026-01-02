@@ -211,16 +211,27 @@ export async function POST(req: Request) {
       }
     }
 
-    if (passengers) {
-      vehicles = vehicles.filter((v) => {
-        if (!v.capacity) return true;
-        return v.capacity >= passengers;
-      });
-    }
-
+    // Sort vehicles: ones matching passenger count first, then by capacity
     vehicles.sort((a, b) => {
       const capA = a.capacity ?? 0;
       const capB = b.capacity ?? 0;
+      
+      if (passengers) {
+        const aMeetsRequirement = capA >= passengers;
+        const bMeetsRequirement = capB >= passengers;
+        
+        // Vehicles meeting requirement come first
+        if (aMeetsRequirement && !bMeetsRequirement) return -1;
+        if (!aMeetsRequirement && bMeetsRequirement) return 1;
+        
+        // Within each group, sort by capacity (ascending for matching, descending for non-matching)
+        if (aMeetsRequirement && bMeetsRequirement) {
+          return capA - capB; // Smallest suitable vehicle first
+        }
+        // Non-matching vehicles sorted by capacity descending (largest first, closest to requirement)
+        return capB - capA;
+      }
+      
       return capA - capB;
     });
 

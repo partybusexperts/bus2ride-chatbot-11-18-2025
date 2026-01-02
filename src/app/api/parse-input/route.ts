@@ -53,6 +53,27 @@ const PASSENGERS_REGEX = /^(\d{1,3})\s*(people|poeple|peolpe|ppl|passengers?|pas
 const PASSENGERS_SHORT_REGEX = /^(\d{1,2})$/;
 const HOURS_REGEX = /^(\d+(\.\d+)?)\s*(hours?|hrs?)?$/i;
 
+// Word to number mapping for passenger counts
+const WORD_TO_NUMBER: Record<string, number> = {
+  'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
+  'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
+  'eleven': 11, 'twelve': 12, 'thirteen': 13, 'fourteen': 14, 'fifteen': 15,
+  'sixteen': 16, 'seventeen': 17, 'eighteen': 18, 'nineteen': 19, 'twenty': 20,
+  'twentyone': 21, 'twenty-one': 21, 'twenty one': 21,
+  'twentytwo': 22, 'twenty-two': 22, 'twenty two': 22,
+  'twentythree': 23, 'twenty-three': 23, 'twenty three': 23,
+  'twentyfour': 24, 'twenty-four': 24, 'twenty four': 24,
+  'twentyfive': 25, 'twenty-five': 25, 'twenty five': 25,
+  'twentysix': 26, 'twenty-six': 26, 'twenty six': 26,
+  'twentyseven': 27, 'twenty-seven': 27, 'twenty seven': 27,
+  'twentyeight': 28, 'twenty-eight': 28, 'twenty eight': 28,
+  'twentynine': 29, 'twenty-nine': 29, 'twenty nine': 29,
+  'thirty': 30, 'forty': 40, 'fifty': 50, 'sixty': 60,
+};
+
+// Handle word-based passenger counts like "five people", "twenty passengers"
+const WORD_PASSENGERS_REGEX = /^(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|twenty[\s-]?(one|two|three|four|five|six|seven|eight|nine)|thirty|forty|fifty|sixty)\s*(people|poeple|peolpe|ppl|passengers?|passangers?|pax|guests?|persons?)$/i;
+
 const EVENT_KEYWORDS = [
   'wedding', 'prom', 'birthday', 'bachelor', 'bachelorette', 'graduation',
   'concert', 'party', 'quinceanera', 'anniversary', 'corporate', 'airport',
@@ -348,6 +369,25 @@ function detectPattern(text: string): DetectedItem | null {
   const passMatch = trimmed.match(PASSENGERS_REGEX);
   if (passMatch) {
     return { type: 'passengers', value: passMatch[1], confidence: 0.9, original: trimmed };
+  }
+  
+  // Handle word-based passenger counts like "five people", "twenty passengers"
+  const wordPassMatch = trimmed.match(WORD_PASSENGERS_REGEX);
+  if (wordPassMatch) {
+    const wordPart = wordPassMatch[1].toLowerCase().replace(/\s+/g, '');
+    const numValue = WORD_TO_NUMBER[wordPart] || WORD_TO_NUMBER[wordPassMatch[1].toLowerCase()];
+    if (numValue) {
+      return { type: 'passengers', value: String(numValue), confidence: 0.9, original: trimmed };
+    }
+  }
+  
+  // Handle standalone word numbers like "five", "twenty"
+  const standaloneWord = lowerText.replace(/\s+/g, '');
+  if (WORD_TO_NUMBER[standaloneWord] || WORD_TO_NUMBER[lowerText]) {
+    const numValue = WORD_TO_NUMBER[standaloneWord] || WORD_TO_NUMBER[lowerText];
+    if (numValue >= 2 && numValue <= 60) {
+      return { type: 'passengers', value: String(numValue), confidence: 0.8, original: trimmed };
+    }
   }
   
   const passShortMatch = trimmed.match(PASSENGERS_SHORT_REGEX);
