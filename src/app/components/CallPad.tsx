@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 type DetectedType = 
   | 'phone' | 'email' | 'zip' | 'city' | 'date' | 'time' 
   | 'passengers' | 'hours' | 'pickup_address' | 'destination' 
-  | 'dropoff_address' | 'event_type' | 'vehicle_type' | 'name' | 'website' | 'place' | 'stop' | 'unknown';
+  | 'dropoff_address' | 'event_type' | 'vehicle_type' | 'name' | 'website' | 'place' | 'stop' | 'agent' | 'unknown';
 
 interface HistoryCity {
   value: string;
@@ -84,6 +84,7 @@ const TYPE_LABELS: Record<DetectedType, string> = {
   website: 'Website',
   place: 'Place/Venue',
   stop: 'Trip Stop',
+  agent: 'Agent',
   unknown: 'Trip Note',
 };
 
@@ -114,6 +115,7 @@ const TYPE_COLORS: Record<DetectedType, { bg: string; text: string; border: stri
   website: { bg: '#cffafe', text: '#155e75', border: '#06b6d4' },
   place: { bg: '#fef3c7', text: '#92400e', border: '#f59e0b' },
   stop: { bg: '#fce7f3', text: '#9d174d', border: '#ec4899' },
+  agent: { bg: '#dbeafe', text: '#1e40af', border: '#3b82f6' },
   unknown: { bg: '#f3f4f6', text: '#6b7280', border: '#9ca3af' },
 };
 
@@ -490,6 +492,11 @@ export default function CallPad() {
       return;
     }
     
+    if (chip.type === 'agent') {
+      setConfirmedData(prev => ({ ...prev, agentName: chip.value }));
+      return;
+    }
+    
     const field = fieldMap[chip.type];
     if (field) {
       let value = chip.value;
@@ -629,6 +636,7 @@ export default function CallPad() {
           vehicle_type: 'vehicleType',
           name: 'callerName',
           website: 'websiteUrl',
+          agent: 'agentName',
         };
         const field = fieldMap[chip.type];
         if (field) {

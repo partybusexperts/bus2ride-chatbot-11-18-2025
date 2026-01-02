@@ -45,6 +45,7 @@ Type comma-separated entries in the main input box. Example:
 `chicago, may 25th, wedding, pu at 9pm, 30 passengers`
 
 The system auto-detects:
+- **Agent names** - "agent Floyd", "Agent Camille", "AGENT SHIELA" (case-insensitive)
 - **Phone numbers** - 10-digit numbers detected as phone
 - **Email addresses** - Detected by @ symbol
 - **ZIP codes** - 5-digit codes

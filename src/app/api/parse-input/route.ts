@@ -24,7 +24,10 @@ type DetectedType =
   | 'website'
   | 'place'
   | 'stop'
+  | 'agent'
   | 'unknown';
+
+const AGENT_NAMES = ['floyd', 'rob', 'camille', 'shiela', 'henrietta', 'other'];
 
 interface DetectedItem {
   type: DetectedType;
@@ -223,6 +226,22 @@ function detectPattern(text: string): DetectedItem | null {
   }
 
   const lowerText = trimmed.toLowerCase();
+  
+  // Detect agent names: "agent Floyd", "Agent Camille", "AGENT SHIELA", etc.
+  const agentMatch = lowerText.match(/^agent\s+(\w+)$/i);
+  if (agentMatch) {
+    const agentName = agentMatch[1].toLowerCase();
+    if (AGENT_NAMES.includes(agentName)) {
+      const capitalizedName = agentName.charAt(0).toUpperCase() + agentName.slice(1);
+      return { type: 'agent', value: capitalizedName, confidence: 0.99, original: trimmed };
+    }
+  }
+  
+  // Also detect just the agent name if it matches exactly
+  if (AGENT_NAMES.includes(lowerText) && lowerText !== 'other') {
+    const capitalizedName = lowerText.charAt(0).toUpperCase() + lowerText.slice(1);
+    return { type: 'agent', value: capitalizedName, confidence: 0.85, original: trimmed };
+  }
   
   const cleanTypoDigits = (text: string): string => {
     return text.replace(/([a-zA-Z])(\d+)$/, '$1').trim();
