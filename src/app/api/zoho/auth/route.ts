@@ -12,6 +12,14 @@ export async function getZohoAccessToken(): Promise<string> {
   const clientSecret = process.env.ZOHO_CLIENT_SECRET;
   const refreshToken = process.env.ZOHO_REFRESH_TOKEN;
 
+  console.log("Zoho credentials check:", {
+    clientIdLength: clientId?.length || 0,
+    clientIdPrefix: clientId?.substring(0, 10) || "missing",
+    clientSecretLength: clientSecret?.length || 0,
+    clientSecretPrefix: clientSecret?.substring(0, 10) || "missing",
+    refreshTokenLength: refreshToken?.length || 0,
+  });
+
   if (!clientId || !clientSecret || !refreshToken) {
     throw new Error("Zoho credentials not configured");
   }
