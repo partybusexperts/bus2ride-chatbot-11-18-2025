@@ -206,18 +206,18 @@ The app has full Zoho CRM integration for lead management.
 Based on actual Zoho CRM API field names:
 - First_Name, Last_Name (parsed from caller name)
 - Email, Phone, City
-- Street (pickup address), Drop_Off_Address
-- Vehicle_Size (passengers as number)
+- Pick_Up_Address, Drop_Off_Address
+- Party_Sizes (passengers as number)
 - Amount_Of_Hours (hours as number)
 - Event_Types
 - Date_Of_Events, Day_of_Week (auto-calculated)
+- Pick_Up_Time, Drop_Off_Time (auto-calculated from pickup time + hours)
 - Where_Are_They_Going (trip notes)
 - Vehicles_Quoted_and_Pricing (quoted vehicle summary)
 - Status (lead status)
 - Agent (selected agent name)
-- Deposit (currency)
-- Balance_Due (string)
-- Trip_Cost (total quoted amount)
+- Tip_Included (Pick List: "Yes" when checked)
+- Balance_Paid_Via (Pick List: "Card" or "Cash")
 
 ## Environment Variables Required
 - `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL

@@ -26,6 +26,9 @@ interface SaveCallRequest {
     balance?: number;
     leadStatus?: string;
     agent?: string;
+    tipIncluded?: boolean;
+    paidByCard?: boolean;
+    paidByCash?: boolean;
   };
 }
 
@@ -37,6 +40,42 @@ function getDayOfWeek(dateStr?: string): string {
     return days[date.getDay()] || "";
   } catch {
     return "";
+  }
+}
+
+function calculateDropOffTime(pickupTime?: string, hours?: string): string | undefined {
+  if (!pickupTime || !hours) return undefined;
+  
+  try {
+    // Parse pickup time like "5:00 PM" or "17:00"
+    const timeMatch = pickupTime.match(/^(\d{1,2}):?(\d{2})?\s*([AP]M?)?$/i);
+    if (!timeMatch) return undefined;
+    
+    let hour = parseInt(timeMatch[1], 10);
+    const minute = parseInt(timeMatch[2] || '0', 10);
+    const meridiem = timeMatch[3]?.toUpperCase();
+    
+    // Convert to 24-hour format
+    if (meridiem === 'PM' && hour < 12) hour += 12;
+    if (meridiem === 'AM' && hour === 12) hour = 0;
+    
+    // Add hours
+    const hoursNum = parseInt(hours, 10);
+    if (isNaN(hoursNum)) return undefined;
+    
+    let dropHour = hour + hoursNum;
+    const dropMinute = minute;
+    
+    // Handle day overflow
+    while (dropHour >= 24) dropHour -= 24;
+    
+    // Format back
+    const dropMeridiem = dropHour >= 12 ? 'PM' : 'AM';
+    const displayHour = dropHour > 12 ? dropHour - 12 : (dropHour === 0 ? 12 : dropHour);
+    
+    return `${displayHour}:${dropMinute.toString().padStart(2, '0')} ${dropMeridiem}`;
+  } catch {
+    return undefined;
   }
 }
 
@@ -56,10 +95,13 @@ function buildZohoLeadData(data: SaveCallRequest["data"], fieldsToUpdate?: strin
   // Parse hours as number for Amount_Of_Hours field
   const hoursNum = data.hours ? parseInt(data.hours, 10) : undefined;
   
-  // Parse passengers as number for Vehicle_Size field
+  // Parse passengers as number for Party_Sizes field
   const passengersNum = data.passengers ? parseInt(data.passengers, 10) : undefined;
+  
+  // Calculate drop off time from pickup time + hours
+  const dropOffTime = calculateDropOffTime(data.pickupTime, data.hours);
 
-  // Based on actual Zoho CRM API field names from user's screenshots:
+  // Based on actual Zoho CRM API field names:
   const allFields: Record<string, unknown> = {
     // Standard Zoho fields
     First_Name: firstName,
@@ -69,20 +111,21 @@ function buildZohoLeadData(data: SaveCallRequest["data"], fieldsToUpdate?: strin
     City: data.cityOrZip || undefined,
     
     // Custom fields with correct API names
-    Street: data.pickupAddress || undefined,
+    Pick_Up_Address: data.pickupAddress || undefined,
     Drop_Off_Address: data.dropoffAddress || undefined,
-    Vehicle_Size: passengersNum || undefined,
+    Party_Sizes: passengersNum || undefined,
     Amount_Of_Hours: hoursNum || undefined,
     Event_Types: data.eventType || undefined,
     Date_Of_Events: data.date || undefined,
     Day_of_Week: day || undefined,
+    Pick_Up_Time: data.pickupTime || undefined,
+    Drop_Off_Time: dropOffTime || undefined,
     Where_Are_They_Going: data.tripNotes || undefined,
     Vehicles_Quoted_and_Pricing: quotedVehiclesSummary || undefined,
     Status: mapLeadStatus(data.leadStatus),
     Agent: data.agent || undefined,
-    Deposit: data.deposit || undefined,
-    Balance_Due: data.balance ? String(data.balance) : undefined,
-    Trip_Cost: data.totalQuoted || undefined,
+    Tip_Included: data.tipIncluded ? "Yes" : undefined,
+    Balance_Paid_Via: data.paidByCard ? "Card" : (data.paidByCash ? "Cash" : undefined),
   };
 
   if (fieldsToUpdate && fieldsToUpdate.length > 0) {
@@ -92,13 +135,14 @@ function buildZohoLeadData(data: SaveCallRequest["data"], fieldsToUpdate?: strin
       phone: "Phone",
       email: "Email",
       cityOrZip: "City",
-      pickupAddress: "Street",
+      pickupAddress: "Pick_Up_Address",
       dropoffAddress: "Drop_Off_Address",
-      passengers: "Vehicle_Size",
+      passengers: "Party_Sizes",
       hours: "Amount_Of_Hours",
       eventType: "Event_Types",
       date: "Date_Of_Events",
       day: "Day_of_Week",
+      pickupTime: "Pick_Up_Time",
       tripNotes: "Where_Are_They_Going",
       quotedVehicles: "Vehicles_Quoted_and_Pricing",
       leadStatus: "Status",

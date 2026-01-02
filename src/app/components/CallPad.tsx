@@ -964,6 +964,9 @@ export default function CallPad() {
       balance: balanceDue,
       leadStatus: finalLeadStatus,
       agent: confirmedData.agentName,
+      tipIncluded: confirmedData.tipIncluded,
+      paidByCard: confirmedData.paidByCard,
+      paidByCash: confirmedData.paidByCash,
     };
 
     try {
@@ -989,13 +992,13 @@ export default function CallPad() {
             { label: 'Phone', fieldKey: 'phone', zohoField: 'Phone', newValue: confirmedData.phone },
             { label: 'Email', fieldKey: 'email', zohoField: 'Email', newValue: confirmedData.email },
             { label: 'City', fieldKey: 'cityOrZip', zohoField: 'City', newValue: confirmedData.cityOrZip },
-            { label: 'Pickup Address', fieldKey: 'pickupAddress', zohoField: 'Street', newValue: confirmedData.pickupAddress },
+            { label: 'Pickup Address', fieldKey: 'pickupAddress', zohoField: 'Pick_Up_Address', newValue: confirmedData.pickupAddress },
             { label: 'Drop-Off Address', fieldKey: 'dropoffAddress', zohoField: 'Drop_Off_Address', newValue: confirmedData.dropoffAddress },
-            { label: 'Passengers', fieldKey: 'passengers', zohoField: 'Vehicle_Size', newValue: confirmedData.passengers },
+            { label: 'Passengers', fieldKey: 'passengers', zohoField: 'Party_Sizes', newValue: confirmedData.passengers },
             { label: 'Hours', fieldKey: 'hours', zohoField: 'Amount_Of_Hours', newValue: confirmedData.hours },
             { label: 'Event Type', fieldKey: 'eventType', zohoField: 'Event_Types', newValue: confirmedData.eventType },
             { label: 'Event Date', fieldKey: 'date', zohoField: 'Date_Of_Events', newValue: confirmedData.date },
-            { label: 'Day of Week', fieldKey: 'day', zohoField: 'Day_of_Week', newValue: confirmedData.date ? getDayOfWeek(confirmedData.date) : '' },
+            { label: 'Pickup Time', fieldKey: 'pickupTime', zohoField: 'Pick_Up_Time', newValue: confirmedData.pickupTime },
             { label: 'Trip Notes', fieldKey: 'tripNotes', zohoField: 'Where_Are_They_Going', newValue: confirmedData.tripNotes },
           ];
           
@@ -1088,6 +1091,9 @@ export default function CallPad() {
       balance: balanceDue,
       leadStatus: finalLeadStatus,
       agent: confirmedData.agentName,
+      tipIncluded: confirmedData.tipIncluded,
+      paidByCard: confirmedData.paidByCard,
+      paidByCash: confirmedData.paidByCash,
     };
     
     const fieldsToUpdate = Array.from(selectedFieldsToUpdate);
