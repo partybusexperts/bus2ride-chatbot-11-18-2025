@@ -95,9 +95,6 @@ function buildZohoLeadData(data: SaveCallRequest["data"], fieldsToUpdate?: strin
   // Parse hours as number for Amount_Of_Hours field
   const hoursNum = data.hours ? parseInt(data.hours, 10) : undefined;
   
-  // Parse passengers as number for Party_Sizes field
-  const passengersNum = data.passengers ? parseInt(data.passengers, 10) : undefined;
-  
   // Calculate drop off time from pickup time + hours
   const dropOffTime = calculateDropOffTime(data.pickupTime, data.hours);
 
@@ -113,7 +110,7 @@ function buildZohoLeadData(data: SaveCallRequest["data"], fieldsToUpdate?: strin
     // Custom fields with correct API names
     Pick_Up_Address: data.pickupAddress || undefined,
     Drop_Off_Address: data.dropoffAddress || undefined,
-    Party_Sizes: passengersNum || undefined,
+    Party_Sizes: data.passengers || undefined,
     Amount_Of_Hours: hoursNum || undefined,
     Event_Types: data.eventType || undefined,
     Date_Of_Events: data.date || undefined,
