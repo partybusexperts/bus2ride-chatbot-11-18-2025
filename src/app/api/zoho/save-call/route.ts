@@ -43,21 +43,60 @@ function getDayOfWeek(dateStr?: string): string {
   }
 }
 
+function formatTo12Hour(time24?: string): string | undefined {
+  if (!time24) return undefined;
+  
+  // Handle already 12-hour format
+  if (/[ap]m/i.test(time24)) {
+    const match = time24.match(/^(\d{1,2}):?(\d{2})?\s*([AP]M?)$/i);
+    if (match) {
+      const hour = parseInt(match[1], 10);
+      const minute = match[2] || '00';
+      const meridiem = match[3].toUpperCase().replace('M', '') + 'M';
+      return `${hour}:${minute} ${meridiem}`;
+    }
+    return time24;
+  }
+  
+  // Handle 24-hour format like "17:00"
+  const match24 = time24.match(/^(\d{1,2}):(\d{2})$/);
+  if (match24) {
+    let hour = parseInt(match24[1], 10);
+    const minute = match24[2];
+    const meridiem = hour >= 12 ? 'PM' : 'AM';
+    if (hour > 12) hour -= 12;
+    if (hour === 0) hour = 12;
+    return `${hour}:${minute} ${meridiem}`;
+  }
+  
+  return time24;
+}
+
 function calculateDropOffTime(pickupTime?: string, hours?: string): string | undefined {
   if (!pickupTime || !hours) return undefined;
   
   try {
-    // Parse pickup time like "5:00 PM" or "17:00"
-    const timeMatch = pickupTime.match(/^(\d{1,2}):?(\d{2})?\s*([AP]M?)?$/i);
-    if (!timeMatch) return undefined;
+    // Parse pickup time - handle both 24-hour (17:00) and 12-hour (5:00 PM) formats
+    let hour: number;
+    let minute: number;
     
-    let hour = parseInt(timeMatch[1], 10);
-    const minute = parseInt(timeMatch[2] || '0', 10);
-    const meridiem = timeMatch[3]?.toUpperCase();
-    
-    // Convert to 24-hour format
-    if (meridiem === 'PM' && hour < 12) hour += 12;
-    if (meridiem === 'AM' && hour === 12) hour = 0;
+    // Try 24-hour format first (from HTML input)
+    const match24 = pickupTime.match(/^(\d{1,2}):(\d{2})$/);
+    if (match24) {
+      hour = parseInt(match24[1], 10);
+      minute = parseInt(match24[2], 10);
+    } else {
+      // Try 12-hour format
+      const match12 = pickupTime.match(/^(\d{1,2}):?(\d{2})?\s*([AP]M?)$/i);
+      if (!match12) return undefined;
+      
+      hour = parseInt(match12[1], 10);
+      minute = parseInt(match12[2] || '0', 10);
+      const meridiem = match12[3]?.toUpperCase();
+      
+      if (meridiem?.startsWith('P') && hour < 12) hour += 12;
+      if (meridiem?.startsWith('A') && hour === 12) hour = 0;
+    }
     
     // Add hours
     const hoursNum = parseInt(hours, 10);
@@ -69,9 +108,10 @@ function calculateDropOffTime(pickupTime?: string, hours?: string): string | und
     // Handle day overflow
     while (dropHour >= 24) dropHour -= 24;
     
-    // Format back
+    // Format to 12-hour
     const dropMeridiem = dropHour >= 12 ? 'PM' : 'AM';
-    const displayHour = dropHour > 12 ? dropHour - 12 : (dropHour === 0 ? 12 : dropHour);
+    let displayHour = dropHour > 12 ? dropHour - 12 : dropHour;
+    if (displayHour === 0) displayHour = 12;
     
     return `${displayHour}:${dropMinute.toString().padStart(2, '0')} ${dropMeridiem}`;
   } catch {
@@ -115,7 +155,7 @@ function buildZohoLeadData(data: SaveCallRequest["data"], fieldsToUpdate?: strin
     Event_Types: data.eventType || undefined,
     Date_Of_Events: data.date || undefined,
     Day_of_Week: day || undefined,
-    Pick_Up_Time: data.pickupTime || undefined,
+    Pick_Up_Time: formatTo12Hour(data.pickupTime) || undefined,
     Drop_Off_Time: dropOffTime || undefined,
     Where_Are_They_Going: data.tripNotes || undefined,
     Vehicles_Quoted_and_Pricing: quotedVehiclesSummary || undefined,
@@ -241,15 +281,29 @@ export async function POST(request: NextRequest) {
       }
 
       const result = await response.json();
-      const newLeadId = result.data?.[0]?.details?.id;
       console.log("Zoho create result:", JSON.stringify(result, null, 2));
+      
+      // Check for Zoho API errors in the response body
+      const firstResult = result.data?.[0];
+      if (firstResult?.code === "INVALID_DATA" || firstResult?.status === "error") {
+        const errorDetails = firstResult.details || {};
+        const errorMessage = `Zoho error: ${firstResult.message} - Field: ${errorDetails.api_name || 'unknown'}, Expected: ${errorDetails.expected_data_type || 'unknown'}`;
+        console.error("Zoho validation error:", errorMessage);
+        return NextResponse.json({
+          success: false,
+          error: errorMessage,
+          details: firstResult,
+        }, { status: 400 });
+      }
+      
+      const newLeadId = firstResult?.details?.id;
 
       return NextResponse.json({
         success: true,
         mode: "created",
         leadId: newLeadId,
         leadUrl: newLeadId ? `https://crm.zoho.com/crm/tab/Leads/${newLeadId}` : null,
-        result: result.data?.[0],
+        result: firstResult,
       });
     }
   } catch (error) {

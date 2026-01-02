@@ -1049,8 +1049,10 @@ export default function CallPad() {
         body: JSON.stringify({ mode: "create", data: callData }),
       });
 
-      if (!saveRes.ok) throw new Error("Zoho create error");
       const result = await saveRes.json();
+      if (!saveRes.ok || result.success === false) {
+        throw new Error(result.error || "Zoho create error");
+      }
       if (result.leadUrl) {
         setZohoLeadUrl(result.leadUrl);
       }
@@ -1058,7 +1060,8 @@ export default function CallPad() {
       setLeadStatus(finalLeadStatus);
     } catch (err) {
       console.error(err);
-      setSaveMessage("Error saving to Zoho");
+      const errorMsg = err instanceof Error ? err.message : "Unknown error";
+      setSaveMessage(`Error: ${errorMsg}`);
     } finally {
       setSaving(false);
     }
@@ -1110,8 +1113,10 @@ export default function CallPad() {
         }),
       });
       
-      if (!saveRes.ok) throw new Error("Zoho update error");
       const result = await saveRes.json();
+      if (!saveRes.ok || result.success === false) {
+        throw new Error(result.error || "Zoho update error");
+      }
       if (result.leadUrl) {
         setZohoLeadUrl(result.leadUrl);
       }
@@ -1119,7 +1124,8 @@ export default function CallPad() {
       setLeadStatus(finalLeadStatus);
     } catch (err) {
       console.error(err);
-      setSaveMessage("Error updating Zoho lead");
+      const errorMsg = err instanceof Error ? err.message : "Unknown error";
+      setSaveMessage(`Error: ${errorMsg}`);
     } finally {
       setSaving(false);
       setZohoUpdateConfirmation(null);
