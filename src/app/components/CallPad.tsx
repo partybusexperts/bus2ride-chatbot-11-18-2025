@@ -253,6 +253,13 @@ export default function CallPad() {
   const [lookingUpPlace, setLookingUpPlace] = useState(false);
   const [cityDisambiguation, setCityDisambiguation] = useState<{ city: string; options: string[] } | null>(null);
   const [pendingConfirmations, setPendingConfirmations] = useState<PendingConfirmation[]>([]);
+  
+  const [zohoExistingLead, setZohoExistingLead] = useState<any>(null);
+  const [zohoUpdateConfirmation, setZohoUpdateConfirmation] = useState<{
+    show: boolean;
+    lead: any;
+    changes: Array<{ field: string; oldValue: string; newValue: string }>;
+  } | null>(null);
 
   const AMBIGUOUS_CITIES: Record<string, string[]> = {
     'westmont': ['IL', 'NJ', 'CA', 'PA'],
@@ -924,29 +931,101 @@ export default function CallPad() {
 
     const finalLeadStatus: LeadStatus = quotedVehicles.length > 0 ? 'quoted' : leadStatus;
 
-    const snapshot = {
-      ...confirmedData,
-      passengers: confirmedData.passengers ? Number(confirmedData.passengers) : null,
-      hours: confirmedData.hours ? Number(confirmedData.hours) : null,
-      leadStatus: finalLeadStatus,
-      dayOfWeek,
+    const callData = {
+      callerName: confirmedData.callerName,
+      phone: confirmedData.phone,
+      email: confirmedData.email,
+      cityOrZip: confirmedData.cityOrZip,
+      pickupAddress: confirmedData.pickupAddress,
+      dropoffAddress: confirmedData.dropoffAddress,
+      date: confirmedData.date,
+      pickupTime: confirmedData.pickupTime,
+      passengers: confirmedData.passengers,
+      hours: confirmedData.hours,
+      eventType: confirmedData.eventType,
+      tripNotes: confirmedData.tripNotes,
       quotedVehicles,
-      totalQuotedPrice,
-      depositAmount,
-      depositPercentage,
-      balanceDue,
-      daysUntilEvent: daysUntilEvent === Infinity ? null : daysUntilEvent,
+      totalQuoted: totalQuotedPrice,
+      deposit: depositAmount,
+      balance: balanceDue,
+      leadStatus: finalLeadStatus,
+      agent: confirmedData.agentName,
     };
 
     try {
-      const res = await fetch("/api/zoho/save-call", {
+      // First, check if lead exists by phone or email
+      if (confirmedData.phone || confirmedData.email) {
+        const findRes = await fetch("/api/zoho/find-lead", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: confirmedData.phone, email: confirmedData.email }),
+        });
+        
+        const findData = await findRes.json();
+        
+        if (findData.found && findData.leads?.length > 0) {
+          const existingLead = findData.leads[0];
+          setZohoExistingLead(existingLead);
+          
+          // Calculate what fields will change
+          const changes: Array<{ field: string; oldValue: string; newValue: string }> = [];
+          
+          const fieldMappings: Array<{ label: string; zohoField: string; newValue: string }> = [
+            { label: 'Name', zohoField: 'Full_Name', newValue: confirmedData.callerName },
+            { label: 'Phone', zohoField: 'Phone', newValue: confirmedData.phone },
+            { label: 'Email', zohoField: 'Email', newValue: confirmedData.email },
+            { label: 'City', zohoField: 'City', newValue: confirmedData.cityOrZip },
+            { label: 'Pickup Address', zohoField: 'Street', newValue: confirmedData.pickupAddress },
+          ];
+          
+          for (const mapping of fieldMappings) {
+            const oldValue = existingLead[mapping.zohoField] || '';
+            const newValue = mapping.newValue || '';
+            if (newValue && oldValue !== newValue) {
+              changes.push({
+                field: mapping.label,
+                oldValue: oldValue || '(empty)',
+                newValue,
+              });
+            }
+          }
+          
+          if (changes.length > 0) {
+            // Show confirmation dialog
+            setZohoUpdateConfirmation({
+              show: true,
+              lead: existingLead,
+              changes,
+            });
+            setSaving(false);
+            return;
+          } else {
+            // No changes, just update with trip notes
+            const saveRes = await fetch("/api/zoho/save-call", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ mode: "update", leadId: existingLead.id, data: callData }),
+            });
+            
+            if (!saveRes.ok) throw new Error("Zoho update error");
+            setSaveMessage("Updated existing lead in Zoho");
+            setLeadStatus(finalLeadStatus);
+            setSaving(false);
+            return;
+          }
+        }
+      }
+      
+      // No existing lead found, create new
+      const saveRes = await fetch("/api/zoho/save-call", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(snapshot),
+        body: JSON.stringify({ mode: "create", data: callData }),
       });
 
-      if (!res.ok) throw new Error("Zoho error");
-      setSaveMessage("Saved to Zoho");
+      if (!saveRes.ok) throw new Error("Zoho create error");
+      const result = await saveRes.json();
+      setSaveMessage(`New lead created in Zoho (ID: ${result.leadId || 'success'})`);
       setLeadStatus(finalLeadStatus);
     } catch (err) {
       console.error(err);
@@ -954,6 +1033,57 @@ export default function CallPad() {
     } finally {
       setSaving(false);
     }
+  }
+  
+  async function confirmZohoUpdate() {
+    if (!zohoUpdateConfirmation?.lead) return;
+    
+    setSaving(true);
+    const finalLeadStatus: LeadStatus = quotedVehicles.length > 0 ? 'quoted' : leadStatus;
+    
+    const callData = {
+      callerName: confirmedData.callerName,
+      phone: confirmedData.phone,
+      email: confirmedData.email,
+      cityOrZip: confirmedData.cityOrZip,
+      pickupAddress: confirmedData.pickupAddress,
+      dropoffAddress: confirmedData.dropoffAddress,
+      date: confirmedData.date,
+      pickupTime: confirmedData.pickupTime,
+      passengers: confirmedData.passengers,
+      hours: confirmedData.hours,
+      eventType: confirmedData.eventType,
+      tripNotes: confirmedData.tripNotes,
+      quotedVehicles,
+      totalQuoted: totalQuotedPrice,
+      deposit: depositAmount,
+      balance: balanceDue,
+      leadStatus: finalLeadStatus,
+      agent: confirmedData.agentName,
+    };
+    
+    try {
+      const saveRes = await fetch("/api/zoho/save-call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "update", leadId: zohoUpdateConfirmation.lead.id, data: callData }),
+      });
+      
+      if (!saveRes.ok) throw new Error("Zoho update error");
+      setSaveMessage("Lead updated in Zoho");
+      setLeadStatus(finalLeadStatus);
+    } catch (err) {
+      console.error(err);
+      setSaveMessage("Error updating Zoho lead");
+    } finally {
+      setSaving(false);
+      setZohoUpdateConfirmation(null);
+    }
+  }
+  
+  function cancelZohoUpdate() {
+    setZohoUpdateConfirmation(null);
+    setSaveMessage("Update cancelled");
   }
 
   const pendingChips = chips.filter(c => !c.confirmed);
@@ -2835,6 +2965,119 @@ export default function CallPad() {
         </div>
         );
       })()}
+
+      {zohoUpdateConfirmation?.show && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+          }}
+          onClick={() => cancelZohoUpdate()}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: '12px',
+              padding: '24px',
+              maxWidth: '500px',
+              width: '90%',
+              maxHeight: '80vh',
+              overflow: 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px', color: '#1f2937' }}>
+              Existing Customer Found
+            </h2>
+            <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '16px' }}>
+              This phone/email matches an existing lead in Zoho. The following information will be updated:
+            </p>
+            
+            <div style={{ 
+              background: '#fef3c7', 
+              border: '1px solid #f59e0b', 
+              borderRadius: '8px', 
+              padding: '12px',
+              marginBottom: '16px',
+            }}>
+              {zohoUpdateConfirmation.changes.map((change, idx) => (
+                <div key={idx} style={{ 
+                  padding: '8px 0', 
+                  borderBottom: idx < zohoUpdateConfirmation.changes.length - 1 ? '1px solid #fcd34d' : 'none',
+                }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#92400e', marginBottom: '4px' }}>
+                    {change.field}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ 
+                      fontSize: '13px', 
+                      color: '#dc2626', 
+                      textDecoration: 'line-through',
+                      flex: 1,
+                    }}>
+                      {change.oldValue}
+                    </span>
+                    <span style={{ color: '#9ca3af' }}>→</span>
+                    <span style={{ 
+                      fontSize: '13px', 
+                      color: '#16a34a', 
+                      fontWeight: 500,
+                      flex: 1,
+                    }}>
+                      {change.newValue}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => cancelZohoUpdate()}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1px solid #d1d5db',
+                  background: '#fff',
+                  color: '#374151',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => confirmZohoUpdate()}
+                disabled={saving}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#10b981',
+                  color: '#fff',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: saving ? 'not-allowed' : 'pointer',
+                  opacity: saving ? 0.7 : 1,
+                }}
+              >
+                {saving ? 'Updating...' : 'Update Lead'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
