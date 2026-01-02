@@ -987,30 +987,99 @@ export default function CallPad() {
           // Calculate what fields will change
           const changes: Array<{ field: string; fieldKey: string; oldValue: string; newValue: string }> = [];
           
-          const fieldMappings: Array<{ label: string; fieldKey: string; zohoField: string; newValue: string }> = [
+          // Helper to normalize values for comparison
+          const normalizeForCompare = (val: string, fieldType?: string): string => {
+            if (!val) return '';
+            const str = String(val).trim().toLowerCase();
+            
+            // Normalize time formats (18:00 vs 6:00 PM vs 6pm)
+            if (fieldType === 'time') {
+              // Convert 24-hour to comparable format
+              const match24 = str.match(/^(\d{1,2}):(\d{2})$/);
+              if (match24) {
+                return `${parseInt(match24[1])}:${match24[2]}`;
+              }
+              // Convert 12-hour to comparable format
+              const match12 = str.match(/^(\d{1,2}):?(\d{2})?\s*([ap])\.?m?\.?$/i);
+              if (match12) {
+                let hour = parseInt(match12[1]);
+                const min = match12[2] || '00';
+                const meridiem = match12[3].toLowerCase();
+                if (meridiem === 'p' && hour < 12) hour += 12;
+                if (meridiem === 'a' && hour === 12) hour = 0;
+                return `${hour}:${min}`;
+              }
+            }
+            
+            // Normalize numbers
+            if (fieldType === 'number') {
+              const num = parseInt(str);
+              return isNaN(num) ? str : String(num);
+            }
+            
+            // Normalize phone (remove non-digits)
+            if (fieldType === 'phone') {
+              return str.replace(/\D/g, '').slice(-10);
+            }
+            
+            return str;
+          };
+          
+          // Convert 24-hour to 12-hour for display
+          const formatTimeFor12Hour = (time24: string): string => {
+            if (!time24) return '';
+            const match = time24.match(/^(\d{1,2}):(\d{2})$/);
+            if (match) {
+              let hour = parseInt(match[1]);
+              const min = match[2];
+              const meridiem = hour >= 12 ? 'PM' : 'AM';
+              if (hour > 12) hour -= 12;
+              if (hour === 0) hour = 12;
+              return `${hour}:${min} ${meridiem}`;
+            }
+            return time24;
+          };
+          
+          const fieldMappings: Array<{ label: string; fieldKey: string; zohoField: string; newValue: string; fieldType?: string }> = [
             { label: 'Customer Name', fieldKey: 'callerName', zohoField: 'Last_Name', newValue: confirmedData.callerName },
-            { label: 'Phone', fieldKey: 'phone', zohoField: 'Phone', newValue: confirmedData.phone },
+            { label: 'Phone', fieldKey: 'phone', zohoField: 'Phone', newValue: confirmedData.phone, fieldType: 'phone' },
             { label: 'Email', fieldKey: 'email', zohoField: 'Email', newValue: confirmedData.email },
-            { label: 'City', fieldKey: 'cityOrZip', zohoField: 'City', newValue: confirmedData.cityOrZip },
             { label: 'Pickup Address', fieldKey: 'pickupAddress', zohoField: 'Pick_Up_Address', newValue: confirmedData.pickupAddress },
             { label: 'Drop-Off Address', fieldKey: 'dropoffAddress', zohoField: 'Drop_Off_Address', newValue: confirmedData.dropoffAddress },
-            { label: 'Passengers', fieldKey: 'passengers', zohoField: 'Party_Sizes', newValue: confirmedData.passengers },
-            { label: 'Hours', fieldKey: 'hours', zohoField: 'Amount_Of_Hours', newValue: confirmedData.hours },
+            { label: 'Passengers', fieldKey: 'passengers', zohoField: 'Party_Sizes', newValue: confirmedData.passengers, fieldType: 'number' },
+            { label: 'Hours', fieldKey: 'hours', zohoField: 'Amount_Of_Hours', newValue: confirmedData.hours, fieldType: 'number' },
             { label: 'Event Type', fieldKey: 'eventType', zohoField: 'Event_Types', newValue: confirmedData.eventType },
             { label: 'Event Date', fieldKey: 'date', zohoField: 'Date_Of_Events', newValue: confirmedData.date },
-            { label: 'Pickup Time', fieldKey: 'pickupTime', zohoField: 'Pick_Up_Time', newValue: confirmedData.pickupTime },
+            { label: 'Pickup Time', fieldKey: 'pickupTime', zohoField: 'Pick_Up_Time', newValue: confirmedData.pickupTime, fieldType: 'time' },
             { label: 'Trip Notes', fieldKey: 'tripNotes', zohoField: 'Where_Are_They_Going', newValue: confirmedData.tripNotes },
           ];
           
           for (const mapping of fieldMappings) {
-            const oldValue = existingLead[mapping.zohoField] || '';
-            const newValue = mapping.newValue || '';
-            if (newValue && oldValue !== newValue) {
+            const oldValueRaw = existingLead[mapping.zohoField] || '';
+            const newValueRaw = mapping.newValue || '';
+            
+            // Skip if no new value
+            if (!newValueRaw) continue;
+            
+            // Normalize both for comparison
+            const oldNorm = normalizeForCompare(String(oldValueRaw), mapping.fieldType);
+            const newNorm = normalizeForCompare(newValueRaw, mapping.fieldType);
+            
+            // Only add if values are actually different
+            if (oldNorm !== newNorm) {
+              // Format display values nicely
+              let displayNew = newValueRaw;
+              let displayOld = String(oldValueRaw);
+              
+              if (mapping.fieldType === 'time') {
+                displayNew = formatTimeFor12Hour(newValueRaw) || newValueRaw;
+              }
+              
               changes.push({
                 field: mapping.label,
                 fieldKey: mapping.fieldKey,
-                oldValue: oldValue || '(empty)',
-                newValue,
+                oldValue: displayOld || '(empty)',
+                newValue: displayNew,
               });
             }
           }
