@@ -987,6 +987,20 @@ export default function CallPad() {
           // Calculate what fields will change
           const changes: Array<{ field: string; fieldKey: string; oldValue: string; newValue: string }> = [];
           
+          // Map lead status to display value
+          const mapLeadStatusForDisplay = (status: string): string => {
+            const statusMap: Record<string, string> = {
+              quoted: "Quoted",
+              not_quoted: "Not Quoted",
+              spam: "Spam",
+              not_interested: "Not Interested",
+              pending_closed: "Pending Closed",
+              closed: "Closed",
+              cancellation: "Cancellation",
+            };
+            return statusMap[status?.toLowerCase()] || "Quoted";
+          };
+          
           // Helper to normalize values for comparison
           const normalizeForCompare = (val: string, fieldType?: string): string => {
             if (!val) return '';
@@ -1052,6 +1066,7 @@ export default function CallPad() {
             { label: 'Event Date', fieldKey: 'date', zohoField: 'Date_Of_Events', newValue: confirmedData.date },
             { label: 'Pickup Time', fieldKey: 'pickupTime', zohoField: 'Pick_Up_Time', newValue: confirmedData.pickupTime, fieldType: 'time' },
             { label: 'Trip Notes', fieldKey: 'tripNotes', zohoField: 'Where_Are_They_Going', newValue: confirmedData.tripNotes },
+            { label: 'Lead Status', fieldKey: 'leadStatus', zohoField: 'Status', newValue: mapLeadStatusForDisplay(finalLeadStatus) },
           ];
           
           for (const mapping of fieldMappings) {
