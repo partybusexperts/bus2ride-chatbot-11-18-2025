@@ -52,19 +52,28 @@ The system auto-detects:
 - **Dates** - Various formats (1/15, January 15th, may 25th)
 - **Times** - Various formats (6pm, 6:00 PM)
 - **Pickup time** - "pu at 9pm" or "pickup at 9pm"
-- **Passenger counts** - "30 people", "30 passengers"
+- **Passenger counts** - "30 people", "30 passengers", "five people", "twenty passengers" (word numbers supported)
 - **Hours** - "5 hours", "5 hrs"
 - **Event types** - Wedding, Prom, Birthday, etc.
 - **Addresses** - "pu at [location]", "do at [dropoff]" (adds to Trip Notes AND populates field)
 - **Places/Venues** - TopGolf, bars, restaurants, hotels detected and looked up via OpenAI
 - **Complex addresses** - Uses OpenAI for address parsing
 
-### Venue/Place Lookup
+### Venue/Place Lookup with Confirmation
 When a venue is mentioned (e.g., "TopGolf Scottsdale", "480 bar", "Dave & Busters"):
 - System detects venue keywords (bar, grill, restaurant, hotel, TopGolf, etc.)
 - Looks up the real address using OpenAI with the current service area as context
-- Adds to Trip Notes as "Stop: [venue name] - [full address]"
-- Works with single entries like "TopGolf Scottsdale" by extracting the city from the text
+- **Addresses go to "Needs Customer Confirmation" section first** - agent must verify with customer
+- Agent clicks Confirm to add to trip notes, or Reject to discard
+- Prevents incorrect addresses from being sent to CRM
+
+### Needs Customer Confirmation Section
+Yellow warning section appears when addresses need verification:
+- Shows what customer said vs. looked-up address
+- Color-coded by type: Pickup (green), Drop-off (red), Stop (yellow)
+- Confirm button applies the address
+- Reject button discards it
+- Warning badge on Save button when unconfirmed items exist
 
 ### Multiple Cities
 When multiple cities are entered (e.g., first "phoenix", then "mesa"):
@@ -107,6 +116,8 @@ The system recognizes vehicle preferences:
 ### Vehicle Gallery
 - Large 3-column grid with dark theme
 - Vehicle cards show: photo, name, capacity badge, category tag, price
+- **Smart Sorting** - When passengers are specified, vehicles meeting the passenger requirement appear first (sorted by capacity), followed by smaller vehicles (sorted largest first, closest to requirement)
+- All vehicles are shown regardless of passenger count - nothing is hidden
 - Click "Quote" to mark vehicles as discussed - triggers AI selling points
 - Click vehicle photo/name to see all photos in fullscreen gallery
 - Click "$" button to see all pricing tiers modal
