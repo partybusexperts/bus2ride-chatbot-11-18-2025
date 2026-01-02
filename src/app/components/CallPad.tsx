@@ -1360,15 +1360,24 @@ export default function CallPad() {
 
           {pendingConfirmations.length > 0 && (
             <div style={{ background: '#fef3c7', padding: '14px', borderRadius: '10px', border: '2px solid #f59e0b' }}>
-              <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '12px', color: '#92400e', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '16px' }}>⚠️</span> Needs Customer Confirmation
+              <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '8px', color: '#92400e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '16px' }}>⚠️</span> ASK CUSTOMER TO CONFIRM
                 <span style={{ background: '#f59e0b', color: '#fff', padding: '2px 8px', borderRadius: '10px', fontSize: '11px' }}>
                   {pendingConfirmations.length}
                 </span>
               </h3>
-              <p style={{ fontSize: '11px', color: '#78350f', marginBottom: '10px' }}>
-                Verify these addresses with customer before saving to CRM
-              </p>
+              <div style={{ 
+                background: '#fffbeb', 
+                border: '1px dashed #d97706', 
+                borderRadius: '6px', 
+                padding: '8px 10px', 
+                marginBottom: '10px',
+                fontSize: '12px',
+                color: '#92400e',
+                fontStyle: 'italic'
+              }}>
+                Say: "Just to confirm, is the address [read address below]?"
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {pendingConfirmations.map(item => (
                   <div 
