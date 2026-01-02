@@ -204,7 +204,7 @@ The app has full Zoho CRM integration for lead management.
 
 ### Lead Data Mapped to Zoho Fields
 Based on actual Zoho CRM API field names:
-- First_Name, Last_Name (parsed from caller name)
+- Last_Name (full customer name goes here)
 - Email, Phone, City
 - Pick_Up_Address, Drop_Off_Address
 - Party_Sizes (passengers as number)

@@ -988,7 +988,7 @@ export default function CallPad() {
           const changes: Array<{ field: string; fieldKey: string; oldValue: string; newValue: string }> = [];
           
           const fieldMappings: Array<{ label: string; fieldKey: string; zohoField: string; newValue: string }> = [
-            { label: 'Customer Name', fieldKey: 'callerName', zohoField: 'Full_Name', newValue: confirmedData.callerName },
+            { label: 'Customer Name', fieldKey: 'callerName', zohoField: 'Last_Name', newValue: confirmedData.callerName },
             { label: 'Phone', fieldKey: 'phone', zohoField: 'Phone', newValue: confirmedData.phone },
             { label: 'Email', fieldKey: 'email', zohoField: 'Email', newValue: confirmedData.email },
             { label: 'City', fieldKey: 'cityOrZip', zohoField: 'City', newValue: confirmedData.cityOrZip },

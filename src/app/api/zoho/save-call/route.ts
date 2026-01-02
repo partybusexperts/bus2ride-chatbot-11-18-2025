@@ -120,9 +120,8 @@ function calculateDropOffTime(pickupTime?: string, hours?: string): string | und
 }
 
 function buildZohoLeadData(data: SaveCallRequest["data"], fieldsToUpdate?: string[]) {
-  const nameParts = (data.callerName || "Unknown").trim().split(" ");
-  const firstName = nameParts[0] || "Unknown";
-  const lastName = nameParts.slice(1).join(" ") || "Lead";
+  // Put the full name in Last_Name field
+  const fullName = (data.callerName || "").trim() || "Unknown";
 
   const quotedVehiclesSummary = data.quotedVehicles?.length
     ? data.quotedVehicles.map((v) => `${v.name}: $${v.price}${v.hours ? ` (${v.hours}hr)` : ""}`).join("\n")
@@ -140,9 +139,8 @@ function buildZohoLeadData(data: SaveCallRequest["data"], fieldsToUpdate?: strin
 
   // Based on actual Zoho CRM API field names:
   const allFields: Record<string, unknown> = {
-    // Standard Zoho fields
-    First_Name: firstName,
-    Last_Name: lastName,
+    // Put full name in Last_Name only
+    Last_Name: fullName,
     Email: data.email || undefined,
     Phone: cleanPhone || undefined,
     City: data.cityOrZip || undefined,
@@ -167,8 +165,7 @@ function buildZohoLeadData(data: SaveCallRequest["data"], fieldsToUpdate?: strin
 
   if (fieldsToUpdate && fieldsToUpdate.length > 0) {
     const fieldMapping: Record<string, string> = {
-      callerName: "First_Name",
-      callerNameLast: "Last_Name",
+      callerName: "Last_Name",
       phone: "Phone",
       email: "Email",
       cityOrZip: "City",
@@ -191,9 +188,6 @@ function buildZohoLeadData(data: SaveCallRequest["data"], fieldsToUpdate?: strin
       const zohoField = fieldMapping[field];
       if (zohoField && allFields[zohoField] !== undefined) {
         filteredFields[zohoField] = allFields[zohoField];
-        if (field === "callerName") {
-          filteredFields["Last_Name"] = lastName;
-        }
       }
     }
     return filteredFields;
