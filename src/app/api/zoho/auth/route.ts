@@ -23,22 +23,52 @@ export async function getZohoAccessToken(): Promise<string> {
     grant_type: "refresh_token",
   });
 
-  const response = await fetch("https://accounts.zoho.com/oauth/v2/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: params.toString(),
-  });
+  const zohoRegions = [
+    "https://accounts.zoho.com/oauth/v2/token",
+    "https://accounts.zoho.eu/oauth/v2/token",
+    "https://accounts.zoho.in/oauth/v2/token",
+    "https://accounts.zoho.com.au/oauth/v2/token",
+  ];
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Zoho token refresh failed:", errorText);
-    throw new Error(`Failed to refresh Zoho token: ${response.status}`);
+  let lastError = "";
+  let data: any = null;
+
+  for (const endpoint of zohoRegions) {
+    try {
+      console.log(`Trying Zoho endpoint: ${endpoint}`);
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: params.toString(),
+      });
+
+      const responseText = await response.text();
+      console.log(`Zoho response from ${endpoint}:`, responseText);
+
+      if (!response.ok) {
+        lastError = `${endpoint}: ${response.status} - ${responseText}`;
+        continue;
+      }
+
+      try {
+        data = JSON.parse(responseText);
+        if (data.access_token) {
+          console.log("Successfully got access token from:", endpoint);
+          break;
+        } else {
+          lastError = `${endpoint}: No access_token in response - ${responseText}`;
+        }
+      } catch (parseErr) {
+        lastError = `${endpoint}: Failed to parse response - ${responseText}`;
+      }
+    } catch (fetchErr) {
+      lastError = `${endpoint}: Fetch error - ${fetchErr}`;
+    }
   }
 
-  const data = await response.json();
-  
-  if (!data.access_token) {
-    throw new Error("No access token in Zoho response");
+  if (!data?.access_token) {
+    console.error("All Zoho endpoints failed. Last error:", lastError);
+    throw new Error(`Failed to get Zoho access token: ${lastError}`);
   }
 
   cachedAccessToken = data.access_token;
