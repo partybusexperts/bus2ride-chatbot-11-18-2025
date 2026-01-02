@@ -32,6 +32,15 @@ type QuotedVehicle = {
   hours?: number;
 };
 
+interface PendingConfirmation {
+  id: string;
+  type: 'pickup' | 'dropoff' | 'stop' | 'tripNote';
+  originalValue: string;
+  lookedUpAddress: string;
+  venueName?: string;
+  timestamp: number;
+}
+
 type LeadStatus = 'new' | 'not_quoted' | 'quoted' | 'booked' | 'closed' | 'cancelled';
 
 const LEAD_STATUS_OPTIONS: { value: LeadStatus; label: string }[] = [
@@ -240,6 +249,7 @@ export default function CallPad() {
   const [historyCities, setHistoryCities] = useState<HistoryCity[]>([]);
   const [lookingUpPlace, setLookingUpPlace] = useState(false);
   const [cityDisambiguation, setCityDisambiguation] = useState<{ city: string; options: string[] } | null>(null);
+  const [pendingConfirmations, setPendingConfirmations] = useState<PendingConfirmation[]>([]);
 
   const AMBIGUOUS_CITIES: Record<string, string[]> = {
     'westmont': ['IL', 'NJ', 'CA', 'PA'],
@@ -295,20 +305,19 @@ export default function CallPad() {
       const data = await res.json();
       
       if (data.found && data.fullAddress) {
-        // Format address with venue name first for readability
         const formattedAddress = data.name ? `${data.name} - ${data.fullAddress}` : data.fullAddress;
         
-        if (context === 'pickup') {
-          setConfirmedData(prev => ({ ...prev, pickupAddress: formattedAddress }));
-        } else if (context === 'dropoff') {
-          setConfirmedData(prev => ({ ...prev, dropoffAddress: formattedAddress }));
-        } else {
-          const stopNote = `Stop: ${formattedAddress}`;
-          setConfirmedData(prev => ({
-            ...prev,
-            tripNotes: prev.tripNotes ? `${prev.tripNotes}\n${stopNote}` : stopNote,
-          }));
-        }
+        // Add to pending confirmations instead of directly updating
+        const pendingItem: PendingConfirmation = {
+          id: generateId(),
+          type: context === 'pickup' ? 'pickup' : context === 'dropoff' ? 'dropoff' : 'stop',
+          originalValue: placeName,
+          lookedUpAddress: formattedAddress,
+          venueName: data.name || undefined,
+          timestamp: Date.now(),
+        };
+        
+        setPendingConfirmations(prev => [...prev, pendingItem]);
         return data;
       }
       return null;
@@ -319,6 +328,32 @@ export default function CallPad() {
       setLookingUpPlace(false);
     }
   }, [confirmedData.cityOrZip]);
+
+  const confirmPendingItem = useCallback((itemId: string) => {
+    setPendingConfirmations(prev => {
+      const item = prev.find(p => p.id === itemId);
+      if (!item) return prev;
+      
+      // Apply the confirmed address
+      if (item.type === 'pickup') {
+        setConfirmedData(prevData => ({ ...prevData, pickupAddress: item.lookedUpAddress }));
+      } else if (item.type === 'dropoff') {
+        setConfirmedData(prevData => ({ ...prevData, dropoffAddress: item.lookedUpAddress }));
+      } else {
+        const stopNote = `Stop: ${item.lookedUpAddress}`;
+        setConfirmedData(prevData => ({
+          ...prevData,
+          tripNotes: prevData.tripNotes ? `${prevData.tripNotes}\n${stopNote}` : stopNote,
+        }));
+      }
+      
+      return prev.filter(p => p.id !== itemId);
+    });
+  }, []);
+
+  const rejectPendingItem = useCallback((itemId: string) => {
+    setPendingConfirmations(prev => prev.filter(p => p.id !== itemId));
+  }, []);
 
   const applyChipToData = useCallback((chip: DetectedChip) => {
     const fieldMap: Partial<Record<DetectedType, keyof typeof confirmedData>> = {
@@ -1323,6 +1358,87 @@ export default function CallPad() {
             </div>
           </div>
 
+          {pendingConfirmations.length > 0 && (
+            <div style={{ background: '#fef3c7', padding: '14px', borderRadius: '10px', border: '2px solid #f59e0b' }}>
+              <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '12px', color: '#92400e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '16px' }}>⚠️</span> Needs Customer Confirmation
+                <span style={{ background: '#f59e0b', color: '#fff', padding: '2px 8px', borderRadius: '10px', fontSize: '11px' }}>
+                  {pendingConfirmations.length}
+                </span>
+              </h3>
+              <p style={{ fontSize: '11px', color: '#78350f', marginBottom: '10px' }}>
+                Verify these addresses with customer before saving to CRM
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {pendingConfirmations.map(item => (
+                  <div 
+                    key={item.id} 
+                    style={{ 
+                      background: '#fff', 
+                      padding: '10px 12px', 
+                      borderRadius: '8px', 
+                      border: '1px solid #fcd34d',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ 
+                        fontSize: '11px', 
+                        fontWeight: 600, 
+                        color: item.type === 'pickup' ? '#166534' : item.type === 'dropoff' ? '#991b1b' : '#854d0e',
+                        textTransform: 'uppercase',
+                      }}>
+                        {item.type === 'pickup' ? '📍 Pickup' : item.type === 'dropoff' ? '🏁 Drop-off' : '📌 Stop'}
+                      </span>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button
+                          onClick={() => confirmPendingItem(item.id)}
+                          style={{
+                            background: '#22c55e',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '4px',
+                            padding: '4px 10px',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                          }}
+                          title="Confirm this address"
+                        >
+                          ✓ Confirm
+                        </button>
+                        <button
+                          onClick={() => rejectPendingItem(item.id)}
+                          style={{
+                            background: '#ef4444',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: '4px',
+                            padding: '4px 10px',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                          }}
+                          title="Reject this address"
+                        >
+                          ✕ Reject
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                      <span style={{ fontWeight: 500 }}>Customer said:</span> "{item.originalValue}"
+                    </div>
+                    <div style={{ fontSize: '13px', color: '#1f2937', fontWeight: 500 }}>
+                      <span style={{ fontWeight: 400, color: '#6b7280' }}>→</span> {item.lookedUpAddress}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div style={{ background: SECTION_STYLES.locations.bg, padding: '14px', borderRadius: '10px', border: `2px solid ${SECTION_STYLES.locations.border}` }}>
             <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '12px', color: SECTION_STYLES.locations.title }}>Locations</h3>
             <div style={{ display: 'grid', gap: '8px' }}>
@@ -1429,6 +1545,23 @@ export default function CallPad() {
             </select>
           </div>
 
+          {pendingConfirmations.length > 0 && (
+            <div style={{ 
+              background: '#fef3c7', 
+              border: '1px solid #f59e0b', 
+              borderRadius: '6px', 
+              padding: '8px 12px', 
+              fontSize: '12px', 
+              color: '#92400e',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}>
+              <span>⚠️</span>
+              <span><strong>{pendingConfirmations.length}</strong> address{pendingConfirmations.length > 1 ? 'es need' : ' needs'} customer confirmation before saving</span>
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               style={{
@@ -1439,13 +1572,13 @@ export default function CallPad() {
                 cursor: 'pointer',
                 fontWeight: 600,
                 fontSize: '14px',
-                background: '#10b981',
+                background: pendingConfirmations.length > 0 ? '#f59e0b' : '#10b981',
                 color: '#fff',
               }}
               onClick={handleSaveToZoho}
               disabled={saving}
             >
-              {saving ? "Saving..." : "Save to Zoho"}
+              {saving ? "Saving..." : pendingConfirmations.length > 0 ? "Save to Zoho (Unconfirmed)" : "Save to Zoho"}
             </button>
             
             <button
