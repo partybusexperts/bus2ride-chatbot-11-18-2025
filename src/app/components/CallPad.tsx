@@ -1850,6 +1850,42 @@ export default function CallPad() {
             const limos = filteredVehicles.filter(isLimo);
             const coaches = filteredVehicles.filter(isCoach);
             
+            const openPricingModal = (v: typeof filteredVehicles[0]) => {
+              setSelectedVehicle(v);
+              const hasStd = [3, 4, 5, 6, 7, 8, 9, 10].some(h => v[`price_${h}hr`]);
+              const hasProm = [6, 7, 8, 9, 10].some(h => v[`prom_price_${h}hr`]);
+              const hasB5 = [3, 4, 5, 6, 7].some(h => v[`before5pm_${h}hr`]);
+              const hasAM = [5, 6, 7, 8, 9].some(h => v[`april_may_weekend_${h}hr`]);
+              const hasTr = !!v.transfer_price;
+              
+              let defaultType: 'standard' | 'prom' | 'before5pm' | 'aprilmay' | 'transfer' = 'standard';
+              let defaultHours = rateHours;
+              
+              if (hasStd) {
+                defaultType = 'standard';
+                const stdHours = [3, 4, 5, 6, 7, 8, 9, 10].filter(h => v[`price_${h}hr`]);
+                defaultHours = stdHours.includes(rateHours) ? rateHours : (stdHours[0] || 4);
+              } else if (hasProm) {
+                defaultType = 'prom';
+                const promHours = [6, 7, 8, 9, 10].filter(h => v[`prom_price_${h}hr`]);
+                defaultHours = promHours[0] || 6;
+              } else if (hasB5) {
+                defaultType = 'before5pm';
+                const b5Hours = [3, 4, 5, 6, 7].filter(h => v[`before5pm_${h}hr`]);
+                defaultHours = b5Hours[0] || 4;
+              } else if (hasAM) {
+                defaultType = 'aprilmay';
+                const amHours = [5, 6, 7, 8, 9].filter(h => v[`april_may_weekend_${h}hr`]);
+                defaultHours = amHours[0] || 5;
+              } else if (hasTr) {
+                defaultType = 'transfer';
+                defaultHours = 0;
+              }
+              
+              setModalPriceType(defaultType);
+              setModalHours(defaultHours);
+            };
+            
             const renderVehicleCard = (v: typeof filteredVehicles[0]) => (
                 <div
                   key={v.id}
@@ -1865,7 +1901,7 @@ export default function CallPad() {
                   {v.image && (
                     <div 
                       style={{ height: '100px', overflow: 'hidden', cursor: 'pointer' }}
-                      onClick={() => setPhotoModalVehicle(v)}
+                      onClick={() => openPricingModal(v)}
                     >
                       <img 
                         src={v.image} 
@@ -1880,7 +1916,7 @@ export default function CallPad() {
                   <div style={{ padding: '10px' }}>
                     <div 
                       style={{ fontWeight: 600, color: '#fff', fontSize: '13px', marginBottom: '6px', lineHeight: 1.3, cursor: 'pointer' }}
-                      onClick={() => setPhotoModalVehicle(v)}
+                      onClick={() => openPricingModal(v)}
                     >
                       {v.name}
                     </div>
@@ -1954,41 +1990,7 @@ export default function CallPad() {
                         {isQuoted(v.id) ? "Quoted" : (v.displayPrice && v.displayPrice > 0 ? "Quote" : "Call")}
                       </button>
                       <button
-                        onClick={() => {
-                          setSelectedVehicle(v);
-                          const hasStd = [3, 4, 5, 6, 7, 8, 9, 10].some(h => v[`price_${h}hr`]);
-                          const hasProm = [6, 7, 8, 9, 10].some(h => v[`prom_price_${h}hr`]);
-                          const hasB5 = [3, 4, 5, 6, 7].some(h => v[`before5pm_${h}hr`]);
-                          const hasAM = [5, 6, 7, 8, 9].some(h => v[`april_may_weekend_${h}hr`]);
-                          const hasTr = !!v.transfer_price;
-                          
-                          let defaultType: 'standard' | 'prom' | 'before5pm' | 'aprilmay' | 'transfer' = 'standard';
-                          let defaultHours = rateHours;
-                          
-                          if (hasStd) {
-                            defaultType = 'standard';
-                            const stdHours = [3, 4, 5, 6, 7, 8, 9, 10].filter(h => v[`price_${h}hr`]);
-                            defaultHours = stdHours.includes(rateHours) ? rateHours : (stdHours[0] || 4);
-                          } else if (hasProm) {
-                            defaultType = 'prom';
-                            const promHours = [6, 7, 8, 9, 10].filter(h => v[`prom_price_${h}hr`]);
-                            defaultHours = promHours[0] || 6;
-                          } else if (hasB5) {
-                            defaultType = 'before5pm';
-                            const b5Hours = [3, 4, 5, 6, 7].filter(h => v[`before5pm_${h}hr`]);
-                            defaultHours = b5Hours[0] || 4;
-                          } else if (hasAM) {
-                            defaultType = 'aprilmay';
-                            const amHours = [5, 6, 7, 8, 9].filter(h => v[`april_may_weekend_${h}hr`]);
-                            defaultHours = amHours[0] || 5;
-                          } else if (hasTr) {
-                            defaultType = 'transfer';
-                            defaultHours = 0;
-                          }
-                          
-                          setModalPriceType(defaultType);
-                          setModalHours(defaultHours);
-                        }}
+                        onClick={() => openPricingModal(v)}
                         style={{
                           padding: '8px 10px',
                           borderRadius: '6px',
