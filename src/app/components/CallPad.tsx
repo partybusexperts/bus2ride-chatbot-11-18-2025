@@ -38,6 +38,9 @@ interface PendingConfirmation {
   originalValue: string;
   lookedUpAddress: string;
   venueName?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
   timestamp: number;
 }
 
@@ -314,6 +317,9 @@ export default function CallPad() {
           originalValue: placeName,
           lookedUpAddress: formattedAddress,
           venueName: data.name || undefined,
+          city: data.city || undefined,
+          state: data.state || undefined,
+          zip: data.zip || undefined,
           timestamp: Date.now(),
         };
         
@@ -334,25 +340,56 @@ export default function CallPad() {
       const item = prev.find(p => p.id === itemId);
       if (!item) return prev;
       
-      // Apply the confirmed address
+      // Apply the confirmed address and populate city/zip if empty
       if (item.type === 'pickup') {
-        setConfirmedData(prevData => ({ ...prevData, pickupAddress: item.lookedUpAddress }));
+        setConfirmedData(prevData => {
+          const updates: Partial<typeof prevData> = { pickupAddress: item.lookedUpAddress };
+          // Also populate city/zip if we have it and it's empty
+          if (!prevData.cityOrZip && item.city) {
+            updates.cityOrZip = item.state ? `${item.city}, ${item.state}` : item.city;
+          }
+          return { ...prevData, ...updates };
+        });
       } else if (item.type === 'dropoff') {
-        setConfirmedData(prevData => ({ ...prevData, dropoffAddress: item.lookedUpAddress }));
+        setConfirmedData(prevData => {
+          const updates: Partial<typeof prevData> = { dropoffAddress: item.lookedUpAddress };
+          if (!prevData.cityOrZip && item.city) {
+            updates.cityOrZip = item.state ? `${item.city}, ${item.state}` : item.city;
+          }
+          return { ...prevData, ...updates };
+        });
       } else {
         const stopNote = `Stop: ${item.lookedUpAddress}`;
-        setConfirmedData(prevData => ({
-          ...prevData,
-          tripNotes: prevData.tripNotes ? `${prevData.tripNotes}\n${stopNote}` : stopNote,
-        }));
+        setConfirmedData(prevData => {
+          const updates: Partial<typeof prevData> = {
+            tripNotes: prevData.tripNotes ? `${prevData.tripNotes}\n${stopNote}` : stopNote,
+          };
+          if (!prevData.cityOrZip && item.city) {
+            updates.cityOrZip = item.state ? `${item.city}, ${item.state}` : item.city;
+          }
+          return { ...prevData, ...updates };
+        });
       }
       
       return prev.filter(p => p.id !== itemId);
     });
   }, []);
 
-  const rejectPendingItem = useCallback((itemId: string) => {
-    setPendingConfirmations(prev => prev.filter(p => p.id !== itemId));
+  const rejectPendingItem = useCallback((itemId: string, keepVenueName: boolean = true) => {
+    setPendingConfirmations(prev => {
+      const item = prev.find(p => p.id === itemId);
+      
+      // Keep the venue name in trip notes (customer still wants to go there, just not this specific address)
+      if (item && keepVenueName && item.venueName) {
+        const venueNote = `${item.type === 'pickup' ? 'Pickup' : item.type === 'dropoff' ? 'Drop-off' : 'Stop'}: ${item.venueName} (address needs verification)`;
+        setConfirmedData(prevData => ({
+          ...prevData,
+          tripNotes: prevData.tripNotes ? `${prevData.tripNotes}\n${venueNote}` : venueNote,
+        }));
+      }
+      
+      return prev.filter(p => p.id !== itemId);
+    });
   }, []);
 
   const applyChipToData = useCallback((chip: DetectedChip) => {
@@ -1401,22 +1438,25 @@ export default function CallPad() {
                       }}>
                         {item.type === 'pickup' ? '📍 Pickup' : item.type === 'dropoff' ? '🏁 Drop-off' : '📌 Stop'}
                       </span>
-                      <div style={{ display: 'flex', gap: '4px' }}>
+                      <div style={{ display: 'flex', gap: '6px' }}>
                         <button
                           onClick={() => confirmPendingItem(item.id)}
                           style={{
                             background: '#22c55e',
                             color: '#fff',
                             border: 'none',
-                            borderRadius: '4px',
-                            padding: '4px 10px',
-                            fontSize: '12px',
+                            borderRadius: '50%',
+                            width: '28px',
+                            height: '28px',
+                            fontSize: '16px',
                             cursor: 'pointer',
-                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                           }}
-                          title="Confirm this address"
+                          title="Customer confirmed - address is correct"
                         >
-                          ✓ Confirm
+                          ✓
                         </button>
                         <button
                           onClick={() => rejectPendingItem(item.id)}
@@ -1424,15 +1464,18 @@ export default function CallPad() {
                             background: '#ef4444',
                             color: '#fff',
                             border: 'none',
-                            borderRadius: '4px',
-                            padding: '4px 10px',
-                            fontSize: '12px',
+                            borderRadius: '50%',
+                            width: '28px',
+                            height: '28px',
+                            fontSize: '16px',
                             cursor: 'pointer',
-                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                           }}
-                          title="Reject this address"
+                          title="Wrong address - keep venue name only"
                         >
-                          ✕ Reject
+                          ✕
                         </button>
                       </div>
                     </div>
