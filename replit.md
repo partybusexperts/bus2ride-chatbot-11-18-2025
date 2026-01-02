@@ -203,17 +203,21 @@ The app has full Zoho CRM integration for lead management.
 - `src/app/settings/page.tsx` - Settings page for Zoho diagnostics
 
 ### Lead Data Mapped to Zoho Fields
+Based on actual Zoho CRM API field names:
 - First_Name, Last_Name (parsed from caller name)
-- Email, Phone
-- Pick_Up_Address, Drop_Off_Address
-- Party_Size (passengers)
-- Hours_Needed
+- Email, Phone, City
+- Street (pickup address), Drop_Off_Address
+- Vehicle_Size (passengers as number)
+- Amount_Of_Hours (hours as number)
 - Event_Types
-- Event_Date, Day_of_Week (auto-calculated)
-- Pick_Up_Time
-- Trip_Notes
-- Vehicles_Quoted_Pricing (quoted vehicle summary)
-- Lead_Status
+- Date_Of_Events, Day_of_Week (auto-calculated)
+- Where_Are_They_Going (trip notes)
+- Vehicles_Quoted_and_Pricing (quoted vehicle summary)
+- Status (lead status)
+- Agent (selected agent name)
+- Deposit (currency)
+- Balance_Due (string)
+- Trip_Cost (total quoted amount)
 
 ## Environment Variables Required
 - `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL

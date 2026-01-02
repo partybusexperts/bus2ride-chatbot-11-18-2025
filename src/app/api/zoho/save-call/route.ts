@@ -52,23 +52,37 @@ function buildZohoLeadData(data: SaveCallRequest["data"], fieldsToUpdate?: strin
   const cleanPhone = data.phone ? data.phone.replace(/\D/g, "").slice(-10) : undefined;
 
   const day = data.day || getDayOfWeek(data.date);
+  
+  // Parse hours as number for Amount_Of_Hours field
+  const hoursNum = data.hours ? parseInt(data.hours, 10) : undefined;
+  
+  // Parse passengers as number for Vehicle_Size field
+  const passengersNum = data.passengers ? parseInt(data.passengers, 10) : undefined;
 
+  // Based on actual Zoho CRM API field names from user's screenshots:
   const allFields: Record<string, unknown> = {
+    // Standard Zoho fields
     First_Name: firstName,
     Last_Name: lastName,
     Email: data.email || undefined,
     Phone: cleanPhone || undefined,
-    Pick_Up_Address: data.pickupAddress || undefined,
+    City: data.cityOrZip || undefined,
+    
+    // Custom fields with correct API names
+    Street: data.pickupAddress || undefined,
     Drop_Off_Address: data.dropoffAddress || undefined,
-    Party_Size: data.passengers || undefined,
-    Hours_Needed: data.hours || undefined,
+    Vehicle_Size: passengersNum || undefined,
+    Amount_Of_Hours: hoursNum || undefined,
     Event_Types: data.eventType || undefined,
-    Event_Date: data.date || undefined,
+    Date_Of_Events: data.date || undefined,
     Day_of_Week: day || undefined,
-    Pick_Up_Time: data.pickupTime || undefined,
-    Trip_Notes: data.tripNotes || undefined,
-    Vehicles_Quoted_Pricing: quotedVehiclesSummary || undefined,
-    Lead_Status: mapLeadStatus(data.leadStatus),
+    Where_Are_They_Going: data.tripNotes || undefined,
+    Vehicles_Quoted_and_Pricing: quotedVehiclesSummary || undefined,
+    Status: mapLeadStatus(data.leadStatus),
+    Agent: data.agent || undefined,
+    Deposit: data.deposit || undefined,
+    Balance_Due: data.balance ? String(data.balance) : undefined,
+    Trip_Cost: data.totalQuoted || undefined,
   };
 
   if (fieldsToUpdate && fieldsToUpdate.length > 0) {
@@ -77,17 +91,18 @@ function buildZohoLeadData(data: SaveCallRequest["data"], fieldsToUpdate?: strin
       callerNameLast: "Last_Name",
       phone: "Phone",
       email: "Email",
-      pickupAddress: "Pick_Up_Address",
+      cityOrZip: "City",
+      pickupAddress: "Street",
       dropoffAddress: "Drop_Off_Address",
-      passengers: "Party_Size",
-      hours: "Hours_Needed",
+      passengers: "Vehicle_Size",
+      hours: "Amount_Of_Hours",
       eventType: "Event_Types",
-      date: "Event_Date",
+      date: "Date_Of_Events",
       day: "Day_of_Week",
-      pickupTime: "Pick_Up_Time",
-      tripNotes: "Trip_Notes",
-      quotedVehicles: "Vehicles_Quoted_Pricing",
-      leadStatus: "Lead_Status",
+      tripNotes: "Where_Are_They_Going",
+      quotedVehicles: "Vehicles_Quoted_and_Pricing",
+      leadStatus: "Status",
+      agent: "Agent",
     };
 
     const filteredFields: Record<string, unknown> = {};

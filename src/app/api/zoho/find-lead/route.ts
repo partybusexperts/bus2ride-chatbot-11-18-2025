@@ -14,17 +14,19 @@ interface ZohoLead {
   Zip_Code?: string;
   Street?: string;
   Description?: string;
-  Lead_Status?: string;
-  Party_Size?: string;
-  Hours_Needed?: string;
+  Status?: string;
+  Vehicle_Size?: number;
+  Amount_Of_Hours?: number;
   Event_Types?: string;
-  Event_Date?: string;
+  Date_Of_Events?: string;
   Day_of_Week?: string;
-  Pick_Up_Time?: string;
-  Pick_Up_Address?: string;
   Drop_Off_Address?: string;
-  Trip_Notes?: string;
-  Vehicles_Quoted_Pricing?: string;
+  Where_Are_They_Going?: string;
+  Vehicles_Quoted_and_Pricing?: string;
+  Agent?: string;
+  Deposit?: number;
+  Balance_Due?: string;
+  Trip_Cost?: number;
   [key: string]: unknown;
 }
 
