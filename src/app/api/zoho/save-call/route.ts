@@ -123,7 +123,7 @@ function buildZohoLeadData(data: SaveCallRequest["data"], fieldsToUpdate?: strin
     Where_Are_They_Going: data.tripNotes || undefined,
     Vehicles_Quoted_and_Pricing: quotedVehiclesSummary || undefined,
     Status: mapLeadStatus(data.leadStatus),
-    Agent: data.agent || undefined,
+    Agent: data.agent ? [data.agent] : undefined,
     Tip_Included: data.tipIncluded ? "Yes" : undefined,
     Balance_Paid_Via: data.paidByCard ? "Card" : (data.paidByCash ? "Cash" : undefined),
   };
