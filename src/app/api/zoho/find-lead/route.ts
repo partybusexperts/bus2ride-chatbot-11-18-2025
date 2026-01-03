@@ -74,27 +74,35 @@ export async function POST(request: NextRequest) {
       const cleanPhone = phone.replace(/\D/g, "");
       const last10 = cleanPhone.slice(-10);
       
+      console.log(`[find-lead] Searching for phone: ${phone}, cleaned: ${last10}`);
+      
       if (last10.length === 10) {
+        // Try exact 10-digit match
         try {
           const phoneResults = await searchLeads(accessToken, `(Phone:equals:${last10})`);
+          console.log(`[find-lead] Exact phone search found: ${phoneResults.length} leads`);
           leads = [...leads, ...phoneResults];
         } catch (e) {
           console.log("Phone search failed");
         }
         
+        // Try Mobile field
         if (leads.length === 0) {
           try {
             const mobileResults = await searchLeads(accessToken, `(Mobile:equals:${last10})`);
+            console.log(`[find-lead] Mobile search found: ${mobileResults.length} leads`);
             leads = [...leads, ...mobileResults];
           } catch (e) {
             console.log("Mobile search failed");
           }
         }
 
+        // Try formatted xxx-xxx-xxxx
         if (leads.length === 0) {
           const formatted = `${last10.slice(0, 3)}-${last10.slice(3, 6)}-${last10.slice(6)}`;
           try {
             const phoneResults = await searchLeads(accessToken, `(Phone:equals:${formatted})`);
+            console.log(`[find-lead] Formatted phone search found: ${phoneResults.length} leads`);
             leads = [...leads, ...phoneResults];
           } catch (e) {
             console.log("Formatted phone search failed");
@@ -104,15 +112,34 @@ export async function POST(request: NextRequest) {
     }
 
     if (email && leads.length === 0) {
+      console.log(`[find-lead] Searching for email: ${email}`);
       try {
         const emailResults = await searchLeads(accessToken, `(Email:equals:${email})`);
+        console.log(`[find-lead] Email search found: ${emailResults.length} leads`);
         leads = [...leads, ...emailResults];
       } catch (e) {
         console.log("Email search failed");
       }
     }
 
-    const uniqueLeads = leads.reduce((acc: ZohoLead[], lead) => {
+    // Filter to only include leads that actually match phone or email
+    const cleanPhoneForFilter = phone ? phone.replace(/\D/g, "").slice(-10) : "";
+    const verifiedLeads = leads.filter((lead) => {
+      const leadPhone = (lead.Phone || "").replace(/\D/g, "").slice(-10);
+      const leadMobile = (lead.Mobile || "").replace(/\D/g, "").slice(-10);
+      const leadEmail = (lead.Email || "").toLowerCase();
+      
+      const phoneMatch = cleanPhoneForFilter && (leadPhone === cleanPhoneForFilter || leadMobile === cleanPhoneForFilter);
+      const emailMatch = email && leadEmail === email.toLowerCase();
+      
+      console.log(`[find-lead] Verifying lead ${lead.id}: phone=${leadPhone}, mobile=${leadMobile}, email=${leadEmail}, phoneMatch=${phoneMatch}, emailMatch=${emailMatch}`);
+      
+      return phoneMatch || emailMatch;
+    });
+    
+    console.log(`[find-lead] After verification: ${verifiedLeads.length} of ${leads.length} leads confirmed`);
+
+    const uniqueLeads = verifiedLeads.reduce((acc: ZohoLead[], lead) => {
       if (!acc.find((l) => l.id === lead.id)) {
         acc.push(lead);
       }
