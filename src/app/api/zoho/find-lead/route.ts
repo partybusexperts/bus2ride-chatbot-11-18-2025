@@ -100,15 +100,6 @@ export async function POST(request: NextRequest) {
             console.log("Formatted phone search failed");
           }
         }
-
-        if (leads.length === 0) {
-          try {
-            const phoneResults = await searchLeads(accessToken, `(Phone:starts_with:${last10.slice(0, 7)})`);
-            leads = [...leads, ...phoneResults];
-          } catch (e) {
-            console.log("Partial phone search failed");
-          }
-        }
       }
     }
 
