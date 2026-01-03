@@ -51,6 +51,82 @@ const DATE_PATTERNS = [
   // Handle "december 5th 2026", "dec 5, 2026"
   /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2}(st|nd|rd|th)?,?\s+\d{4}$/i,
 ];
+
+// Relative date patterns
+const RELATIVE_DATE_PATTERNS = [
+  /^(next|this)\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/i,
+  /^(monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/i,
+  /^tomorrow$/i,
+  /^today$/i,
+  /^(next|this)\s+week(end)?$/i,
+];
+
+const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+function parseRelativeDate(text: string): string | null {
+  const lower = text.toLowerCase().trim();
+  const today = new Date();
+  
+  // Tomorrow
+  if (lower === 'tomorrow') {
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return formatDate(tomorrow);
+  }
+  
+  // Today
+  if (lower === 'today') {
+    return formatDate(today);
+  }
+  
+  // Next weekend / this weekend
+  if (lower === 'next weekend' || lower === 'this weekend') {
+    const daysUntilSaturday = (6 - today.getDay() + 7) % 7 || 7;
+    const saturday = new Date(today);
+    saturday.setDate(today.getDate() + daysUntilSaturday);
+    return formatDate(saturday);
+  }
+  
+  // "next friday", "this saturday", or just "friday"
+  const dayMatch = lower.match(/^(next|this)?\s*(monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/i);
+  if (dayMatch) {
+    const prefix = dayMatch[1]?.toLowerCase();
+    const targetDayName = dayMatch[2].toLowerCase();
+    const targetDayIndex = DAY_NAMES.indexOf(targetDayName);
+    const currentDayIndex = today.getDay();
+    
+    let daysToAdd = targetDayIndex - currentDayIndex;
+    
+    if (prefix === 'next') {
+      // "next friday" means the friday in the next week
+      if (daysToAdd <= 0) {
+        daysToAdd += 7;
+      }
+      // If it's still this week, add another 7 days
+      if (daysToAdd < 7) {
+        daysToAdd += 7;
+      }
+    } else {
+      // "this friday" or just "friday" means the upcoming one
+      if (daysToAdd <= 0) {
+        daysToAdd += 7;
+      }
+    }
+    
+    const targetDate = new Date(today);
+    targetDate.setDate(today.getDate() + daysToAdd);
+    return formatDate(targetDate);
+  }
+  
+  return null;
+}
+
+function formatDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 // Handle typos like "poeple", "passangers", "peolpe", "ppl"
 const PASSENGERS_REGEX = /^(\d{1,3})\s*(people|poeple|peolpe|ppl|passengers?|passangers?|pax|guests?|persons?)$/i;
 const PASSENGERS_SHORT_REGEX = /^(\d{1,2})$/;
@@ -383,6 +459,12 @@ function detectPattern(text: string): DetectedItem | null {
     if (pattern.test(trimmed)) {
       return { type: 'date', value: trimmed, confidence: 0.9, original: trimmed };
     }
+  }
+  
+  // Check for relative dates: "next friday", "this saturday", "tomorrow", etc.
+  const relativeDate = parseRelativeDate(trimmed);
+  if (relativeDate) {
+    return { type: 'date', value: relativeDate, confidence: 0.95, original: trimmed };
   }
 
   const passMatch = trimmed.match(PASSENGERS_REGEX);
