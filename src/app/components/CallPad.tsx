@@ -470,8 +470,22 @@ export default function CallPad() {
     }
     
     if (chip.type === 'pickup_address') {
+      // Known major cities that should trigger vehicle search directly
+      const KNOWN_MAJOR_CITIES = [
+        'phoenix', 'scottsdale', 'mesa', 'tempe', 'glendale', 'chandler', 'gilbert',
+        'denver', 'chicago', 'dallas', 'houston', 'austin', 'san antonio', 'los angeles',
+        'san diego', 'san francisco', 'seattle', 'portland', 'atlanta', 'miami',
+        'orlando', 'tampa', 'boston', 'new york', 'philadelphia', 'detroit',
+        'minneapolis', 'las vegas', 'grand rapids', 'nashville', 'charlotte',
+        'fort worth', 'plano', 'irving', 'arlington', 'frisco',
+        'tucson', 'albuquerque', 'salt lake city', 'oklahoma city',
+      ];
+      
+      const lowerValue = chip.value.toLowerCase().trim();
+      const isKnownCity = KNOWN_MAJOR_CITIES.includes(lowerValue) || 
+                          KNOWN_MAJOR_CITIES.some(c => lowerValue.startsWith(c + ' ') || lowerValue.startsWith(c + ','));
+      
       // First set the field with original value (e.g., "Mesa")
-      // Only replace with real address if lookup finds one
       setConfirmedData(prev => ({
         ...prev,
         pickupAddress: chip.value,
@@ -479,13 +493,20 @@ export default function CallPad() {
       }));
       
       // If the pickup location is a known city/suburb, also trigger a vehicle search
-      // Check if it should normalize to a major metro (e.g., mesa → Phoenix)
       if (chip.normalizedCity) {
+        // Suburb that normalizes to major metro (e.g., mesa → Phoenix)
         setConfirmedData(prev => ({
           ...prev,
           cityOrZip: chip.normalizedCity!,
         }));
         console.log(`[Pickup City Normalization] "${chip.value}" → searching vehicles for "${chip.normalizedCity}"`);
+      } else if (isKnownCity) {
+        // Known major city - use as-is for vehicle search
+        setConfirmedData(prev => ({
+          ...prev,
+          cityOrZip: chip.value,
+        }));
+        console.log(`[Pickup City Detected] "${chip.value}" is a known city → searching vehicles`);
       }
       
       // Try to look up real address - will only update if found
@@ -666,7 +687,14 @@ export default function CallPad() {
           setConfirmedData(prevData => ({ ...prevData, [field]: '' }));
         }
         if (chip.type === 'city' || chip.type === 'zip') {
-          setConfirmedData(prevData => ({ ...prevData, cityOrZip: '' }));
+          setConfirmedData(prevData => {
+            // Clear cityOrZip and pickupAddress if pickupAddress matches the city
+            const newData = { ...prevData, cityOrZip: '' };
+            if (prevData.pickupAddress.toLowerCase().trim() === chip.value.toLowerCase().trim()) {
+              newData.pickupAddress = '';
+            }
+            return newData;
+          });
           setHistoryCities(prevHistory => prevHistory.filter(c => c.value.toLowerCase() !== chip.value.toLowerCase()));
           setCityDisambiguation(null);
         }
@@ -2061,6 +2089,45 @@ export default function CallPad() {
         </div>
 
         <div style={{ background: '#1e293b', borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column' }}>
+          {/* Prominent City Banner */}
+          {confirmedData.cityOrZip && (
+            <div style={{
+              background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              marginBottom: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+            }}>
+              <span style={{ fontSize: '12px', color: '#93c5fd', fontWeight: 500 }}>SEARCHING:</span>
+              <span style={{ fontSize: '22px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
+                {confirmedData.cityOrZip.toUpperCase()}
+              </span>
+              {confirmedData.pickupAddress && confirmedData.pickupAddress.toLowerCase() !== confirmedData.cityOrZip.toLowerCase() && (
+                <span style={{ fontSize: '11px', color: '#93c5fd', marginLeft: '8px' }}>
+                  (Pickup: {confirmedData.pickupAddress})
+                </span>
+              )}
+              <span style={{ fontSize: '12px', color: '#93c5fd', marginLeft: 'auto' }}>
+                {vehicles.length} vehicle{vehicles.length !== 1 ? 's' : ''} found
+              </span>
+            </div>
+          )}
+          
+          {!confirmedData.cityOrZip && (
+            <div style={{
+              background: '#374151',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              marginBottom: '12px',
+              textAlign: 'center',
+            }}>
+              <span style={{ fontSize: '14px', color: '#9ca3af' }}>Enter a city or ZIP to search vehicles</span>
+            </div>
+          )}
+
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#fff' }}>
               Vehicle Gallery
