@@ -715,7 +715,6 @@ export default function CallPad() {
       const data = await res.json();
       setVehicles(data.vehicles || []);
       setVehicleMessage(data.message || "");
-      setQuotedVehicles([]);
     } catch (err: any) {
       if (err.name !== 'AbortError') {
         console.error(err);
