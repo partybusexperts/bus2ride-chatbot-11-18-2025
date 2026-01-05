@@ -939,6 +939,41 @@ export default function CallPad() {
     return vehicles.some(v => v.is_transfer === true || v.is_transfer === 'true' || (v.transfer_price != null && Number(v.transfer_price) > 0));
   }, [vehicles]);
 
+  // Calculate all available hour options from vehicles' pricing tiers
+  const availableHourOptions = useMemo(() => {
+    const hoursSet = new Set<number>();
+    
+    // Check all possible hour tiers across all vehicles
+    const possibleHours = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    
+    vehicles.forEach(v => {
+      possibleHours.forEach(h => {
+        // Check standard pricing
+        if (v[`price_${h}hr`] && Number(v[`price_${h}hr`]) > 0) {
+          hoursSet.add(h);
+        }
+        // Check prom pricing
+        if (v[`prom_price_${h}hr`] && Number(v[`prom_price_${h}hr`]) > 0) {
+          hoursSet.add(h);
+        }
+        // Check before 5pm pricing
+        if (v[`before5pm_${h}hr`] && Number(v[`before5pm_${h}hr`]) > 0) {
+          hoursSet.add(h);
+        }
+      });
+    });
+    
+    // Always include at least 3, 4, 5, 6 as defaults if no vehicles loaded
+    if (hoursSet.size === 0) {
+      [3, 4, 5, 6].forEach(h => hoursSet.add(h));
+    }
+    
+    // Add the current rateHours if not already in set
+    hoursSet.add(rateHours);
+    
+    return Array.from(hoursSet).sort((a, b) => a - b);
+  }, [vehicles, rateHours]);
+
   const getAIRecommendation = useCallback(async (vehicle: any) => {
     setLoadingRecommendation(true);
     setVehicleRecommendation("");
@@ -2083,8 +2118,8 @@ export default function CallPad() {
                 setConfirmedData(prev => ({ ...prev, hours: String(newHours) }));
               }}
             >
-              {/* Standard hours: 3-8, plus current rateHours if different */}
-              {[...new Set([3, 4, 5, 6, 7, 8, rateHours])].filter(h => h >= 1 && h <= 24).sort((a, b) => a - b).map(h => (
+              {/* Dynamically show all available hour options from vehicles */}
+              {availableHourOptions.map(h => (
                 <option key={h} value={h}>{h} Hour Rate</option>
               ))}
             </select>
