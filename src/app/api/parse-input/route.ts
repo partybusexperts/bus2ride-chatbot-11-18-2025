@@ -382,6 +382,40 @@ function detectPattern(text: string): DetectedItem | null {
 
   const lowerText = trimmed.toLowerCase();
   
+  // EARLY CITY DETECTION - Must happen before name detection
+  // Detect "[word(s)] [2-letter state abbreviation]" patterns like "mesa az", "naperville il", "grand rapids mi"
+  const STATE_ABBREVS_EARLY = ['az', 'ca', 'tx', 'nv', 'co', 'fl', 'ga', 'il', 'ny', 'wa', 'or', 'pa', 'oh', 'mi', 'nc', 'tn', 'mo', 'mn', 'wi', 'in', 'md', 'va', 'nj', 'ma', 'ct', 'sc', 'al', 'la', 'ky', 'ok', 'ut', 'nm', 'ks', 'ne', 'ia', 'ar', 'ms', 'wv', 'id', 'hi', 'me', 'nh', 'ri', 'mt', 'de', 'sd', 'nd', 'ak', 'vt', 'wy', 'dc'];
+  
+  // Pattern: "[city name], [state]" or "[city name] [state]" (e.g., "mesa az", "mesa, az", "grand rapids mi")
+  const cityStatePattern = lowerText.match(/^([a-z][a-z\s]+?)[,\s]+([a-z]{2})$/i);
+  if (cityStatePattern && STATE_ABBREVS_EARLY.includes(cityStatePattern[2].toLowerCase())) {
+    const cityPart = cityStatePattern[1].trim();
+    // Make sure city part is not just a single letter and doesn't look like a name
+    if (cityPart.length >= 2) {
+      const normalized = getNormalizedCity(lowerText) || getNormalizedCity(cityPart);
+      return { 
+        type: 'city', 
+        value: trimmed, 
+        confidence: 0.95, 
+        original: trimmed,
+        ...(normalized && { normalizedCity: normalized.normalized })
+      };
+    }
+  }
+  
+  // Also check for known suburbs/cities that normalize (e.g., "naperville", "silverthorne", "mesa")
+  // This catches single-word cities that should trigger vehicle search
+  const normalizedEarly = getNormalizedCity(lowerText);
+  if (normalizedEarly) {
+    return { 
+      type: 'city', 
+      value: trimmed, 
+      confidence: 0.92, 
+      original: trimmed,
+      normalizedCity: normalizedEarly.normalized
+    };
+  }
+  
   // Detect agent names: "agent Floyd", "Agent Camille", "AGENT SHIELA", etc.
   const agentMatch = lowerText.match(/^agent\s+(\w+)$/i);
   if (agentMatch) {
