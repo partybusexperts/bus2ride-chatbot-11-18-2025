@@ -944,32 +944,48 @@ export default function CallPad() {
     const hoursSet = new Set<number>();
     
     // Check all possible hour tiers across all vehicles
-    const possibleHours = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    const standardHours = [3, 4, 5, 6, 7, 8, 9, 10];
+    const promHours = [6, 7, 8, 9, 10];
+    const before5pmHours = [3, 4, 5, 6, 7];
     
     vehicles.forEach(v => {
-      possibleHours.forEach(h => {
-        // Check standard pricing
-        if (v[`price_${h}hr`] && Number(v[`price_${h}hr`]) > 0) {
+      // Check standard pricing (price_3hr, price_4hr, etc.)
+      standardHours.forEach(h => {
+        const key = `price_${h}hr`;
+        const val = v[key];
+        if (val !== null && val !== undefined && Number(val) > 0) {
           hoursSet.add(h);
         }
-        // Check prom pricing
-        if (v[`prom_price_${h}hr`] && Number(v[`prom_price_${h}hr`]) > 0) {
+      });
+      
+      // Check prom pricing (prom_price_6hr, etc.)
+      promHours.forEach(h => {
+        const key = `prom_price_${h}hr`;
+        const val = v[key];
+        if (val !== null && val !== undefined && Number(val) > 0) {
           hoursSet.add(h);
         }
-        // Check before 5pm pricing
-        if (v[`before5pm_${h}hr`] && Number(v[`before5pm_${h}hr`]) > 0) {
+      });
+      
+      // Check before 5pm pricing (before5pm_3hr, etc.)
+      before5pmHours.forEach(h => {
+        const key = `before5pm_${h}hr`;
+        const val = v[key];
+        if (val !== null && val !== undefined && Number(val) > 0) {
           hoursSet.add(h);
         }
       });
     });
     
-    // Always include at least 3, 4, 5, 6 as defaults if no vehicles loaded
+    // Always include at least 3, 4, 5, 6 as defaults if no vehicles loaded yet
     if (hoursSet.size === 0) {
       [3, 4, 5, 6].forEach(h => hoursSet.add(h));
     }
     
-    // Add the current rateHours if not already in set
-    hoursSet.add(rateHours);
+    // Add the current rateHours if not already in set (for custom values)
+    if (rateHours >= 1 && rateHours <= 24) {
+      hoursSet.add(rateHours);
+    }
     
     return Array.from(hoursSet).sort((a, b) => a - b);
   }, [vehicles, rateHours]);
