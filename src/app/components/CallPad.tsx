@@ -754,6 +754,14 @@ export default function CallPad() {
     };
   }, [confirmedData.cityOrZip, confirmedData.passengers, confirmedData.hours, doVehicleSearch]);
 
+  // Sync rateHours with hours field - when hours changes on left panel, update the rate focus on right
+  useEffect(() => {
+    const hours = Number(confirmedData.hours);
+    if (hours >= 3 && hours <= 8) {
+      setRateHours(hours);
+    }
+  }, [confirmedData.hours]);
+
   function toggleQuoted(vehicle: any) {
     const wasQuoted = quotedVehicles.some(v => v.id === vehicle.id);
     
@@ -2031,7 +2039,11 @@ export default function CallPad() {
             <select
               style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #475569', background: '#334155', color: '#fff', fontSize: '12px' }}
               value={rateHours}
-              onChange={(e) => setRateHours(parseInt(e.target.value))}
+              onChange={(e) => {
+                const newHours = parseInt(e.target.value);
+                setRateHours(newHours);
+                setConfirmedData(prev => ({ ...prev, hours: String(newHours) }));
+              }}
             >
               <option value={3}>3 Hour Rate</option>
               <option value={4}>4 Hour Rate</option>
