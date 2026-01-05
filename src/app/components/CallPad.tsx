@@ -830,37 +830,41 @@ export default function CallPad() {
   }, [totalQuotedPrice, depositAmount]);
 
   const getVehiclePrice = useCallback((v: any, hours: number): number => {
-    // Try exact hour match first
+    // Try exact hour match first (standard pricing)
     const exactKey = `price_${hours}hr`;
     if (v[exactKey]) {
       const numPrice = Number(v[exactKey]);
       if (!isNaN(numPrice) && numPrice > 0) return numPrice;
     }
     
-    // If no exact match, try to calculate from hourly rate or interpolate
-    // Check for hourly rate field
-    if (v.price_per_hour || v.hourly_rate) {
-      const hourlyRate = Number(v.price_per_hour || v.hourly_rate);
-      if (!isNaN(hourlyRate) && hourlyRate > 0) {
-        return hourlyRate * hours;
-      }
-    }
-    
-    // Try to find closest available tier and extrapolate
-    const availableTiers = [3, 4, 5, 6, 8, 10, 12].filter(h => {
+    // Try to find available standard tiers and calculate
+    const availableTiers = [3, 4, 5, 6, 7, 8].filter(h => {
       const key = `price_${h}hr`;
       return v[key] && Number(v[key]) > 0;
     });
     
-    if (availableTiers.length > 0) {
-      // Find the closest tier
-      const closestTier = availableTiers.reduce((prev, curr) => 
-        Math.abs(curr - hours) < Math.abs(prev - hours) ? curr : prev
-      );
-      const tierPrice = Number(v[`price_${closestTier}hr`]);
+    if (availableTiers.length >= 2) {
+      // Calculate hourly rate from two consecutive tiers for accuracy
+      const sortedTiers = availableTiers.sort((a, b) => a - b);
+      const lower = sortedTiers[0];
+      const upper = sortedTiers[sortedTiers.length - 1];
+      const lowerPrice = Number(v[`price_${lower}hr`]);
+      const upperPrice = Number(v[`price_${upper}hr`]);
+      const hourlyRate = (upperPrice - lowerPrice) / (upper - lower);
       
-      // Calculate approximate hourly rate and multiply
-      const impliedHourlyRate = tierPrice / closestTier;
+      // Calculate price for requested hours
+      if (hours <= lower) {
+        return lowerPrice;
+      } else if (hours >= upper) {
+        return Math.round(upperPrice + hourlyRate * (hours - upper));
+      } else {
+        return Math.round(lowerPrice + hourlyRate * (hours - lower));
+      }
+    } else if (availableTiers.length === 1) {
+      // Only one tier available, use implied hourly rate
+      const tier = availableTiers[0];
+      const tierPrice = Number(v[`price_${tier}hr`]);
+      const impliedHourlyRate = tierPrice / tier;
       return Math.round(impliedHourlyRate * hours);
     }
     
@@ -2079,8 +2083,8 @@ export default function CallPad() {
                 setConfirmedData(prev => ({ ...prev, hours: String(newHours) }));
               }}
             >
-              {/* Generate options: preset hours plus current rateHours if not in preset list */}
-              {[...new Set([3, 4, 5, 6, 7, 8, 10, 12, rateHours])].sort((a, b) => a - b).map(h => (
+              {/* Standard hours: 3-8, plus current rateHours if different */}
+              {[...new Set([3, 4, 5, 6, 7, 8, rateHours])].filter(h => h >= 1 && h <= 24).sort((a, b) => a - b).map(h => (
                 <option key={h} value={h}>{h} Hour Rate</option>
               ))}
             </select>
