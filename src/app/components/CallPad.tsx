@@ -246,7 +246,7 @@ export default function CallPad() {
   const [loadingRecommendation, setLoadingRecommendation] = useState(false);
   
   const [sortBy, setSortBy] = useState<'price_low' | 'price_high' | 'capacity_high' | 'capacity_low'>('price_low');
-  const [rateHours, setRateHours] = useState<number>(4);
+  const [rateHours, setRateHours] = useState<number>(4); // Default to 4 hours
   const [vehicleFilters, setVehicleFilters] = useState({
     partyBus: true,
     limo: true,
@@ -757,7 +757,7 @@ export default function CallPad() {
   // Sync rateHours with hours field - when hours changes on left panel, update the rate focus on right
   useEffect(() => {
     const hours = Number(confirmedData.hours);
-    if (hours >= 3 && hours <= 8) {
+    if (hours >= 1 && hours <= 24) {
       setRateHours(hours);
     }
   }, [confirmedData.hours]);
@@ -830,9 +830,43 @@ export default function CallPad() {
   }, [totalQuotedPrice, depositAmount]);
 
   const getVehiclePrice = useCallback((v: any, hours: number): number => {
-    const priceKey = `price_${hours}hr`;
-    const rawPrice = v[priceKey] || v.price_4hr || v.price;
-    const numPrice = Number(rawPrice);
+    // Try exact hour match first
+    const exactKey = `price_${hours}hr`;
+    if (v[exactKey]) {
+      const numPrice = Number(v[exactKey]);
+      if (!isNaN(numPrice) && numPrice > 0) return numPrice;
+    }
+    
+    // If no exact match, try to calculate from hourly rate or interpolate
+    // Check for hourly rate field
+    if (v.price_per_hour || v.hourly_rate) {
+      const hourlyRate = Number(v.price_per_hour || v.hourly_rate);
+      if (!isNaN(hourlyRate) && hourlyRate > 0) {
+        return hourlyRate * hours;
+      }
+    }
+    
+    // Try to find closest available tier and extrapolate
+    const availableTiers = [3, 4, 5, 6, 8, 10, 12].filter(h => {
+      const key = `price_${h}hr`;
+      return v[key] && Number(v[key]) > 0;
+    });
+    
+    if (availableTiers.length > 0) {
+      // Find the closest tier
+      const closestTier = availableTiers.reduce((prev, curr) => 
+        Math.abs(curr - hours) < Math.abs(prev - hours) ? curr : prev
+      );
+      const tierPrice = Number(v[`price_${closestTier}hr`]);
+      
+      // Calculate approximate hourly rate and multiply
+      const impliedHourlyRate = tierPrice / closestTier;
+      return Math.round(impliedHourlyRate * hours);
+    }
+    
+    // Fallback to base price or 4hr price
+    const fallback = v.price_4hr || v.price || 0;
+    const numPrice = Number(fallback);
     return isNaN(numPrice) ? 0 : numPrice;
   }, []);
 
@@ -2045,11 +2079,10 @@ export default function CallPad() {
                 setConfirmedData(prev => ({ ...prev, hours: String(newHours) }));
               }}
             >
-              <option value={3}>3 Hour Rate</option>
-              <option value={4}>4 Hour Rate</option>
-              <option value={5}>5 Hour Rate</option>
-              <option value={6}>6 Hour Rate</option>
-              <option value={8}>8 Hour Rate</option>
+              {/* Generate options: preset hours plus current rateHours if not in preset list */}
+              {[...new Set([3, 4, 5, 6, 7, 8, 10, 12, rateHours])].sort((a, b) => a - b).map(h => (
+                <option key={h} value={h}>{h} Hour Rate</option>
+              ))}
             </select>
             
             <div style={{ display: 'flex', gap: '10px', marginLeft: '8px' }}>
