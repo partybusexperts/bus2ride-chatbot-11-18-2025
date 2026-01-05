@@ -49,16 +49,40 @@ The system auto-detects:
 - **Phone numbers** - 10-digit numbers detected as phone
 - **Email addresses** - Detected by @ symbol
 - **ZIP codes** - 5-digit codes
-- **Cities** - Common city names recognized
-- **Dates** - Various formats (1/15, January 15th, may 25th)
+- **Cities** - Common city names recognized (with suburb normalization - see below)
+- **Dates** - Various formats (1/15, January 15th, may 25th), relative dates (next friday, tomorrow)
 - **Times** - Various formats (6pm, 6:00 PM)
-- **Pickup time** - "pu at 9pm" or "pickup at 9pm"
+- **Pickup locations** - Flexible parsing (see Pickup/Dropoff Location Parsing below)
 - **Passenger counts** - "30 people", "30 passengers", "five people", "twenty passengers" (word numbers supported)
 - **Hours** - "5 hours", "5 hrs"
 - **Event types** - Wedding, Prom, Birthday, etc.
-- **Addresses** - "pu at [location]", "do at [dropoff]" (adds to Trip Notes AND populates field)
 - **Places/Venues** - TopGolf, bars, restaurants, hotels detected and looked up via OpenAI
 - **Complex addresses** - Uses OpenAI for address parsing
+
+### Pickup/Dropoff Location Parsing
+The system recognizes many pickup/dropoff variations:
+- **Prefix patterns**: "pu dallas", "pu mesa", "pickup at mesa", "pick up in dallas"
+- **Postfix patterns**: "dallas pu", "mesa pick up", "dallas pickup"
+- **With prepositions**: "pick up in dallas", "pickup at mesa", "pu @ airport"
+- **Dropoff similar**: "do dallas", "dallas do", "drop off at airport", "dropoff mesa"
+
+Distinguishes pickup TIME from pickup LOCATION:
+- "pu 5pm" or "5pm pu" → pickup TIME (5:00 PM)
+- "pu dallas" or "dallas pu" → pickup LOCATION (Dallas)
+- "pu time 5pm" → pickup TIME (5:00 PM)
+
+### City Normalization (Suburb to Metro)
+When a suburb or small city is entered, the system automatically searches for vehicles in the nearest major metro:
+- **Phoenix metro**: Mesa, Tempe, Scottsdale, Glendale, Chandler, Gilbert, Peoria, Surprise, etc.
+- **Denver metro**: Silverthorne, Aurora, Lakewood, Boulder, Centennial, Littleton, etc.
+- **Dallas metro**: Fort Worth, Arlington, Plano, Irving, Frisco, McKinney, etc.
+- **Houston metro**: The Woodlands, Sugar Land, Pearland, Katy, etc.
+- **LA metro**: Long Beach, Anaheim, Santa Ana, Irvine, Burbank, etc.
+- **SF Bay Area**: Oakland, San Jose, Fremont, Berkeley, Palo Alto, etc.
+- **Chicago metro**: Naperville, Aurora, Joliet, Evanston, Schaumburg, etc.
+- **And more**: Detroit, Miami, Atlanta, Las Vegas, Seattle, Minneapolis suburbs
+
+Example: "mesa az" or "pu mesa" → displays "Mesa AZ" but searches vehicles for "Phoenix"
 
 ### Venue/Place Lookup with Confirmation
 When a venue is mentioned (e.g., "TopGolf Scottsdale", "480 bar", "Dave & Busters"):

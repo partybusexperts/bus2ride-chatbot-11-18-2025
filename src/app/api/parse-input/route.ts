@@ -34,6 +34,7 @@ interface DetectedItem {
   value: string;
   confidence: number;
   original: string;
+  normalizedCity?: string; // For suburbs/small cities, the major metro area to use for vehicle search
 }
 
 const PHONE_REGEX = /^[\d\s\-\(\)\.]{10,}$/;
@@ -208,6 +209,84 @@ const CITY_KEYWORDS = [
   'cleveland', 'pittsburgh', 'cincinnati', 'bakersfield', 'wichita', 'arlington',
 ];
 
+// City normalization - map suburbs/small cities to their major metro for vehicle search
+const CITY_NORMALIZATION: Record<string, string> = {
+  // Phoenix metro
+  'mesa': 'Phoenix', 'mesa az': 'Phoenix', 'tempe': 'Phoenix', 'scottsdale': 'Phoenix',
+  'glendale': 'Phoenix', 'chandler': 'Phoenix', 'gilbert': 'Phoenix', 'peoria': 'Phoenix',
+  'surprise': 'Phoenix', 'goodyear': 'Phoenix', 'avondale': 'Phoenix', 'cave creek': 'Phoenix',
+  'fountain hills': 'Phoenix', 'paradise valley': 'Phoenix', 'queen creek': 'Phoenix',
+  'san tan valley': 'Phoenix', 'apache junction': 'Phoenix', 'buckeye': 'Phoenix',
+  // Denver metro
+  'silverthorne': 'Denver', 'silverthorn': 'Denver', 'aurora': 'Denver', 'lakewood': 'Denver',
+  'thornton': 'Denver', 'arvada': 'Denver', 'westminster': 'Denver', 'centennial': 'Denver',
+  'highlands ranch': 'Denver', 'boulder': 'Denver', 'broomfield': 'Denver', 'littleton': 'Denver',
+  'parker': 'Denver', 'castle rock': 'Denver', 'golden': 'Denver', 'englewood': 'Denver',
+  'commerce city': 'Denver', 'lone tree': 'Denver', 'greenwood village': 'Denver',
+  // Dallas-Fort Worth metro
+  'fort worth': 'Dallas', 'arlington': 'Dallas', 'plano': 'Dallas', 'irving': 'Dallas',
+  'garland': 'Dallas', 'frisco': 'Dallas', 'mckinney': 'Dallas', 'denton': 'Dallas',
+  'carrollton': 'Dallas', 'richardson': 'Dallas', 'lewisville': 'Dallas', 'allen': 'Dallas',
+  'flower mound': 'Dallas', 'grapevine': 'Dallas', 'mesquite': 'Dallas', 'grand prairie': 'Dallas',
+  // Houston metro
+  'the woodlands': 'Houston', 'sugar land': 'Houston', 'pearland': 'Houston', 'league city': 'Houston',
+  'katy': 'Houston', 'baytown': 'Houston', 'conroe': 'Houston', 'pasadena': 'Houston',
+  'missouri city': 'Houston', 'spring': 'Houston', 'cypress': 'Houston', 'humble': 'Houston',
+  // Los Angeles metro
+  'long beach': 'Los Angeles', 'anaheim': 'Los Angeles', 'santa ana': 'Los Angeles',
+  'irvine': 'Los Angeles', 'glendale ca': 'Los Angeles', 'huntington beach': 'Los Angeles',
+  'santa clarita': 'Los Angeles', 'garden grove': 'Los Angeles', 'ontario': 'Los Angeles',
+  'rancho cucamonga': 'Los Angeles', 'pomona': 'Los Angeles', 'fullerton': 'Los Angeles',
+  'pasadena ca': 'Los Angeles', 'burbank': 'Los Angeles', 'torrance': 'Los Angeles',
+  // San Francisco Bay Area
+  'oakland': 'San Francisco', 'san jose': 'San Francisco', 'fremont': 'San Francisco',
+  'hayward': 'San Francisco', 'sunnyvale': 'San Francisco', 'santa clara': 'San Francisco',
+  'concord': 'San Francisco', 'berkeley': 'San Francisco', 'palo alto': 'San Francisco',
+  'mountain view': 'San Francisco', 'redwood city': 'San Francisco', 'san mateo': 'San Francisco',
+  // Chicago metro
+  'naperville': 'Chicago', 'aurora il': 'Chicago', 'joliet': 'Chicago', 'elgin': 'Chicago',
+  'waukegan': 'Chicago', 'cicero': 'Chicago', 'arlington heights': 'Chicago', 'evanston': 'Chicago',
+  'schaumburg': 'Chicago', 'bolingbrook': 'Chicago', 'palatine': 'Chicago', 'skokie': 'Chicago',
+  'oak lawn': 'Chicago', 'downers grove': 'Chicago', 'orland park': 'Chicago', 'oak park': 'Chicago',
+  // Detroit metro
+  'warren': 'Detroit', 'sterling heights': 'Detroit', 'ann arbor': 'Detroit', 'dearborn': 'Detroit',
+  'livonia': 'Detroit', 'troy': 'Detroit', 'westland': 'Detroit', 'farmington hills': 'Detroit',
+  'southfield': 'Detroit', 'royal oak': 'Detroit', 'pontiac': 'Detroit', 'rochester hills': 'Detroit',
+  // Miami metro
+  'fort lauderdale': 'Miami', 'hialeah': 'Miami', 'pembroke pines': 'Miami', 'hollywood': 'Miami',
+  'miramar': 'Miami', 'coral springs': 'Miami', 'miami gardens': 'Miami', 'pompano beach': 'Miami',
+  'west palm beach': 'Miami', 'davie': 'Miami', 'boca raton': 'Miami', 'sunrise': 'Miami',
+  // Atlanta metro
+  'sandy springs': 'Atlanta', 'roswell': 'Atlanta', 'johns creek': 'Atlanta', 'alpharetta': 'Atlanta',
+  'marietta': 'Atlanta', 'smyrna': 'Atlanta', 'dunwoody': 'Atlanta', 'brookhaven': 'Atlanta',
+  'decatur': 'Atlanta', 'lawrenceville': 'Atlanta', 'duluth': 'Atlanta', 'kennesaw': 'Atlanta',
+  // Las Vegas metro
+  'henderson': 'Las Vegas', 'north las vegas': 'Las Vegas', 'enterprise': 'Las Vegas',
+  'spring valley': 'Las Vegas', 'sunrise manor': 'Las Vegas', 'paradise nv': 'Las Vegas',
+  'summerlin': 'Las Vegas', 'green valley': 'Las Vegas', 'boulder city': 'Las Vegas',
+  // Seattle metro
+  'tacoma': 'Seattle', 'bellevue': 'Seattle', 'kent': 'Seattle', 'everett': 'Seattle',
+  'renton': 'Seattle', 'federal way': 'Seattle', 'spokane': 'Seattle', 'kirkland': 'Seattle',
+  'redmond': 'Seattle', 'auburn wa': 'Seattle', 'sammamish': 'Seattle', 'issaquah': 'Seattle',
+  // Minneapolis metro
+  'st paul': 'Minneapolis', 'saint paul': 'Minneapolis', 'bloomington mn': 'Minneapolis',
+  'brooklyn park': 'Minneapolis', 'plymouth': 'Minneapolis', 'maple grove': 'Minneapolis',
+  'woodbury': 'Minneapolis', 'eden prairie': 'Minneapolis', 'eagan': 'Minneapolis',
+};
+
+// Get normalized city for vehicle search
+function getNormalizedCity(city: string): { normalized: string; original: string } | null {
+  const lower = city.toLowerCase().trim();
+  // Remove trailing state abbreviations for lookup
+  const withoutState = lower.replace(/,?\s*(az|co|tx|ca|il|mi|fl|ga|nv|wa|mn|oh|pa|ny|nj|ma)\.?$/i, '').trim();
+  
+  const normalized = CITY_NORMALIZATION[withoutState] || CITY_NORMALIZATION[lower];
+  if (normalized) {
+    return { normalized, original: city };
+  }
+  return null;
+}
+
 const VENUE_KEYWORDS = [
   'topgolf', 'top golf', 'dave and busters', 'dave & busters', 'bowlero',
   'main event', 'lucky strike', 'pinstripes', 'k1 speed', 'andretti',
@@ -378,7 +457,31 @@ function detectPattern(text: string): DetectedItem | null {
     return { type: 'time', value: timeVal, confidence: 0.92, original: trimmed };
   }
   
-  const puMatch = lowerText.match(/^(pu|up|p\.u\.|u\.p\.|p\/u|pickup|pick\s*-?\s*up)\s*(at|@|:|-|–|is)?\s*(.+)/i);
+  // Enhanced pickup location parsing - handles many variations:
+  // "pu dallas", "dallas pu", "pick up dallas", "dallas pick up", "pick up in dallas", 
+  // "pickup at dallas", "pu at 123 main st", "mesa pick up", etc.
+  
+  // Pattern: [city/location] + pu/pickup (postfix) - e.g., "dallas pu", "mesa pick up"
+  const puPostfixLocationMatch = lowerText.match(/^(.+?)\s+(pu|up|p\.u\.|u\.p\.|p\/u|pickup|pick\s*-?\s*up)$/i);
+  if (puPostfixLocationMatch && puPostfixLocationMatch[1]) {
+    const location = cleanTypoDigits(puPostfixLocationMatch[1].trim());
+    // Make sure it's not a time (like "5pm pickup")
+    const isTime = /^\d{1,2}(:\d{2})?\s*[ap]\.?m?\.?$/i.test(location);
+    if (!isTime && location.length > 1) {
+      // Check if location is a suburb that should normalize to a major metro
+      const normalized = getNormalizedCity(location);
+      return { 
+        type: 'pickup_address', 
+        value: location, 
+        confidence: 0.92, 
+        original: trimmed,
+        ...(normalized && { normalizedCity: normalized.normalized })
+      };
+    }
+  }
+  
+  // Pattern: pu/pickup + [in/at/@/:] + [location] - e.g., "pu dallas", "pick up in dallas", "pickup at 123 main"
+  const puMatch = lowerText.match(/^(pu|up|p\.u\.|u\.p\.|p\/u|pickup|pick\s*-?\s*up)\s*(in|at|@|:|-|–|is)?\s*(.+)/i);
   if (puMatch && puMatch[3]) {
     let rest = puMatch[3].trim();
     // Skip if rest is just "time" or "t"
@@ -394,12 +497,43 @@ function detectPattern(text: string): DetectedItem | null {
       }
       rest = cleanTypoDigits(rest);
       if (rest.length > 1) {
-        return { type: 'pickup_address', value: rest, confidence: 0.92, original: trimmed };
+        // Check if location is a suburb that should normalize to a major metro
+        const normalized = getNormalizedCity(rest);
+        return { 
+          type: 'pickup_address', 
+          value: rest, 
+          confidence: 0.92, 
+          original: trimmed,
+          ...(normalized && { normalizedCity: normalized.normalized })
+        };
       }
     }
   }
   
-  const doMatch = lowerText.match(/^(do|d\.o\.|d\/o|dropoff|drop\s*-?\s*off)\s*(at|@|:|-|–|is)?\s*(.+)/i);
+  // Enhanced dropoff location parsing - similar to pickup
+  // "do dallas", "dallas do", "drop off dallas", "dallas drop off", "dropoff at dallas"
+  
+  // Pattern: [city/location] + do/dropoff (postfix) - e.g., "dallas do", "mesa drop off"
+  const doPostfixLocationMatch = lowerText.match(/^(.+?)\s+(do|d\.o\.|d\/o|dropoff|drop\s*-?\s*off)$/i);
+  if (doPostfixLocationMatch && doPostfixLocationMatch[1]) {
+    const location = cleanTypoDigits(doPostfixLocationMatch[1].trim());
+    // Make sure it's not a time (like "5pm dropoff")
+    const isTime = /^\d{1,2}(:\d{2})?\s*[ap]\.?m?\.?$/i.test(location);
+    if (!isTime && location.length > 1) {
+      // Check if location is a suburb that should normalize to a major metro
+      const normalized = getNormalizedCity(location);
+      return { 
+        type: 'dropoff_address', 
+        value: location, 
+        confidence: 0.92, 
+        original: trimmed,
+        ...(normalized && { normalizedCity: normalized.normalized })
+      };
+    }
+  }
+  
+  // Pattern: do/dropoff + [in/at/@/:] + [location] - e.g., "do dallas", "drop off in dallas"
+  const doMatch = lowerText.match(/^(do|d\.o\.|d\/o|dropoff|drop\s*-?\s*off)\s*(in|at|@|:|-|–|is)?\s*(.+)/i);
   if (doMatch && doMatch[3]) {
     let rest = doMatch[3].trim();
     // Skip if rest is just "time" or "t"
@@ -415,7 +549,15 @@ function detectPattern(text: string): DetectedItem | null {
       }
       rest = cleanTypoDigits(rest);
       if (rest.length > 1) {
-        return { type: 'dropoff_address', value: rest, confidence: 0.92, original: trimmed };
+        // Check if location is a suburb that should normalize to a major metro
+        const normalized = getNormalizedCity(rest);
+        return { 
+          type: 'dropoff_address', 
+          value: rest, 
+          confidence: 0.92, 
+          original: trimmed,
+          ...(normalized && { normalizedCity: normalized.normalized })
+        };
       }
     }
   }
@@ -561,19 +703,53 @@ function detectPattern(text: string): DetectedItem | null {
     const cityStateAbbrevPattern = new RegExp(`^${city}[,\\s]+([a-z]{2})$`, 'i');
     const cityStateMatch = lowerText.match(cityStateAbbrevPattern);
     if (cityStateMatch && STATE_ABBREVS.includes(cityStateMatch[1].toLowerCase())) {
-      return { type: 'city', value: trimmed, confidence: 0.95, original: trimmed };
+      const normalized = getNormalizedCity(trimmed);
+      return { 
+        type: 'city', 
+        value: trimmed, 
+        confidence: 0.95, 
+        original: trimmed,
+        ...(normalized && { normalizedCity: normalized.normalized })
+      };
     }
     
     // Check for city + state name pattern (e.g., "mesa arizona", "phoenix arizona")
     for (const state of STATE_NAMES) {
       if (lowerText === `${city} ${state}` || lowerText === `${city}, ${state}`) {
-        return { type: 'city', value: trimmed, confidence: 0.95, original: trimmed };
+        const normalized = getNormalizedCity(trimmed);
+        return { 
+          type: 'city', 
+          value: trimmed, 
+          confidence: 0.95, 
+          original: trimmed,
+          ...(normalized && { normalizedCity: normalized.normalized })
+        };
       }
     }
     
     if (lowerText === city || lowerText.startsWith(city + ' ') || lowerText.includes(' ' + city)) {
-      return { type: 'city', value: trimmed, confidence: 0.9, original: trimmed };
+      const normalized = getNormalizedCity(trimmed);
+      return { 
+        type: 'city', 
+        value: trimmed, 
+        confidence: 0.9, 
+        original: trimmed,
+        ...(normalized && { normalizedCity: normalized.normalized })
+      };
     }
+  }
+  
+  // Also check if input is a suburb/small city that normalizes to a major metro
+  // even if it's not in CITY_KEYWORDS (e.g., "silverthorne", "naperville")
+  const normalized = getNormalizedCity(lowerText);
+  if (normalized) {
+    return { 
+      type: 'city', 
+      value: trimmed, 
+      confidence: 0.9, 
+      original: trimmed,
+      normalizedCity: normalized.normalized
+    };
   }
 
   return null;

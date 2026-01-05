@@ -21,6 +21,7 @@ interface DetectedChip {
   original: string;
   confirmed: boolean;
   autoPopulated: boolean;
+  normalizedCity?: string; // For suburbs, the major metro to use for vehicle search
 }
 
 type QuotedVehicle = {
@@ -427,7 +428,7 @@ export default function CallPad() {
       const lowerCity = chip.value.toLowerCase().trim();
       const ambiguousOptions = AMBIGUOUS_CITIES[lowerCity];
       
-      if (ambiguousOptions && chip.type === 'city') {
+      if (ambiguousOptions && chip.type === 'city' && !chip.normalizedCity) {
         setCityDisambiguation({ city: chip.value, options: ambiguousOptions });
         return;
       }
@@ -443,12 +444,22 @@ export default function CallPad() {
         return newHistory;
       });
       
-      // Update both cityOrZip and pickupAddress when a new city/zip is entered
+      // Use normalized city (major metro) for vehicle search, but show original for display
+      // e.g., "mesa az" shows as Mesa AZ but searches vehicles for Phoenix
+      const searchCity = chip.normalizedCity || chip.value;
+      
+      // Update both cityOrZip (for vehicle search) and pickupAddress when a new city/zip is entered
       setConfirmedData(prev => ({ 
         ...prev, 
-        cityOrZip: chip.value,
-        pickupAddress: chip.value
+        cityOrZip: searchCity, // Use normalized city for vehicle search
+        pickupAddress: chip.value // Keep original for display/Zoho
       }));
+      
+      // Show notification if city was normalized
+      if (chip.normalizedCity && chip.normalizedCity.toLowerCase() !== chip.value.toLowerCase()) {
+        console.log(`[City Normalization] "${chip.value}" → searching vehicles for "${chip.normalizedCity}"`);
+      }
+      
       setCityDisambiguation(null);
       return;
     }
@@ -466,6 +477,17 @@ export default function CallPad() {
         pickupAddress: chip.value,
         tripNotes: prev.tripNotes ? `${prev.tripNotes}\nPU: ${chip.value}` : `PU: ${chip.value}`,
       }));
+      
+      // If the pickup location is a known city/suburb, also trigger a vehicle search
+      // Check if it should normalize to a major metro (e.g., mesa → Phoenix)
+      if (chip.normalizedCity) {
+        setConfirmedData(prev => ({
+          ...prev,
+          cityOrZip: chip.normalizedCity!,
+        }));
+        console.log(`[Pickup City Normalization] "${chip.value}" → searching vehicles for "${chip.normalizedCity}"`);
+      }
+      
       // Try to look up real address - will only update if found
       lookupPlace(chip.value, 'pickup');
       return;
@@ -544,6 +566,7 @@ export default function CallPad() {
             original: item.original || text,
             confirmed: shouldAutoPopulate,
             autoPopulated: shouldAutoPopulate,
+            ...(item.normalizedCity && { normalizedCity: item.normalizedCity }),
           };
         });
         
