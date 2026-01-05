@@ -939,56 +939,18 @@ export default function CallPad() {
     return vehicles.some(v => v.is_transfer === true || v.is_transfer === 'true' || (v.transfer_price != null && Number(v.transfer_price) > 0));
   }, [vehicles]);
 
-  // Calculate all available hour options from vehicles' pricing tiers
+  // All available hour options - show 3-10 which covers all pricing tiers
+  // (standard 3-10, prom 6-10, before5pm 3-7)
   const availableHourOptions = useMemo(() => {
-    const hoursSet = new Set<number>();
+    const baseHours = [3, 4, 5, 6, 7, 8, 9, 10];
     
-    // Check all possible hour tiers across all vehicles
-    const standardHours = [3, 4, 5, 6, 7, 8, 9, 10];
-    const promHours = [6, 7, 8, 9, 10];
-    const before5pmHours = [3, 4, 5, 6, 7];
-    
-    vehicles.forEach(v => {
-      // Check standard pricing (price_3hr, price_4hr, etc.)
-      standardHours.forEach(h => {
-        const key = `price_${h}hr`;
-        const val = v[key];
-        if (val !== null && val !== undefined && Number(val) > 0) {
-          hoursSet.add(h);
-        }
-      });
-      
-      // Check prom pricing (prom_price_6hr, etc.)
-      promHours.forEach(h => {
-        const key = `prom_price_${h}hr`;
-        const val = v[key];
-        if (val !== null && val !== undefined && Number(val) > 0) {
-          hoursSet.add(h);
-        }
-      });
-      
-      // Check before 5pm pricing (before5pm_3hr, etc.)
-      before5pmHours.forEach(h => {
-        const key = `before5pm_${h}hr`;
-        const val = v[key];
-        if (val !== null && val !== undefined && Number(val) > 0) {
-          hoursSet.add(h);
-        }
-      });
-    });
-    
-    // Always include at least 3, 4, 5, 6 as defaults if no vehicles loaded yet
-    if (hoursSet.size === 0) {
-      [3, 4, 5, 6].forEach(h => hoursSet.add(h));
+    // Add the current rateHours if not already in the list (for custom values)
+    if (rateHours >= 1 && rateHours <= 24 && !baseHours.includes(rateHours)) {
+      return [...baseHours, rateHours].sort((a, b) => a - b);
     }
     
-    // Add the current rateHours if not already in set (for custom values)
-    if (rateHours >= 1 && rateHours <= 24) {
-      hoursSet.add(rateHours);
-    }
-    
-    return Array.from(hoursSet).sort((a, b) => a - b);
-  }, [vehicles, rateHours]);
+    return baseHours;
+  }, [rateHours]);
 
   const getAIRecommendation = useCallback(async (vehicle: any) => {
     setLoadingRecommendation(true);
