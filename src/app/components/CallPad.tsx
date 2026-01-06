@@ -768,6 +768,7 @@ export default function CallPad() {
       });
 
       const data = await res.json();
+      console.log('[Vehicle Search Response]', cityOrZip, 'returned', data.vehicles?.length || 0, 'vehicles');
       setVehicles(data.vehicles || []);
       setVehicleMessage(data.message || "");
     } catch (err: any) {
@@ -951,11 +952,18 @@ export default function CallPad() {
       
       if (vehicleFilters.oneWayTransfer && !isTransfer) return false;
       
+      // If vehicle doesn't match any category, show it if any filter is on (don't exclude uncategorized vehicles)
+      const isUncategorized = !isPartyBus && !isLimo && !isShuttle && !isCarSuv;
+      
       if (isPartyBus && !vehicleFilters.partyBus) return false;
       if (isLimo && !vehicleFilters.limo) return false;
       if (isShuttle && !vehicleFilters.shuttle) return false;
       if (isCarSuv && !vehicleFilters.carSuv) return false;
-      if (!isPartyBus && !isLimo && !isShuttle && !isCarSuv) return false;
+      
+      // Show uncategorized vehicles if all filters are enabled (default state)
+      if (isUncategorized) {
+        return vehicleFilters.partyBus && vehicleFilters.limo && vehicleFilters.shuttle && vehicleFilters.carSuv;
+      }
       
       return true;
     }).map(v => {

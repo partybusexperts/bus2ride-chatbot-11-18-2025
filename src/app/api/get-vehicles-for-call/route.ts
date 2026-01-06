@@ -192,11 +192,20 @@ export async function POST(req: Request) {
           .filter((v: any) => v && v.active !== false);
       }
     } else {
-      const { data: cityData } = await supabase
+      console.log('Searching for city:', query);
+      const { data: cityData, error: cityError } = await supabase
         .from('vehicles_for_chatbot')
         .select('*')
         .ilike('city', `%${query}%`)
         .eq('active', true);
+
+      if (cityError) {
+        console.error('Supabase error:', cityError);
+      }
+      console.log('Found vehicles:', cityData?.length || 0, 'for city:', query);
+      if (cityData && cityData.length > 0) {
+        console.log('Sample cities in results:', cityData.slice(0, 3).map((v: any) => v.city));
+      }
 
       vehicles = cityData || [];
       
