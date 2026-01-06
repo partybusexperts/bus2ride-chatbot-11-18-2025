@@ -368,18 +368,26 @@ const VEHICLE_TYPE_KEYWORDS: Record<string, string> = {
   'limobus': 'Limo Bus',
   'shuttle': 'Shuttle',
   'shuttle bus': 'Shuttle',
+  'shuttle van': 'Shuttle',
   'sprinter': 'Sprinter',
   'mercedes sprinter': 'Sprinter',
+  'sprinter van': 'Sprinter',
   'executive': 'Executive',
   'executive van': 'Executive',
   'charter': 'Charter Bus',
   'charter bus': 'Charter Bus',
   'coach': 'Charter Bus',
+  'coach bus': 'Charter Bus',
   'motor coach': 'Charter Bus',
   'sedan': 'Sedan',
+  'town car': 'Sedan',
+  'towncar': 'Sedan',
+  'lincoln': 'Sedan',
   'suv': 'SUV',
   'escalade': 'SUV',
   'navigator': 'SUV',
+  'suburban': 'SUV',
+  'yukon': 'SUV',
   'hummer': 'Hummer',
   'h2': 'Hummer',
   'trolley': 'Trolley',
@@ -387,6 +395,13 @@ const VEHICLE_TYPE_KEYWORDS: Record<string, string> = {
   'classic': 'Vintage',
   'rolls royce': 'Rolls Royce',
   'bentley': 'Bentley',
+  'van': 'Van',
+  'passenger van': 'Van',
+  'minivan': 'Van',
+  'mini van': 'Van',
+  'bus': 'Bus',
+  'mini bus': 'Mini Bus',
+  'minibus': 'Mini Bus',
 };
 
 const CITY_KEYWORDS = [
@@ -1043,6 +1058,16 @@ const COMMON_FIRST_NAMES = [
   'kenneth', 'kevin', 'brian', 'george', 'timothy', 'ronald', 'edward', 'jason', 'jeffrey', 'ryan',
   'jacob', 'gary', 'nicholas', 'eric', 'jonathan', 'stephen', 'larry', 'justin', 'scott', 'brandon',
   'benjamin', 'samuel', 'raymond', 'gregory', 'frank', 'alexander', 'patrick', 'jack', 'dennis', 'jerry',
+  'dane', 'dean', 'dale', 'darren', 'daryl', 'devin', 'dominic', 'don', 'doug', 'dwight', 'dylan',
+  'earl', 'eddie', 'edgar', 'edwin', 'elliot', 'elmer', 'ernest', 'eugene', 'felix', 'floyd',
+  'freddie', 'fred', 'gene', 'gerald', 'glen', 'glenn', 'gordon', 'graham', 'hal', 'hank',
+  'harold', 'harry', 'harvey', 'hector', 'henry', 'herbert', 'herman', 'howard', 'hugh', 'ivan',
+  'irving', 'jackie', 'jaden', 'jaiden', 'jake', 'jamie', 'jared', 'jarrett', 'jay', 'jesse',
+  'jess', 'jimmy', 'johnny', 'jonas', 'jonah', 'jordan', 'jorge', 'juan', 'karl', 'keith',
+  'ken', 'kenny', 'kerry', 'kirk', 'kurt', 'lance', 'leo', 'leon', 'leonard', 'leroy',
+  'leslie', 'lester', 'lloyd', 'lonnie', 'louis', 'lou', 'luke', 'lyle', 'manny', 'marty',
+  'marvin', 'mel', 'melvin', 'mickey', 'miles', 'milo', 'mitch', 'morris', 'murray', 'neil',
+  'nelson', 'norm', 'norman', 'ollie', 'orlando', 'oscar', 'otis', 'otto', 'owen', 'pat',
   'mary', 'patricia', 'jennifer', 'linda', 'elizabeth', 'barbara', 'susan', 'jessica', 'sarah', 'karen',
   'lisa', 'nancy', 'betty', 'margaret', 'sandra', 'ashley', 'kimberly', 'emily', 'donna', 'michelle',
   'dorothy', 'carol', 'amanda', 'melissa', 'deborah', 'stephanie', 'rebecca', 'sharon', 'laura', 'cynthia',
@@ -1556,15 +1581,16 @@ function detectPattern(text: string): DetectedItem | null {
     }
   }
 
-  for (const event of EVENT_KEYWORDS) {
-    if (lowerText === event || lowerText.startsWith(event + ' ') || lowerText.endsWith(' ' + event)) {
-      return { type: 'event_type', value: trimmed, confidence: 0.9, original: trimmed };
-    }
-  }
-
+  // VEHICLE TYPES MUST BE CHECKED BEFORE EVENTS (so "party bus" matches vehicle, not "party" event)
   for (const [keyword, vehicleType] of Object.entries(VEHICLE_TYPE_KEYWORDS)) {
     if (lowerText === keyword || lowerText.includes(keyword)) {
       return { type: 'vehicle_type', value: vehicleType, confidence: 0.9, original: trimmed };
+    }
+  }
+
+  for (const event of EVENT_KEYWORDS) {
+    if (lowerText === event || lowerText.startsWith(event + ' ') || lowerText.endsWith(' ' + event)) {
+      return { type: 'event_type', value: trimmed, confidence: 0.9, original: trimmed };
     }
   }
 
