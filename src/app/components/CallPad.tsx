@@ -374,9 +374,16 @@ export default function CallPad() {
     
     if (chip.type === 'city' || chip.type === 'zip') {
       const lowerCity = chip.value.toLowerCase().trim();
-      const ambiguousOptions = AMBIGUOUS_CITIES[lowerCity];
       
-      if (ambiguousOptions && chip.type === 'city' && !chip.normalizedCity) {
+      // Check if state is already specified (e.g., "madison wi", "madison, wi")
+      const hasStateSpecified = /\b(al|ak|az|ar|ca|co|ct|de|fl|ga|hi|id|il|in|ia|ks|ky|la|me|md|ma|mi|mn|ms|mo|mt|ne|nv|nh|nj|nm|ny|nc|nd|oh|ok|or|pa|ri|sc|sd|tn|tx|ut|vt|va|wa|wv|wi|wy)\b/i.test(lowerCity) ||
+        /\b(alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington|west virginia|wisconsin|wyoming)\b/i.test(lowerCity);
+      
+      // Only show disambiguation if state is NOT already specified
+      const cityNameOnly = lowerCity.replace(/,?\s*(al|ak|az|ar|ca|co|ct|de|fl|ga|hi|id|il|in|ia|ks|ky|la|me|md|ma|mi|mn|ms|mo|mt|ne|nv|nh|nj|nm|ny|nc|nd|oh|ok|or|pa|ri|sc|sd|tn|tx|ut|vt|va|wa|wv|wi|wy|alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington|west virginia|wisconsin|wyoming)\s*$/i, '').trim();
+      const ambiguousOptions = AMBIGUOUS_CITIES[cityNameOnly];
+      
+      if (ambiguousOptions && chip.type === 'city' && !chip.normalizedCity && !hasStateSpecified) {
         setCityDisambiguation({ city: chip.value, options: ambiguousOptions });
         return;
       }
@@ -1613,6 +1620,66 @@ export default function CallPad() {
             </div>
           </div>
         )}
+        
+        {cityDisambiguation && (
+          <div style={{ 
+            marginTop: '10px', 
+            padding: '10px 14px', 
+            background: '#fef3c7', 
+            borderRadius: '8px',
+            border: '2px solid #f59e0b',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+          }}>
+            <span style={{ fontSize: '13px', color: '#92400e', fontWeight: 700 }}>
+              Which {cityDisambiguation.city}?
+            </span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {cityDisambiguation.options.map(state => (
+                <button
+                  key={state}
+                  onClick={() => {
+                    const fullCity = `${cityDisambiguation.city}, ${state}`;
+                    setHistoryCities(prev => {
+                      const newHistory = prev.map(c => ({ ...c, active: false }));
+                      newHistory.push({ value: fullCity, addedAt: Date.now(), active: true });
+                      return newHistory;
+                    });
+                    setConfirmedData(prev => ({ ...prev, cityOrZip: fullCity, searchedCity: fullCity }));
+                    setCityDisambiguation(null);
+                  }}
+                  style={{
+                    padding: '6px 14px',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    background: '#fff',
+                    border: '2px solid #d97706',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    color: '#92400e',
+                  }}
+                >
+                  {state}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setCityDisambiguation(null)}
+              style={{
+                padding: '4px 8px',
+                fontSize: '16px',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#92400e',
+                marginLeft: 'auto',
+              }}
+            >
+              ×
+            </button>
+          </div>
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '300px 280px 1fr', gap: '16px' }}>
@@ -1702,61 +1769,6 @@ export default function CallPad() {
                 {lookingUpPlace && (
                   <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
                     Looking up place...
-                  </div>
-                )}
-                {cityDisambiguation && (
-                  <div style={{ 
-                    marginTop: '6px', 
-                    padding: '8px', 
-                    background: '#fef3c7', 
-                    borderRadius: '6px',
-                    border: '1px solid #f59e0b',
-                  }}>
-                    <div style={{ fontSize: '11px', color: '#92400e', fontWeight: 600, marginBottom: '6px' }}>
-                      Which {cityDisambiguation.city}?
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                      {cityDisambiguation.options.map(state => (
-                        <button
-                          key={state}
-                          onClick={() => {
-                            const fullCity = `${cityDisambiguation.city}, ${state}`;
-                            setHistoryCities(prev => {
-                              const newHistory = prev.map(c => ({ ...c, active: false }));
-                              newHistory.push({ value: fullCity, addedAt: Date.now(), active: true });
-                              return newHistory;
-                            });
-                            setConfirmedData(prev => ({ ...prev, cityOrZip: fullCity }));
-                            setCityDisambiguation(null);
-                          }}
-                          style={{
-                            padding: '4px 10px',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            background: '#fff',
-                            border: '1px solid #d97706',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            color: '#92400e',
-                          }}
-                        >
-                          {state}
-                        </button>
-                      ))}
-                      <button
-                        onClick={() => setCityDisambiguation(null)}
-                        style={{
-                          padding: '4px 8px',
-                          fontSize: '11px',
-                          background: 'transparent',
-                          border: 'none',
-                          cursor: 'pointer',
-                          color: '#9ca3af',
-                        }}
-                      >
-                        ×
-                      </button>
-                    </div>
                   </div>
                 )}
               </div>

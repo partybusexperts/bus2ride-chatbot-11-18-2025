@@ -285,9 +285,10 @@ const CITY_KEYWORDS = [
   'san diego', 'san francisco', 'seattle', 'portland', 'atlanta', 'miami',
   'orlando', 'tampa', 'boston', 'new york', 'philadelphia', 'detroit',
   'minneapolis', 'st louis', 'kansas city', 'nashville', 'memphis', 'charlotte',
-  'westmont', 'springfield', 'clinton', 'franklin', 'madison', 'georgetown',
-  'greenville', 'bristol', 'auburn', 'oxford', 'riverside', 'fairfield',
-  'manchester', 'columbia', 'lexington', 'nyc', 'la', 'sf', 'dc', 'philly',
+  'westmont', 'springfield', 'clinton', 'franklin', 'madison', 'madison wi',
+  'madison wisconsin', 'georgetown', 'greenville', 'bristol', 'auburn', 'oxford', 
+  'riverside', 'fairfield', 'manchester', 'columbia', 'lexington', 
+  'nyc', 'la', 'sf', 'dc', 'philly',
   'grand rapids', 'ann arbor', 'salt lake city', 'oklahoma city', 'fort worth',
   'san jose', 'jacksonville', 'indianapolis', 'columbus', 'fort lauderdale',
   'el paso', 'milwaukee', 'albuquerque', 'raleigh', 'omaha', 'virginia beach',
@@ -729,6 +730,8 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'kaysville': 'Salt Lake City', 'clearfield ut': 'Salt Lake City', 'clinton ut': 'Salt Lake City',
   'roy ut': 'Salt Lake City', 'syracuse ut': 'Salt Lake City', 'park city': 'Salt Lake City',
   'downtown slc': 'Salt Lake City', 'sugar house': 'Salt Lake City', 'the avenues': 'Salt Lake City',
+  // Madison WI - major city (not a suburb, maps to itself)
+  'madison wi': 'Madison', 'madison wisconsin': 'Madison', 'madison, wi': 'Madison', 'madison, wisconsin': 'Madison',
 };
 
 // Remote locations that are 1+ hour from the nearest major metro - agent should be warned
