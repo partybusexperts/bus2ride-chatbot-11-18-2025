@@ -85,7 +85,10 @@ Return ONLY the JSON array, no other text.`;
         temperature: 0.7,
       });
 
-      const content = completion.choices[0]?.message?.content?.trim() || '[]';
+      let content = completion.choices[0]?.message?.content?.trim() || '';
+      
+      // Remove markdown code blocks if present
+      content = content.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
       
       let tips: string[] = [];
       try {
@@ -94,8 +97,20 @@ Return ONLY the JSON array, no other text.`;
           tips = parsed.filter(t => typeof t === 'string').slice(0, 3);
         }
       } catch {
-        const lines = content.split('\n').filter(l => l.trim().length > 0);
-        tips = lines.slice(0, 3).map(l => l.replace(/^[\d\.\-\*]+\s*/, '').trim());
+        // If JSON parsing fails, try to extract tips line by line
+        const lines = content.split('\n').filter(l => l.trim().length > 5);
+        tips = lines.slice(0, 3).map(l => {
+          // Clean up common prefixes
+          return l.replace(/^[\d\.\-\*\[\]\"]+\s*/, '')
+                  .replace(/[\"\],]+$/, '')
+                  .replace(/^"/, '')
+                  .trim();
+        }).filter(t => t.length > 5);
+      }
+
+      // If still no tips, return empty
+      if (tips.length === 0) {
+        return NextResponse.json({ tips: [] });
       }
 
       return NextResponse.json({ tips });
