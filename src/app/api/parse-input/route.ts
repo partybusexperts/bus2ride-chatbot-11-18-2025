@@ -279,6 +279,7 @@ const VEHICLE_TYPE_KEYWORDS: Record<string, string> = {
 };
 
 const CITY_KEYWORDS = [
+  // Major metros
   'phoenix', 'scottsdale', 'mesa', 'tempe', 'glendale', 'chandler', 'gilbert',
   'peoria', 'surprise', 'goodyear', 'avondale', 'tucson', 'las vegas', 'denver',
   'chicago', 'dallas', 'houston', 'austin', 'san antonio', 'los angeles',
@@ -294,6 +295,140 @@ const CITY_KEYWORDS = [
   'el paso', 'milwaukee', 'albuquerque', 'raleigh', 'omaha', 'virginia beach',
   'colorado springs', 'long beach', 'oakland', 'sacramento', 'fresno', 'tulsa',
   'cleveland', 'pittsburgh', 'cincinnati', 'bakersfield', 'wichita', 'arlington',
+  // Michigan cities
+  'battle creek', 'kalamazoo', 'lansing', 'flint', 'saginaw', 'muskegon', 'traverse city',
+  'holland', 'port huron', 'jackson', 'midland', 'bay city', 'dearborn', 'livonia',
+  'warren', 'sterling heights', 'troy', 'farmington hills', 'southfield', 'novi',
+  // Ohio cities
+  'akron', 'toledo', 'dayton', 'youngstown', 'canton', 'parma', 'lorain', 'hamilton',
+  'kettering', 'elyria', 'lakewood', 'cuyahoga falls', 'euclid', 'mentor', 'dublin',
+  // Indiana cities
+  'fort wayne', 'evansville', 'south bend', 'carmel', 'fishers', 'bloomington',
+  'hammond', 'gary', 'muncie', 'terre haute', 'kokomo', 'lafayette', 'noblesville',
+  // Illinois cities (beyond Chicago)
+  'rockford', 'naperville', 'joliet', 'elgin', 'waukegan', 'champaign', 'urbana',
+  'peoria il', 'bloomington il', 'normal', 'decatur', 'aurora il', 'schaumburg',
+  // Wisconsin cities
+  'green bay', 'kenosha', 'racine', 'appleton', 'waukesha', 'oshkosh', 'eau claire',
+  'janesville', 'la crosse', 'sheboygan', 'fond du lac', 'brookfield', 'wausau',
+  // Minnesota cities
+  'st paul', 'rochester mn', 'duluth', 'bloomington mn', 'brooklyn park', 'plymouth',
+  'woodbury', 'maple grove', 'blaine', 'lakeville', 'burnsville', 'eden prairie',
+  // Iowa cities
+  'des moines', 'cedar rapids', 'davenport', 'sioux city', 'iowa city', 'waterloo',
+  'council bluffs', 'ames', 'dubuque', 'west des moines', 'ankeny', 'urbandale',
+  // Missouri cities
+  'st charles', 'independence', 'columbia mo', 'lee summit', 'ofallon', 'springfield mo',
+  'joplin', 'jefferson city', 'cape girardeau', 'florissant', 'chesterfield',
+  // Kansas cities
+  'wichita', 'overland park', 'kansas city ks', 'olathe', 'topeka', 'lawrence',
+  'shawnee', 'manhattan ks', 'lenexa', 'salina', 'hutchinson',
+  // Nebraska cities
+  'omaha', 'lincoln', 'bellevue', 'grand island', 'kearney', 'fremont', 'hastings',
+  // North Dakota / South Dakota
+  'fargo', 'bismarck', 'grand forks', 'minot', 'sioux falls', 'rapid city', 'aberdeen',
+  // Texas cities (comprehensive)
+  'lubbock', 'amarillo', 'laredo', 'corpus christi', 'brownsville', 'mcallen',
+  'midland tx', 'odessa', 'beaumont', 'waco', 'abilene', 'tyler', 'college station',
+  'round rock', 'pearland', 'sugar land', 'the woodlands', 'killeen', 'carrollton',
+  // Florida cities (comprehensive)
+  'st petersburg', 'hialeah', 'tallahassee', 'cape coral', 'fort myers', 'pembroke pines',
+  'hollywood fl', 'gainesville fl', 'miramar', 'coral springs', 'clearwater', 'palm bay',
+  'lakeland', 'pompano beach', 'west palm beach', 'davie', 'boca raton', 'sunrise',
+  // Georgia cities
+  'savannah', 'augusta', 'macon', 'athens', 'sandy springs', 'roswell', 'johns creek',
+  'alpharetta', 'marietta', 'smyrna', 'albany ga', 'valdosta', 'warner robins',
+  // North Carolina cities
+  'durham', 'greensboro', 'winston salem', 'fayetteville', 'cary', 'wilmington nc',
+  'high point', 'concord', 'asheville', 'gastonia', 'jacksonville nc', 'chapel hill',
+  // South Carolina cities
+  'columbia sc', 'charleston', 'north charleston', 'mount pleasant', 'rock hill',
+  'greenville sc', 'summerville', 'goose creek', 'hilton head', 'myrtle beach',
+  // Virginia cities
+  'virginia beach', 'norfolk', 'chesapeake', 'richmond', 'newport news', 'alexandria',
+  'hampton', 'roanoke', 'portsmouth', 'suffolk', 'lynchburg', 'harrisonburg',
+  // Tennessee cities
+  'knoxville', 'chattanooga', 'clarksville', 'murfreesboro', 'franklin tn', 'jackson tn',
+  'johnson city', 'bartlett', 'hendersonville', 'kingsport', 'collierville', 'smyrna tn',
+  // Kentucky cities
+  'louisville', 'lexington ky', 'bowling green', 'owensboro', 'covington', 'hopkinsville',
+  'richmond ky', 'florence ky', 'georgetown ky', 'elizabethtown', 'nicholasville',
+  // Alabama cities
+  'birmingham', 'montgomery', 'mobile', 'huntsville', 'tuscaloosa', 'hoover',
+  'dothan', 'auburn al', 'decatur al', 'madison al', 'florence al', 'gadsden',
+  // Mississippi cities
+  'jackson ms', 'gulfport', 'southaven', 'biloxi', 'hattiesburg', 'olive branch',
+  'tupelo', 'meridian', 'greenville ms', 'horn lake', 'clinton ms', 'pearl',
+  // Louisiana cities
+  'new orleans', 'baton rouge', 'shreveport', 'metairie', 'lafayette la', 'lake charles',
+  'kenner', 'bossier city', 'monroe la', 'alexandria la', 'houma', 'new iberia',
+  // Arkansas cities
+  'little rock', 'fort smith', 'fayetteville ar', 'springdale ar', 'jonesboro',
+  'north little rock', 'conway', 'rogers ar', 'bentonville', 'pine bluff', 'hot springs',
+  // Oklahoma cities
+  'oklahoma city', 'tulsa', 'norman', 'broken arrow', 'lawton', 'edmond', 'moore ok',
+  'midwest city', 'enid', 'stillwater', 'muskogee', 'bartlesville', 'owasso',
+  // New Mexico cities
+  'albuquerque', 'las cruces', 'rio rancho', 'santa fe', 'roswell nm', 'farmington nm',
+  'clovis nm', 'hobbs', 'alamogordo', 'carlsbad nm',
+  // Arizona cities (beyond Phoenix metro)
+  'tucson', 'yuma', 'flagstaff', 'prescott', 'lake havasu city', 'bullhead city',
+  'casa grande', 'sierra vista', 'maricopa az', 'apache junction', 'prescott valley',
+  // Nevada cities
+  'las vegas', 'henderson', 'reno', 'north las vegas', 'sparks', 'carson city',
+  // Utah cities
+  'salt lake city', 'west valley city', 'provo', 'west jordan', 'orem', 'sandy ut',
+  'ogden', 'st george', 'layton', 'south jordan', 'lehi', 'millcreek', 'taylorsville',
+  // Colorado cities
+  'denver', 'colorado springs', 'aurora co', 'fort collins', 'lakewood co', 'thornton',
+  'arvada', 'westminster co', 'pueblo', 'centennial', 'boulder', 'greeley', 'longmont',
+  // Idaho cities
+  'boise', 'meridian id', 'nampa', 'idaho falls', 'pocatello', 'caldwell', 'coeur dalene',
+  'twin falls', 'lewiston', 'post falls', 'rexburg', 'moscow id',
+  // Montana cities
+  'billings', 'missoula', 'great falls', 'bozeman', 'butte', 'helena', 'kalispell',
+  // Wyoming cities
+  'cheyenne', 'casper', 'laramie', 'gillette', 'rock springs', 'sheridan', 'jackson wy',
+  // Washington cities
+  'seattle', 'spokane', 'tacoma', 'vancouver wa', 'bellevue', 'kent', 'everett',
+  'renton', 'spokane valley', 'federal way', 'yakima', 'bellingham', 'kirkland',
+  // Oregon cities
+  'portland', 'salem', 'eugene', 'gresham', 'hillsboro', 'beaverton', 'bend',
+  'medford', 'springfield or', 'corvallis', 'albany or', 'tigard', 'lake oswego',
+  // California cities (comprehensive)
+  'los angeles', 'san diego', 'san jose', 'san francisco', 'fresno', 'sacramento',
+  'long beach', 'oakland', 'bakersfield', 'anaheim', 'santa ana', 'riverside',
+  'stockton', 'irvine', 'chula vista', 'fremont', 'san bernardino', 'modesto',
+  'fontana', 'moreno valley', 'glendale ca', 'huntington beach', 'santa clarita',
+  'garden grove', 'oceanside', 'rancho cucamonga', 'ontario ca', 'santa rosa',
+  'elk grove', 'corona', 'lancaster', 'palmdale', 'salinas', 'pomona', 'hayward',
+  'escondido', 'sunnyvale', 'torrance', 'pasadena ca', 'orange', 'fullerton',
+  'thousand oaks', 'roseville', 'concord ca', 'simi valley', 'santa clara',
+  'victorville', 'vallejo', 'berkeley', 'el monte', 'downey', 'costa mesa',
+  'inglewood', 'carlsbad', 'san buenaventura', 'ventura', 'fairfield ca', 'west covina',
+  'murrieta', 'richmond ca', 'norwalk', 'antioch ca', 'temecula', 'burbank',
+  'daly city', 'el cajon', 'san mateo', 'clovis', 'compton', 'jurupa valley',
+  'vista', 'south gate', 'mission viejo', 'vacaville', 'carson', 'hesperia',
+  'santa maria', 'redding', 'westminster ca', 'santa monica', 'chico', 'newport beach',
+  // New England cities
+  'hartford', 'new haven', 'stamford', 'bridgeport', 'waterbury', 'norwalk ct',
+  'providence', 'warwick', 'cranston', 'pawtucket', 'worcester', 'springfield ma',
+  'lowell', 'cambridge', 'new bedford', 'brockton', 'quincy', 'lynn', 'fall river',
+  'manchester nh', 'nashua', 'concord nh', 'portsmouth nh', 'dover nh', 'rochester nh',
+  'burlington vt', 'south burlington', 'rutland', 'barre', 'montpelier',
+  'portland me', 'lewiston me', 'bangor', 'south portland', 'auburn me',
+  // Mid-Atlantic cities
+  'newark', 'jersey city', 'paterson', 'elizabeth', 'edison', 'woodbridge',
+  'lakewood nj', 'toms river', 'trenton', 'camden', 'cherry hill', 'atlantic city',
+  'yonkers', 'rochester ny', 'buffalo', 'syracuse', 'albany ny', 'new rochelle',
+  'mount vernon ny', 'schenectady', 'utica', 'white plains', 'hempstead', 'troy ny',
+  'wilmington de', 'dover de', 'newark de', 'middletown de', 'smyrna de',
+  'baltimore', 'frederick', 'rockville', 'gaithersburg', 'bowie', 'hagerstown',
+  'annapolis', 'college park md', 'salisbury', 'laurel md', 'greenbelt',
+  'washington dc', 'arlington va', 'fairfax', 'falls church', 'manassas', 'leesburg',
+  // Alaska / Hawaii
+  'anchorage', 'fairbanks', 'juneau', 'sitka', 'ketchikan', 'wasilla',
+  'honolulu', 'pearl city', 'hilo', 'kailua', 'kapolei', 'kaneohe', 'maui', 'kona',
 ];
 
 // City normalization - map suburbs/small cities to their major metro for vehicle search
