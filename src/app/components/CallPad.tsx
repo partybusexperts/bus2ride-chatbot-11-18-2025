@@ -257,6 +257,10 @@ export default function CallPad() {
     changes: Array<{ field: string; fieldKey: string; oldValue: string; newValue: string }>;
   } | null>(null);
 
+  const [agentTips, setAgentTips] = useState<string[]>([]);
+  const [loadingTips, setLoadingTips] = useState(false);
+  const tipsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const AMBIGUOUS_CITIES: Record<string, string[]> = {
     'westmont': ['IL', 'NJ', 'CA', 'PA'],
     'springfield': ['IL', 'MA', 'MO', 'OH', 'OR', 'NJ'],
@@ -796,6 +800,69 @@ export default function CallPad() {
       setRateHours(hours);
     }
   }, [confirmedData.hours]);
+
+  // Fetch AI tips when call context changes
+  useEffect(() => {
+    if (tipsTimeoutRef.current) {
+      clearTimeout(tipsTimeoutRef.current);
+    }
+
+    const hasContext = confirmedData.cityOrZip || confirmedData.pickupAddress || confirmedData.eventType || confirmedData.dropoffAddress;
+    if (!hasContext) {
+      setAgentTips([]);
+      return;
+    }
+
+    tipsTimeoutRef.current = setTimeout(async () => {
+      setLoadingTips(true);
+      try {
+        const res = await fetch('/api/agent-tips', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            city: confirmedData.cityOrZip,
+            pickupAddress: confirmedData.pickupAddress,
+            dropoffAddress: confirmedData.dropoffAddress,
+            eventType: confirmedData.eventType,
+            date: confirmedData.date,
+            time: confirmedData.pickupTime,
+            passengers: Number(confirmedData.passengers) || undefined,
+            hours: Number(confirmedData.hours) || undefined,
+            vehicleType: confirmedData.vehicleType,
+            quotedVehicles: quotedVehicles.map(v => ({ name: v.name, price: v.price, capacity: v.capacity })),
+            availableVehicles: vehicles.slice(0, 20).map(v => ({ 
+              name: v.name, 
+              price: v.displayPrice || v.price, 
+              capacity: v.capacity,
+              category: v.category 
+            })),
+          }),
+        });
+        const data = await res.json();
+        setAgentTips(data.tips || []);
+      } catch (err) {
+        console.error('Tips fetch error:', err);
+      } finally {
+        setLoadingTips(false);
+      }
+    }, 800);
+
+    return () => {
+      if (tipsTimeoutRef.current) clearTimeout(tipsTimeoutRef.current);
+    };
+  }, [
+    confirmedData.cityOrZip,
+    confirmedData.pickupAddress,
+    confirmedData.dropoffAddress,
+    confirmedData.eventType,
+    confirmedData.date,
+    confirmedData.pickupTime,
+    confirmedData.passengers,
+    confirmedData.hours,
+    confirmedData.vehicleType,
+    vehicles,
+    quotedVehicles,
+  ]);
 
   function toggleQuoted(vehicle: any) {
     const wasQuoted = quotedVehicles.some(v => v.id === vehicle.id);
@@ -1681,6 +1748,58 @@ export default function CallPad() {
           </div>
         )}
       </div>
+
+      {/* AI Sales Tips Box */}
+      {(agentTips.length > 0 || loadingTips) && (
+        <div style={{
+          background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
+          border: '2px solid #10b981',
+          borderRadius: '10px',
+          padding: '12px 16px',
+          marginBottom: '12px',
+          boxShadow: '0 2px 8px rgba(16, 185, 129, 0.15)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <span style={{ fontSize: '18px' }}>💡</span>
+            <span style={{ 
+              fontSize: '13px', 
+              fontWeight: 700, 
+              color: '#047857',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}>
+              AI Sales Tips
+            </span>
+            {loadingTips && (
+              <span style={{ fontSize: '12px', color: '#6b7280', marginLeft: 'auto' }}>updating...</span>
+            )}
+          </div>
+          {agentTips.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {agentTips.map((tip, idx) => (
+                <div 
+                  key={idx}
+                  style={{
+                    background: '#fff',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    color: '#1f2937',
+                    lineHeight: '1.4',
+                    borderLeft: '3px solid #10b981',
+                  }}
+                >
+                  {tip}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ fontSize: '12px', color: '#6b7280', fontStyle: 'italic' }}>
+              Tips will appear as you enter call details...
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '300px 280px 1fr', gap: '16px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
