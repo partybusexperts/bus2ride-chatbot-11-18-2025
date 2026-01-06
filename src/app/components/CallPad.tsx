@@ -215,6 +215,7 @@ export default function CallPad() {
     phone: "",
     email: "",
     cityOrZip: "",
+    searchedCity: "", // Original city/suburb entered (for display)
     passengers: "",
     hours: "",
     eventType: "",
@@ -447,16 +448,18 @@ export default function CallPad() {
       // Use normalized city (major metro) for vehicle search, but show original for display
       // e.g., "mesa az" shows as Mesa AZ but searches vehicles for Phoenix
       const searchCity = chip.normalizedCity || chip.value;
+      const wasNormalized = chip.normalizedCity && chip.normalizedCity.toLowerCase() !== chip.value.toLowerCase();
       
-      // Update both cityOrZip (for vehicle search) and pickupAddress when a new city/zip is entered
+      // Update cityOrZip (for vehicle search), searchedCity (original for display), and pickupAddress
       setConfirmedData(prev => ({ 
         ...prev, 
         cityOrZip: searchCity, // Use normalized city for vehicle search
+        searchedCity: wasNormalized ? chip.value : '', // Only set if different from normalized
         pickupAddress: chip.value // Keep original for display/Zoho
       }));
       
       // Show notification if city was normalized
-      if (chip.normalizedCity && chip.normalizedCity.toLowerCase() !== chip.value.toLowerCase()) {
+      if (wasNormalized) {
         console.log(`[City Normalization] "${chip.value}" → searching vehicles for "${chip.normalizedCity}"`);
       }
       
@@ -498,6 +501,7 @@ export default function CallPad() {
         setConfirmedData(prev => ({
           ...prev,
           cityOrZip: chip.normalizedCity!,
+          searchedCity: chip.value, // Track original suburb
         }));
         console.log(`[Pickup City Normalization] "${chip.value}" → searching vehicles for "${chip.normalizedCity}"`);
       } else if (isKnownCity) {
@@ -2100,15 +2104,28 @@ export default function CallPad() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
+              flexWrap: 'wrap',
             }}>
-              <span style={{ fontSize: '12px', color: '#93c5fd', fontWeight: 500 }}>SEARCHING:</span>
-              <span style={{ fontSize: '22px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
-                {confirmedData.cityOrZip.toUpperCase()}
-              </span>
-              {confirmedData.pickupAddress && confirmedData.pickupAddress.toLowerCase() !== confirmedData.cityOrZip.toLowerCase() && (
-                <span style={{ fontSize: '11px', color: '#93c5fd', marginLeft: '8px' }}>
-                  (Pickup: {confirmedData.pickupAddress})
-                </span>
+              {confirmedData.searchedCity && confirmedData.searchedCity.toLowerCase() !== confirmedData.cityOrZip.toLowerCase() ? (
+                <>
+                  <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: 500 }}>SEARCHED:</span>
+                  <span style={{ fontSize: '16px', fontWeight: 600, color: '#bfdbfe', letterSpacing: '0.5px' }}>
+                    {confirmedData.searchedCity.toUpperCase()}
+                  </span>
+                  <span style={{ fontSize: '16px', color: '#93c5fd', fontWeight: 500 }}>→</span>
+                  <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: 500 }}>SHOWING:</span>
+                  <span style={{ fontSize: '22px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
+                    {confirmedData.cityOrZip.toUpperCase()}
+                  </span>
+                  <span style={{ fontSize: '11px', color: '#fcd34d', fontWeight: 500, marginLeft: '4px' }}>RATES</span>
+                </>
+              ) : (
+                <>
+                  <span style={{ fontSize: '12px', color: '#93c5fd', fontWeight: 500 }}>SEARCHING:</span>
+                  <span style={{ fontSize: '22px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
+                    {confirmedData.cityOrZip.toUpperCase()}
+                  </span>
+                </>
               )}
               <span style={{ fontSize: '12px', color: '#93c5fd', marginLeft: 'auto' }}>
                 {vehicles.length} vehicle{vehicles.length !== 1 ? 's' : ''} found
