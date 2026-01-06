@@ -1375,7 +1375,7 @@ export default function CallPad() {
   };
 
   return (
-    <div style={{ background: '#f3f4f6', padding: '16px', borderRadius: '12px', paddingTop: '160px' }}>
+    <div style={{ background: '#f3f4f6', padding: '16px', borderRadius: '12px', paddingTop: '110px' }}>
       <div style={{ 
         background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #2d5a87 100%)',
         padding: '16px 20px',
@@ -2089,7 +2089,7 @@ export default function CallPad() {
               marginBottom: '12px',
               textAlign: 'center',
             }}>
-              <span style={{ fontSize: '14px', color: '#9ca3af' }}>Enter a city or ZIP to search vehicles</span>
+              <span style={{ fontSize: '14px', color: '#9ca3af' }}>Vehicles will appear here once a city is entered</span>
             </div>
           )}
 
