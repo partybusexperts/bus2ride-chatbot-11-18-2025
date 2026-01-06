@@ -684,19 +684,76 @@ function detectPattern(text: string): DetectedItem | null {
     }
   }
   
+  // Helper to parse time like "630pm" -> "6:30pm", "5pm" -> "5pm", "530" -> "5:30pm"
+  function parseTimeValue(hourPart: string, colonMinutes: string | undefined, rawMinutes: string | undefined, meridiem: string | undefined): string {
+    let hour = hourPart;
+    let minutes = '00';
+    
+    // If we have colon minutes like ":30", use those
+    if (colonMinutes) {
+      minutes = colonMinutes.replace(':', '');
+    }
+    // If hour part is 3-4 digits like "630" or "1030", split it
+    else if (hourPart.length >= 3) {
+      if (hourPart.length === 3) {
+        // "630" -> hour="6", minutes="30"
+        hour = hourPart.charAt(0);
+        minutes = hourPart.slice(1);
+      } else if (hourPart.length === 4) {
+        // "1030" -> hour="10", minutes="30"
+        hour = hourPart.slice(0, 2);
+        minutes = hourPart.slice(2);
+      }
+    }
+    // If we have raw minutes like "30" after space
+    else if (rawMinutes) {
+      minutes = rawMinutes.padStart(2, '0');
+    }
+    
+    const period = meridiem ? (meridiem.toLowerCase().startsWith('a') ? 'am' : 'pm') : 'pm';
+    return `${hour}:${minutes}${period}`;
+  }
+  
+  // Handle "pu at 630pm", "pu 630pm", "pu at 6:30pm", "pickup at 630 pm", etc.
+  // Matches: pu/pickup + (at)? + time (630pm, 6:30pm, 630 pm, 6 30 pm, etc.)
+  const puAtTimeMatch = lowerText.match(/^(pu|up|p\.u\.|u\.p\.|p\/u|pickup|pick\s*-?\s*up)\s*(at|@)?\s*(\d{1,4})(:\d{2})?\s*(\d{2})?\s*([ap]\.?m?\.?)?$/i);
+  if (puAtTimeMatch) {
+    const timeVal = parseTimeValue(puAtTimeMatch[3], puAtTimeMatch[4], puAtTimeMatch[5], puAtTimeMatch[6]);
+    return { type: 'time', value: timeVal, confidence: 0.95, original: trimmed };
+  }
+  
+  // Handle "630pm pu", "6:30pm pickup", "630 pm pick up", "6 30 pm pu"
+  const timeBeforePuPatternMatch = lowerText.match(/^(\d{1,4})(:\d{2})?\s*(\d{2})?\s*([ap]\.?m?\.?)?\s*(pu|up|p\.u\.|u\.p\.|p\/u|pickup|pick\s*-?\s*up)$/i);
+  if (timeBeforePuPatternMatch) {
+    const timeVal = parseTimeValue(timeBeforePuPatternMatch[1], timeBeforePuPatternMatch[2], timeBeforePuPatternMatch[3], timeBeforePuPatternMatch[4]);
+    return { type: 'time', value: timeVal, confidence: 0.95, original: trimmed };
+  }
+  
+  // Handle "do at 630pm", "dropoff at 6:30pm", etc.
+  const doAtTimeMatch = lowerText.match(/^(do|d\.o\.|d\/o|dropoff|drop\s*-?\s*off)\s*(at|@)?\s*(\d{1,4})(:\d{2})?\s*(\d{2})?\s*([ap]\.?m?\.?)?$/i);
+  if (doAtTimeMatch) {
+    const timeVal = parseTimeValue(doAtTimeMatch[3], doAtTimeMatch[4], doAtTimeMatch[5], doAtTimeMatch[6]);
+    return { type: 'time', value: timeVal, confidence: 0.95, original: trimmed };
+  }
+  
+  // Handle "630pm do", "6:30pm dropoff", etc.
+  const timeBeforeDoPatternMatch = lowerText.match(/^(\d{1,4})(:\d{2})?\s*(\d{2})?\s*([ap]\.?m?\.?)?\s*(do|d\.o\.|d\/o|dropoff|drop\s*-?\s*off)$/i);
+  if (timeBeforeDoPatternMatch) {
+    const timeVal = parseTimeValue(timeBeforeDoPatternMatch[1], timeBeforeDoPatternMatch[2], timeBeforeDoPatternMatch[3], timeBeforeDoPatternMatch[4]);
+    return { type: 'time', value: timeVal, confidence: 0.95, original: trimmed };
+  }
+  
   // Handle "pu time is 5pm", "pickup time is 5pm", "pu time 5pm"
-  const puTimeIsMatch = lowerText.match(/^(pu|up|p\.u\.|u\.p\.|p\/u|pickup|pick\s*-?\s*up)\s*time\s*(is|=|:)?\s*(\d{1,2})(:\d{2})?\s*([ap]\.?m?\.?)?$/i);
+  const puTimeIsMatch = lowerText.match(/^(pu|up|p\.u\.|u\.p\.|p\/u|pickup|pick\s*-?\s*up)\s*time\s*(is|=|:)?\s*(\d{1,4})(:\d{2})?\s*(\d{2})?\s*([ap]\.?m?\.?)?$/i);
   if (puTimeIsMatch) {
-    const meridiem = puTimeIsMatch[5] ? (puTimeIsMatch[5].toLowerCase().startsWith('a') ? 'am' : 'pm') : 'pm';
-    const timeVal = puTimeIsMatch[3] + (puTimeIsMatch[4] || '') + meridiem;
+    const timeVal = parseTimeValue(puTimeIsMatch[3], puTimeIsMatch[4], puTimeIsMatch[5], puTimeIsMatch[6]);
     return { type: 'time', value: timeVal, confidence: 0.92, original: trimmed };
   }
   
   // Handle "do time is 5pm", "dropoff time is 5pm"
-  const doTimeIsMatch = lowerText.match(/^(do|d\.o\.|d\/o|dropoff|drop\s*-?\s*off)\s*time\s*(is|=|:)?\s*(\d{1,2})(:\d{2})?\s*([ap]\.?m?\.?)?$/i);
+  const doTimeIsMatch = lowerText.match(/^(do|d\.o\.|d\/o|dropoff|drop\s*-?\s*off)\s*time\s*(is|=|:)?\s*(\d{1,4})(:\d{2})?\s*(\d{2})?\s*([ap]\.?m?\.?)?$/i);
   if (doTimeIsMatch) {
-    const meridiem = doTimeIsMatch[5] ? (doTimeIsMatch[5].toLowerCase().startsWith('a') ? 'am' : 'pm') : 'pm';
-    const timeVal = doTimeIsMatch[3] + (doTimeIsMatch[4] || '') + meridiem;
+    const timeVal = parseTimeValue(doTimeIsMatch[3], doTimeIsMatch[4], doTimeIsMatch[5], doTimeIsMatch[6]);
     return { type: 'time', value: timeVal, confidence: 0.92, original: trimmed };
   }
   
@@ -707,7 +764,7 @@ function detectPattern(text: string): DetectedItem | null {
     // Return null to fall through
   }
   
-  // Handle "5pm pu", "5p pickup", "5:30pm pick up" (time before pickup indicator)
+  // Handle "5pm pu", "5p pickup", "5:30pm pick up" (time before pickup indicator) - legacy pattern
   const timeBeforePuMatch = lowerText.match(/^(\d{1,2})(:\d{2})?\s*([ap]\.?m?\.?)?\s*(pu|up|p\.u\.|u\.p\.|p\/u|pickup|pick\s*-?\s*up)$/i);
   if (timeBeforePuMatch) {
     const meridiem = timeBeforePuMatch[3] ? (timeBeforePuMatch[3].toLowerCase().startsWith('a') ? 'am' : 'pm') : 'pm';
