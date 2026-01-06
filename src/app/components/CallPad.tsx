@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 type DetectedType = 
   | 'phone' | 'email' | 'zip' | 'city' | 'date' | 'time' 
   | 'passengers' | 'hours' | 'pickup_address' | 'destination' 
-  | 'dropoff_address' | 'event_type' | 'vehicle_type' | 'name' | 'website' | 'stop' | 'agent' | 'unknown';
+  | 'dropoff_address' | 'event_type' | 'vehicle_type' | 'name' | 'website' | 'stop' | 'agent' | 'place' | 'unknown';
 
 interface HistoryCity {
   value: string;
