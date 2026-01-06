@@ -1318,6 +1318,42 @@ function detectPattern(text: string): DetectedItem | null {
     return { type: 'destination', value: destMatch[2], confidence: 0.85, original: trimmed };
   }
   
+  // PRIORITY: Check for city BEFORE name detection - cities must be detected first!
+  // This prevents "Battle Creek", "Grand Rapids", etc. from being detected as names
+  const lowerForCity = lowerText.replace(/,/g, '').trim();
+  const isCityKeyword = CITY_KEYWORDS.some(c => {
+    const lowerCity = c.toLowerCase();
+    // Exact match or match with state suffix
+    return lowerForCity === lowerCity || 
+           lowerForCity.startsWith(lowerCity + ' ') ||
+           lowerForCity.endsWith(' ' + lowerCity) ||
+           lowerForCity.replace(/\s+(al|ak|az|ar|ca|co|ct|de|fl|ga|hi|id|il|in|ia|ks|ky|la|me|md|ma|mi|mn|ms|mo|mt|ne|nv|nh|nj|nm|ny|nc|nd|oh|ok|or|pa|ri|sc|sd|tn|tx|ut|vt|va|wa|wv|wi|wy)$/i, '').trim() === lowerCity;
+  });
+  
+  if (isCityKeyword) {
+    const normalized = getNormalizedCity(lowerText);
+    return { 
+      type: 'city', 
+      value: trimmed, 
+      confidence: 0.92, 
+      original: trimmed,
+      ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote })
+    };
+  }
+  
+  // Also check if it's in CITY_NORMALIZATION (suburbs/metros)
+  const normalizedBeforeName = getNormalizedCity(lowerText);
+  if (normalizedBeforeName) {
+    return { 
+      type: 'city', 
+      value: trimmed, 
+      confidence: 0.9, 
+      original: trimmed,
+      normalizedCity: normalizedBeforeName.normalized,
+      isRemote: normalizedBeforeName.isRemote
+    };
+  }
+  
   const nameMatch = trimmed.match(/^(customer|caller|name|cust)\s*:?\s*(.+)/i);
   if (nameMatch && nameMatch[2] && nameMatch[2].length > 2) {
     return { type: 'name', value: nameMatch[2], confidence: 0.85, original: trimmed };
@@ -1327,7 +1363,8 @@ function detectPattern(text: string): DetectedItem | null {
   if (twoWordName && trimmed.length >= 5 && trimmed.length <= 40) {
     const firstName = twoWordName[1].toLowerCase();
     const lastName = twoWordName[2].toLowerCase();
-    const isNotCity = !CITY_KEYWORDS.some(c => c.toLowerCase() === firstName || c.toLowerCase() === trimmed.toLowerCase());
+    // Double-check it's not a city (should have been caught above, but just in case)
+    const isNotCity = !CITY_KEYWORDS.some(c => c.toLowerCase() === trimmed.toLowerCase());
     const isNotVehicle = !Object.keys(VEHICLE_TYPE_KEYWORDS).some(v => v.toLowerCase() === trimmed.toLowerCase());
     const isNotEvent = !EVENT_KEYWORDS.some(e => e.toLowerCase() === trimmed.toLowerCase());
     const isNotVenue = !VENUE_KEYWORDS.some(v => firstName.includes(v) || lastName.includes(v) || trimmed.toLowerCase().includes(v));
