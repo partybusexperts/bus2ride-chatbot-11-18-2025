@@ -19,6 +19,7 @@ interface SaveCallRequest {
     passengers?: string;
     hours?: string;
     eventType?: string;
+    vehicleType?: string;
     tripNotes?: string;
     quotedVehicles?: Array<{ name: string; price: number; hours?: number }>;
     totalQuoted?: number;
@@ -29,6 +30,7 @@ interface SaveCallRequest {
     tipIncluded?: boolean;
     paidByCard?: boolean;
     paidByCash?: boolean;
+    leadSource?: string;
   };
 }
 
@@ -151,12 +153,17 @@ function buildZohoLeadData(data: SaveCallRequest["data"], fieldsToUpdate?: strin
     Party_Sizes: data.passengers || undefined,
     Amount_Of_Hours: hoursNum || undefined,
     Event_Types: data.eventType || undefined,
+    Vehicle_Requested: data.vehicleType || undefined,
     Date_Of_Events: data.date || undefined,
     Day_of_Week: day || undefined,
     Pick_Up_Time: formatTo12Hour(data.pickupTime) || undefined,
     Drop_Off_Time: dropOffTime || undefined,
     Where_Are_They_Going: data.tripNotes || undefined,
     Vehicles_Quoted_and_Pricing: quotedVehiclesSummary || undefined,
+    Trip_Cost: data.totalQuoted || undefined,
+    Deposit: data.deposit || undefined,
+    Balance_Due: data.balance || undefined,
+    Lead_Source: data.leadSource || undefined,
     Status: mapLeadStatus(data.leadStatus),
     Agent: data.agent ? [data.agent] : undefined,
     Tip_Included: data.tipIncluded ? "Yes" : undefined,
@@ -174,11 +181,16 @@ function buildZohoLeadData(data: SaveCallRequest["data"], fieldsToUpdate?: strin
       passengers: "Party_Sizes",
       hours: "Amount_Of_Hours",
       eventType: "Event_Types",
+      vehicleType: "Vehicle_Requested",
       date: "Date_Of_Events",
       day: "Day_of_Week",
       pickupTime: "Pick_Up_Time",
       tripNotes: "Where_Are_They_Going",
       quotedVehicles: "Vehicles_Quoted_and_Pricing",
+      totalQuoted: "Trip_Cost",
+      deposit: "Deposit",
+      balance: "Balance_Due",
+      leadSource: "Lead_Source",
       leadStatus: "Status",
       agent: "Agent",
     };

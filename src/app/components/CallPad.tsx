@@ -1011,6 +1011,7 @@ export default function CallPad() {
       passengers: confirmedData.passengers,
       hours: confirmedData.hours,
       eventType: confirmedData.eventType,
+      vehicleType: confirmedData.vehicleType,
       tripNotes: confirmedData.tripNotes,
       quotedVehicles,
       totalQuoted: totalQuotedPrice,
@@ -1021,6 +1022,7 @@ export default function CallPad() {
       tipIncluded: confirmedData.tipIncluded,
       paidByCard: confirmedData.paidByCard,
       paidByCash: confirmedData.paidByCash,
+      leadSource: confirmedData.leadSource,
     };
 
     try {
@@ -1225,6 +1227,7 @@ export default function CallPad() {
       passengers: confirmedData.passengers,
       hours: confirmedData.hours,
       eventType: confirmedData.eventType,
+      vehicleType: confirmedData.vehicleType,
       tripNotes: confirmedData.tripNotes,
       quotedVehicles,
       totalQuoted: totalQuotedPrice,
@@ -1235,6 +1238,7 @@ export default function CallPad() {
       tipIncluded: confirmedData.tipIncluded,
       paidByCard: confirmedData.paidByCard,
       paidByCash: confirmedData.paidByCash,
+      leadSource: confirmedData.leadSource,
     };
     
     const fieldsToUpdate = Array.from(selectedFieldsToUpdate);
@@ -1717,9 +1721,15 @@ export default function CallPad() {
                   )}
                 </div>
               </div>
-              <div>
-                <label style={labelStyle}>Event Type</label>
-                <input style={getInputStyle(confirmedData.eventType)} placeholder="Prom, Wedding..." value={confirmedData.eventType} onChange={(e) => setConfirmedData(prev => ({ ...prev, eventType: e.target.value }))} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div>
+                  <label style={labelStyle}>Event Type</label>
+                  <input style={getInputStyle(confirmedData.eventType)} placeholder="Prom, Wedding..." value={confirmedData.eventType} onChange={(e) => setConfirmedData(prev => ({ ...prev, eventType: e.target.value }))} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Vehicle Type</label>
+                  <input style={getInputStyle(confirmedData.vehicleType)} placeholder="Party Bus, Limo..." value={confirmedData.vehicleType} onChange={(e) => setConfirmedData(prev => ({ ...prev, vehicleType: e.target.value }))} />
+                </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <div>
@@ -1877,6 +1887,24 @@ export default function CallPad() {
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
+            <div style={{ marginTop: '10px' }}>
+              <label style={labelStyle}>Lead Source</label>
+              <select
+                style={getInputStyle(confirmedData.leadSource)}
+                value={confirmedData.leadSource}
+                onChange={(e) => setConfirmedData(prev => ({ ...prev, leadSource: e.target.value }))}
+              >
+                <option value="">Select source...</option>
+                <option value="Phone Call">Phone Call</option>
+                <option value="Online Form Formspree">Online Form Formspree</option>
+                <option value="Referral">Referral</option>
+                <option value="Google Ads">Google Ads</option>
+                <option value="Facebook">Facebook</option>
+                <option value="Instagram">Instagram</option>
+                <option value="Website">Website</option>
+                <option value="Returning Customer">Returning Customer</option>
+              </select>
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: '8px' }}>
