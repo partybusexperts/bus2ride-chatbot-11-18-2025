@@ -586,6 +586,45 @@ export default function CallPad() {
     }
   };
 
+  const clearAll = useCallback(() => {
+    setSmartInput("");
+    setChips([]);
+    setConfirmedData({
+      agentName: "",
+      callerName: "",
+      phone: "",
+      email: "",
+      cityOrZip: "",
+      searchedCity: "",
+      passengers: "",
+      hours: "",
+      eventType: "",
+      vehicleType: "",
+      date: "",
+      pickupTime: "",
+      pickupAddress: "",
+      destination: "",
+      dropoffAddress: "",
+      websiteUrl: "",
+      tripNotes: "",
+      leadSource: "",
+      tipIncluded: false,
+      paidByCard: false,
+      paidByCash: false,
+    });
+    setVehicles([]);
+    setQuotedVehicles([]);
+    setVehicleMessage("");
+    setLeadStatus('quoted');
+    setZohoLeadUrl(null);
+    setSaveMessage("");
+    setHistoryCities([]);
+    setRemoteLocationWarning(null);
+    setVehicleRecommendation("");
+    setCityDisambiguation(null);
+    setSelectedVehicle(null);
+  }, []);
+
 
   const confirmChip = useCallback((chipId: string) => {
     setChips(prev => {
@@ -1351,6 +1390,24 @@ export default function CallPad() {
         overflowY: 'auto',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            onClick={clearAll}
+            style={{
+              padding: '14px 18px',
+              fontSize: '14px',
+              fontWeight: 700,
+              border: 'none',
+              borderRadius: '8px',
+              background: '#dc2626',
+              color: '#fff',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+            }}
+            title="Clear all fields and start fresh"
+          >
+            NEW CALL
+          </button>
           <input
             ref={inputRef}
             type="text"
