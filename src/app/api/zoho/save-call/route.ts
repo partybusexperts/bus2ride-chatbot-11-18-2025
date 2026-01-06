@@ -291,6 +291,47 @@ export async function POST(request: NextRequest) {
       
       // Check for Zoho API errors in the response body
       const firstResult = result.data?.[0];
+      
+      // Handle duplicate data - automatically update the existing lead
+      if (firstResult?.code === "DUPLICATE_DATA") {
+        const duplicateId = firstResult.details?.id;
+        console.log("Duplicate detected, attempting to update existing lead:", duplicateId);
+        
+        if (duplicateId) {
+          // Update the existing lead instead
+          const updateResponse = await fetch(
+            `https://www.zohoapis.com/crm/v2/Leads/${duplicateId}`,
+            {
+              method: "PUT",
+              headers: {
+                Authorization: `Zoho-oauthtoken ${accessToken}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ data: [filteredLeadData] }),
+            }
+          );
+          
+          if (updateResponse.ok) {
+            const updateResult = await updateResponse.json();
+            return NextResponse.json({
+              success: true,
+              mode: "updated",
+              leadId: duplicateId,
+              leadUrl: `https://crm.zoho.com/crm/tab/Leads/${duplicateId}`,
+              result: updateResult.data?.[0],
+              note: "Updated existing lead (duplicate phone detected)",
+            });
+          }
+        }
+        
+        // If auto-update failed, return a friendly error
+        return NextResponse.json({
+          success: false,
+          error: "A lead with this phone number already exists. Please search for the existing lead to update it.",
+          duplicateId: duplicateId,
+        }, { status: 400 });
+      }
+      
       if (firstResult?.code === "INVALID_DATA" || firstResult?.status === "error") {
         const errorDetails = firstResult.details || {};
         const errorMessage = `Zoho error: ${firstResult.message} - Field: ${errorDetails.api_name || 'unknown'}, Expected: ${errorDetails.expected_data_type || 'unknown'}`;
