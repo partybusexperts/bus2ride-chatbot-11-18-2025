@@ -1952,14 +1952,14 @@ export default function CallPad() {
                 onChange={(e) => setConfirmedData(prev => ({ ...prev, leadSource: e.target.value }))}
               >
                 <option value="">Select source...</option>
-                <option value="Phone Call">Phone Call</option>
+                <option value="Brandon Call">Brandon Call</option>
                 <option value="Online Form Formspree">Online Form Formspree</option>
-                <option value="Referral">Referral</option>
-                <option value="Google Ads">Google Ads</option>
-                <option value="Facebook">Facebook</option>
-                <option value="Instagram">Instagram</option>
-                <option value="Website">Website</option>
-                <option value="Returning Customer">Returning Customer</option>
+                <option value="Chat">Chat</option>
+                <option value="Unknown Call">Unknown Call</option>
+                <option value="Organic Call">Organic Call</option>
+                <option value="Organic Form">Organic Form</option>
+                <option value="Bend Form">Bend Form</option>
+                <option value="Text">Text</option>
               </select>
             </div>
           </div>
