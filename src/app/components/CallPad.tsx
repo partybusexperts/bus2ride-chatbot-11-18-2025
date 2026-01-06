@@ -22,6 +22,7 @@ interface DetectedChip {
   confirmed: boolean;
   autoPopulated: boolean;
   normalizedCity?: string; // For suburbs, the major metro to use for vehicle search
+  isRemote?: boolean; // True if location is 1+ hour from nearest major metro
 }
 
 type QuotedVehicle = {
@@ -247,6 +248,7 @@ export default function CallPad() {
   const [historyCities, setHistoryCities] = useState<HistoryCity[]>([]);
   const [lookingUpPlace, setLookingUpPlace] = useState(false);
   const [cityDisambiguation, setCityDisambiguation] = useState<{ city: string; options: string[] } | null>(null);
+  const [remoteLocationWarning, setRemoteLocationWarning] = useState<string | null>(null);
   
   const [zohoExistingLead, setZohoExistingLead] = useState<any>(null);
   const [zohoUpdateConfirmation, setZohoUpdateConfirmation] = useState<{
@@ -408,6 +410,13 @@ export default function CallPad() {
         console.log(`[City Normalization] "${chip.value}" → searching vehicles for "${chip.normalizedCity}"`);
       }
       
+      // Show warning if this is a remote location (1+ hour from nearest major metro)
+      if (chip.isRemote) {
+        setRemoteLocationWarning(`"${chip.value}" is over 1 hour from ${chip.normalizedCity || 'the nearest major city'}. Confirm with manager about travel surcharge.`);
+      } else {
+        setRemoteLocationWarning(null);
+      }
+      
       setCityDisambiguation(null);
       return;
     }
@@ -453,6 +462,11 @@ export default function CallPad() {
           searchedCity: chip.value, // Track original suburb
         }));
         console.log(`[Pickup City Normalization] "${chip.value}" → searching vehicles for "${chip.normalizedCity}"`);
+        
+        // Show warning if this is a remote location
+        if (chip.isRemote) {
+          setRemoteLocationWarning(`"${chip.value}" is over 1 hour from ${chip.normalizedCity}. Confirm with manager about travel surcharge.`);
+        }
       } else if (isKnownCity) {
         // Known major city - use as-is for vehicle search
         setConfirmedData(prev => ({
@@ -541,6 +555,7 @@ export default function CallPad() {
             confirmed: shouldAutoPopulate,
             autoPopulated: shouldAutoPopulate,
             ...(item.normalizedCity && { normalizedCity: item.normalizedCity }),
+            ...(item.isRemote && { isRemote: item.isRemote }),
           };
         });
         
@@ -1722,6 +1737,41 @@ export default function CallPad() {
               </div>
             </div>
           </div>
+
+          {remoteLocationWarning && (
+            <div style={{ 
+              background: '#fef3c7', 
+              border: '2px solid #f59e0b', 
+              borderRadius: '10px', 
+              padding: '12px 14px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '10px',
+            }}>
+              <span style={{ fontSize: '20px' }}>⚠️</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, color: '#92400e', fontSize: '13px', marginBottom: '4px' }}>
+                  REMOTE LOCATION - 1+ HOUR AWAY
+                </div>
+                <div style={{ fontSize: '12px', color: '#78350f' }}>
+                  {remoteLocationWarning}
+                </div>
+              </div>
+              <button
+                onClick={() => setRemoteLocationWarning(null)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  color: '#92400e',
+                  padding: '0',
+                }}
+              >
+                ×
+              </button>
+            </div>
+          )}
 
           <div style={{ background: SECTION_STYLES.locations.bg, padding: '14px', borderRadius: '10px', border: `2px solid ${SECTION_STYLES.locations.border}` }}>
             <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '12px', color: SECTION_STYLES.locations.title }}>Locations</h3>

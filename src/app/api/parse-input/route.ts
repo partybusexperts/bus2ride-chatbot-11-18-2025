@@ -34,6 +34,7 @@ interface DetectedItem {
   confidence: number;
   original: string;
   normalizedCity?: string; // For suburbs/small cities, the major metro area to use for vehicle search
+  isRemote?: boolean; // True if location is 1+ hour from nearest major metro
 }
 
 const PHONE_REGEX = /^[\d\s\-\(\)\.]{10,}$/;
@@ -326,6 +327,9 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'pasadena': 'Houston', 'pasadena tx': 'Houston', 'missouri city': 'Houston', 
   'spring': 'Houston', 'cypress': 'Houston', 'humble': 'Houston',
   'galveston': 'Houston', 'galveston tx': 'Houston', 'texas city': 'Houston',
+  'jamaica beach': 'Houston', 'jamaica beach tx': 'Houston', 'crystal beach': 'Houston',
+  'bolivar': 'Houston', 'bolivar peninsula': 'Houston', 'port bolivar': 'Houston',
+  'surfside': 'Houston', 'surfside beach': 'Houston', 'freeport': 'Houston', 'freeport tx': 'Houston',
   'clear lake': 'Houston', 'friendswood': 'Houston', 'seabrook': 'Houston',
   'kemah': 'Houston', 'webster': 'Houston', 'la porte': 'Houston', 'deer park': 'Houston',
   'tomball': 'Houston', 'kingwood': 'Houston', 'atascocita': 'Houston', 'richmond': 'Houston',
@@ -473,15 +477,44 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'mclean': 'Washington DC', 'falls church': 'Washington DC',
 };
 
+// Remote locations that are 1+ hour from the nearest major metro - agent should be warned
+const REMOTE_LOCATIONS: Set<string> = new Set([
+  // Texas Gulf Coast (1+ hour from Houston)
+  'jamaica beach', 'jamaica beach tx', 'crystal beach', 'crystal beach tx',
+  'bolivar', 'bolivar peninsula', 'port bolivar', 'bolivar tx',
+  'surfside', 'surfside beach', 'freeport', 'freeport tx',
+  'port aransas', 'port aransas tx', 'rockport', 'rockport tx',
+  'south padre', 'south padre island',
+  // Colorado mountains (1+ hour from Denver)
+  'vail', 'breckenridge', 'aspen', 'steamboat springs', 'telluride',
+  'winter park', 'keystone', 'copper mountain', 'crested butte',
+  // Arizona remote
+  'sedona', 'flagstaff', 'prescott', 'lake havasu', 'lake havasu city',
+  'yuma', 'page', 'williams',
+  // California remote
+  'lake tahoe', 'south lake tahoe', 'mammoth', 'mammoth lakes',
+  'big bear', 'big bear lake', 'palm desert', 'coachella',
+  // Nevada
+  'reno', 'lake tahoe nv', 'laughlin',
+  // Florida remote
+  'key west', 'key largo', 'islamorada', 'marathon fl',
+  // Michigan remote
+  'traverse city', 'mackinac', 'mackinac island', 'sault ste marie',
+  // Wisconsin remote
+  'door county', 'sturgeon bay', 'wisconsin dells',
+]);
+
 // Get normalized city for vehicle search
-function getNormalizedCity(city: string): { normalized: string; original: string } | null {
+function getNormalizedCity(city: string): { normalized: string; original: string; isRemote: boolean } | null {
   const lower = city.toLowerCase().trim();
   // Remove trailing state abbreviations for lookup
   const withoutState = lower.replace(/,?\s*(az|co|tx|ca|il|mi|fl|ga|nv|wa|mn|oh|pa|ny|nj|ma)\.?$/i, '').trim();
   
   const normalized = CITY_NORMALIZATION[withoutState] || CITY_NORMALIZATION[lower];
+  const isRemote = REMOTE_LOCATIONS.has(withoutState) || REMOTE_LOCATIONS.has(lower);
+  
   if (normalized) {
-    return { normalized, original: city };
+    return { normalized, original: city, isRemote };
   }
   return null;
 }
@@ -597,7 +630,7 @@ function detectPattern(text: string): DetectedItem | null {
         value: trimmed, 
         confidence: 0.95, 
         original: trimmed,
-        ...(normalized && { normalizedCity: normalized.normalized })
+        ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote })
       };
     }
   }
@@ -690,6 +723,40 @@ function detectPattern(text: string): DetectedItem | null {
     return { type: 'time', value: timeVal, confidence: 0.92, original: trimmed };
   }
   
+  // Handle "pu near", "pickup near", "pick up near" patterns
+  // e.g., "pu near jamaica beach", "pickup near galveston", "pick up near clear lake"
+  const puNearMatch = lowerText.match(/^(pu|up|p\.u\.|u\.p\.|p\/u|pickup|pick\s*-?\s*up)\s*near\s+(.+)/i);
+  if (puNearMatch && puNearMatch[2]) {
+    const location = puNearMatch[2].trim();
+    if (location.length > 1) {
+      // Check if location normalizes to a major metro (for pricing lookup)
+      const normalized = getNormalizedCity(location);
+      return { 
+        type: 'pickup_address', 
+        value: `Near ${location}`, 
+        confidence: 0.92, 
+        original: trimmed,
+        ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote })
+      };
+    }
+  }
+  
+  // Handle "do near", "dropoff near", "drop off near" patterns
+  const doNearMatch = lowerText.match(/^(do|d\.o\.|d\/o|dropoff|drop\s*-?\s*off)\s*near\s+(.+)/i);
+  if (doNearMatch && doNearMatch[2]) {
+    const location = doNearMatch[2].trim();
+    if (location.length > 1) {
+      const normalized = getNormalizedCity(location);
+      return { 
+        type: 'dropoff_address', 
+        value: `Near ${location}`, 
+        confidence: 0.92, 
+        original: trimmed,
+        ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote })
+      };
+    }
+  }
+  
   // Enhanced pickup location parsing - handles many variations:
   // "pu dallas", "dallas pu", "pick up dallas", "dallas pick up", "pick up in dallas", 
   // "pickup at dallas", "pu at 123 main st", "mesa pick up", etc.
@@ -708,7 +775,7 @@ function detectPattern(text: string): DetectedItem | null {
         value: location, 
         confidence: 0.92, 
         original: trimmed,
-        ...(normalized && { normalizedCity: normalized.normalized })
+        ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote })
       };
     }
   }
@@ -737,7 +804,7 @@ function detectPattern(text: string): DetectedItem | null {
           value: rest, 
           confidence: 0.92, 
           original: trimmed,
-          ...(normalized && { normalizedCity: normalized.normalized })
+          ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote })
         };
       }
     }
@@ -760,7 +827,7 @@ function detectPattern(text: string): DetectedItem | null {
         value: location, 
         confidence: 0.92, 
         original: trimmed,
-        ...(normalized && { normalizedCity: normalized.normalized })
+        ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote })
       };
     }
   }
@@ -789,7 +856,7 @@ function detectPattern(text: string): DetectedItem | null {
           value: rest, 
           confidence: 0.92, 
           original: trimmed,
-          ...(normalized && { normalizedCity: normalized.normalized })
+          ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote })
         };
       }
     }
@@ -942,7 +1009,7 @@ function detectPattern(text: string): DetectedItem | null {
         value: trimmed, 
         confidence: 0.95, 
         original: trimmed,
-        ...(normalized && { normalizedCity: normalized.normalized })
+        ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote })
       };
     }
     
@@ -955,7 +1022,7 @@ function detectPattern(text: string): DetectedItem | null {
           value: trimmed, 
           confidence: 0.95, 
           original: trimmed,
-          ...(normalized && { normalizedCity: normalized.normalized })
+          ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote })
         };
       }
     }
@@ -967,7 +1034,7 @@ function detectPattern(text: string): DetectedItem | null {
         value: trimmed, 
         confidence: 0.9, 
         original: trimmed,
-        ...(normalized && { normalizedCity: normalized.normalized })
+        ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote })
       };
     }
   }
@@ -981,7 +1048,8 @@ function detectPattern(text: string): DetectedItem | null {
       value: trimmed, 
       confidence: 0.9, 
       original: trimmed,
-      normalizedCity: normalized.normalized
+      normalizedCity: normalized.normalized,
+      isRemote: normalized.isRemote
     };
   }
 
