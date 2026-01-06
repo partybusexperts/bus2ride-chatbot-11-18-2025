@@ -510,8 +510,10 @@ function getNormalizedCity(city: string): { normalized: string; original: string
   // Remove trailing state abbreviations for lookup
   const withoutState = lower.replace(/,?\s*(az|co|tx|ca|il|mi|fl|ga|nv|wa|mn|oh|pa|ny|nj|ma)\.?$/i, '').trim();
   
-  const normalized = CITY_NORMALIZATION[withoutState] || CITY_NORMALIZATION[lower];
-  const isRemote = REMOTE_LOCATIONS.has(withoutState) || REMOTE_LOCATIONS.has(lower);
+  // Check with state first (more specific), then without state (fallback)
+  // This ensures "aurora il" maps to Chicago, not Denver
+  const normalized = CITY_NORMALIZATION[lower] || CITY_NORMALIZATION[withoutState];
+  const isRemote = REMOTE_LOCATIONS.has(lower) || REMOTE_LOCATIONS.has(withoutState);
   
   if (normalized) {
     return { normalized, original: city, isRemote };
