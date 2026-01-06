@@ -124,15 +124,27 @@ export async function POST(request: NextRequest) {
 
     // Filter to only include leads that actually match phone or email
     const cleanPhoneForFilter = phone ? phone.replace(/\D/g, "").slice(-10) : "";
+    const cleanEmailForFilter = email ? email.trim().toLowerCase() : "";
+    
+    console.log(`[find-lead] Verification criteria - phone: "${cleanPhoneForFilter}", email: "${cleanEmailForFilter}"`);
+    
     const verifiedLeads = leads.filter((lead) => {
       const leadPhone = (lead.Phone || "").replace(/\D/g, "").slice(-10);
       const leadMobile = (lead.Mobile || "").replace(/\D/g, "").slice(-10);
-      const leadEmail = (lead.Email || "").toLowerCase();
+      const leadEmail = (lead.Email || "").trim().toLowerCase();
       
-      const phoneMatch = cleanPhoneForFilter && (leadPhone === cleanPhoneForFilter || leadMobile === cleanPhoneForFilter);
-      const emailMatch = email && leadEmail === email.toLowerCase();
+      // Phone must match exactly (both must have 10 digits)
+      const phoneMatch = cleanPhoneForFilter.length === 10 && (
+        (leadPhone.length === 10 && leadPhone === cleanPhoneForFilter) || 
+        (leadMobile.length === 10 && leadMobile === cleanPhoneForFilter)
+      );
       
-      console.log(`[find-lead] Verifying lead ${lead.id}: phone=${leadPhone}, mobile=${leadMobile}, email=${leadEmail}, phoneMatch=${phoneMatch}, emailMatch=${emailMatch}`);
+      // Email must match exactly (both must be non-empty)
+      const emailMatch = cleanEmailForFilter.length > 0 && 
+        leadEmail.length > 0 && 
+        leadEmail === cleanEmailForFilter;
+      
+      console.log(`[find-lead] Verifying lead ${lead.id} (${lead.Last_Name}): leadPhone="${leadPhone}", leadMobile="${leadMobile}", leadEmail="${leadEmail}", phoneMatch=${phoneMatch}, emailMatch=${emailMatch}`);
       
       return phoneMatch || emailMatch;
     });
