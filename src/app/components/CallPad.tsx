@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 type DetectedType = 
   | 'phone' | 'email' | 'zip' | 'city' | 'date' | 'time' 
   | 'passengers' | 'hours' | 'pickup_address' | 'destination' 
-  | 'dropoff_address' | 'event_type' | 'vehicle_type' | 'name' | 'website' | 'place' | 'stop' | 'agent' | 'unknown';
+  | 'dropoff_address' | 'event_type' | 'vehicle_type' | 'name' | 'website' | 'stop' | 'agent' | 'unknown';
 
 interface HistoryCity {
   value: string;
@@ -412,8 +412,12 @@ export default function CallPad() {
       return;
     }
     
-    if (chip.type === 'place' || chip.type === 'stop') {
-      lookupPlace(chip.value, 'stop');
+    if (chip.type === 'stop') {
+      // Add stop directly to trip notes
+      setConfirmedData(prev => ({
+        ...prev,
+        tripNotes: prev.tripNotes ? `${prev.tripNotes}\nStop: ${chip.value}` : `Stop: ${chip.value}`,
+      }));
       return;
     }
     
@@ -540,42 +544,11 @@ export default function CallPad() {
           };
         });
         
-        const cityChip = newChips.find(c => c.autoPopulated && (c.type === 'city' || c.type === 'zip'));
-        const placeChips = newChips.filter(c => c.autoPopulated && (c.type === 'place' || c.type === 'stop'));
-        const detectedCity = cityChip?.value || confirmedData.cityOrZip;
-        
         newChips.forEach(chip => {
-          if (chip.autoPopulated && chip.type !== 'place' && chip.type !== 'stop') {
+          if (chip.autoPopulated) {
             applyChipToData(chip);
           }
         });
-        
-        if (placeChips.length > 0) {
-          for (const placeChip of placeChips) {
-            const extractedCity = extractCityFromText(placeChip.value);
-            const nearLocation = detectedCity || extractedCity || confirmedData.cityOrZip || 'Arizona';
-            setLookingUpPlace(true);
-            try {
-              const placeRes = await fetch('/api/places/lookup', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ placeName: placeChip.value, nearLocation, context: 'stop' }),
-              });
-              const placeData = await placeRes.json();
-              if (placeData.found && placeData.fullAddress) {
-                const stopNote = `Stop: ${placeData.name} - ${placeData.fullAddress}`;
-                setConfirmedData(prev => ({
-                  ...prev,
-                  tripNotes: prev.tripNotes ? `${prev.tripNotes}\n${stopNote}` : stopNote,
-                }));
-              }
-            } catch (error) {
-              console.error('Place lookup error:', error);
-            } finally {
-              setLookingUpPlace(false);
-            }
-          }
-        }
         
         setChips(prev => {
           const existingValues = new Set(prev.map(c => `${c.type}:${c.value.toLowerCase()}`));
@@ -1479,7 +1452,7 @@ export default function CallPad() {
                           chip.type,
                           'name', 'phone', 'email', 'city', 'zip', 'date', 'time',
                           'passengers', 'hours', 'event_type', 'vehicle_type',
-                          'pickup_address', 'dropoff_address', 'place', 'stop', 'website'
+                          'pickup_address', 'dropoff_address', 'stop', 'website'
                         ];
                         const seen = new Set<string>();
                         const sortedTypes = priorityOrder.filter(t => {

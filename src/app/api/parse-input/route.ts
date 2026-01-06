@@ -22,7 +22,6 @@ type DetectedType =
   | 'vehicle_type'
   | 'name'
   | 'website'
-  | 'place'
   | 'stop'
   | 'agent'
   | 'unknown';
@@ -63,6 +62,21 @@ const RELATIVE_DATE_PATTERNS = [
 ];
 
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const MONTH_NAMES = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+const MONTH_ABBREVS: Record<string, number> = {
+  'jan': 0, 'january': 0,
+  'feb': 1, 'february': 1,
+  'mar': 2, 'march': 2,
+  'apr': 3, 'april': 3,
+  'may': 4,
+  'jun': 5, 'june': 5,
+  'jul': 6, 'july': 6,
+  'aug': 7, 'august': 7,
+  'sep': 8, 'sept': 8, 'september': 8,
+  'oct': 9, 'october': 9,
+  'nov': 10, 'november': 10,
+  'dec': 11, 'december': 11,
+};
 
 function parseRelativeDate(text: string): string | null {
   const lower = text.toLowerCase().trim();
@@ -116,6 +130,77 @@ function parseRelativeDate(text: string): string | null {
     
     const targetDate = new Date(today);
     targetDate.setDate(today.getDate() + daysToAdd);
+    return formatDate(targetDate);
+  }
+  
+  // "next april 30", "april 30", "next may 15th", "may 15", "next jan 1st", "jan 1"
+  // Also handles "april 30th", "may 15th 2026"
+  const monthDayMatch = lower.match(/^(next\s+)?(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t)?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?(?:\s*,?\s*(\d{4}))?$/i);
+  if (monthDayMatch) {
+    const hasNext = !!monthDayMatch[1];
+    const monthStr = monthDayMatch[2].toLowerCase();
+    const dayNum = parseInt(monthDayMatch[3], 10);
+    const yearNum = monthDayMatch[4] ? parseInt(monthDayMatch[4], 10) : null;
+    
+    const targetMonth = MONTH_ABBREVS[monthStr];
+    if (targetMonth !== undefined && dayNum >= 1 && dayNum <= 31) {
+      let targetYear = today.getFullYear();
+      
+      if (yearNum) {
+        // Explicit year provided
+        targetYear = yearNum;
+      } else {
+        // No year provided - determine if this year or next year
+        const currentMonth = today.getMonth();
+        const currentDay = today.getDate();
+        
+        // If the date is in the past this year, go to next year
+        if (targetMonth < currentMonth || (targetMonth === currentMonth && dayNum < currentDay)) {
+          if (hasNext) {
+            // "next april 30" when it's already past - definitely next year
+            targetYear = today.getFullYear() + 1;
+          } else {
+            // Just "april 30" when it's past - assume next year
+            targetYear = today.getFullYear() + 1;
+          }
+        } else if (hasNext && targetMonth > currentMonth) {
+          // "next april 30" and it's currently before april - could mean next year
+          // If it's close (same month or next month), "next" means later this year
+          // If it's far away, "next" might mean next year - but we'll assume this year for simplicity
+          targetYear = today.getFullYear();
+        }
+      }
+      
+      const targetDate = new Date(targetYear, targetMonth, dayNum);
+      // Validate the date is real (e.g., Feb 30 is not real)
+      if (targetDate.getMonth() === targetMonth && targetDate.getDate() === dayNum) {
+        return formatDate(targetDate);
+      }
+    }
+  }
+  
+  // "in 2 weeks", "in 3 days", "in a week"
+  const inTimeMatch = lower.match(/^in\s+(a|\d+)\s+(day|week|month)s?$/i);
+  if (inTimeMatch) {
+    const amount = inTimeMatch[1] === 'a' ? 1 : parseInt(inTimeMatch[1], 10);
+    const unit = inTimeMatch[2].toLowerCase();
+    const targetDate = new Date(today);
+    
+    if (unit === 'day') {
+      targetDate.setDate(today.getDate() + amount);
+    } else if (unit === 'week') {
+      targetDate.setDate(today.getDate() + (amount * 7));
+    } else if (unit === 'month') {
+      targetDate.setMonth(today.getMonth() + amount);
+    }
+    return formatDate(targetDate);
+  }
+  
+  // "next month", "this month"
+  if (lower === 'next month') {
+    const targetDate = new Date(today);
+    targetDate.setMonth(today.getMonth() + 1);
+    targetDate.setDate(1); // First of next month
     return formatDate(targetDate);
   }
   
@@ -814,7 +899,7 @@ function detectPattern(text: string): DetectedItem | null {
     if (lowerText.includes(venue)) {
       const isPickup = lowerText.includes('pu ') || lowerText.includes('pickup') || lowerText.includes('pick up');
       return { 
-        type: isPickup ? 'pickup_address' : 'place', 
+        type: isPickup ? 'pickup_address' : 'stop', 
         value: trimmed, 
         confidence: 0.85, 
         original: trimmed 
@@ -824,22 +909,22 @@ function detectPattern(text: string): DetectedItem | null {
 
   const businessPattern = /\d{2,4}\s+(bar|grill|lounge|club|restaurant|steakhouse|brewery|pub|tavern)/i;
   if (businessPattern.test(trimmed)) {
-    return { type: 'place', value: trimmed, confidence: 0.85, original: trimmed };
+    return { type: 'stop', value: trimmed, confidence: 0.85, original: trimmed };
   }
   
   const namedVenuePattern = /(bar|grill|club|restaurant|pub|tavern|lounge|brewery|winery|steakhouse|venue|arena|stadium|hotel|resort|casino|theater|theatre)\s+(called|named)\s+\w+/i;
   if (namedVenuePattern.test(trimmed)) {
-    return { type: 'place', value: trimmed, confidence: 0.9, original: trimmed };
+    return { type: 'stop', value: trimmed, confidence: 0.9, original: trimmed };
   }
   
   const venueNearPattern = /\b(bar|grill|club|restaurant|pub|tavern|lounge|brewery|winery|steakhouse)\b.*\b(near|by|at|next\s+to|across\s+from)\b/i;
   if (venueNearPattern.test(trimmed)) {
-    return { type: 'place', value: trimmed, confidence: 0.85, original: trimmed };
+    return { type: 'stop', value: trimmed, confidence: 0.85, original: trimmed };
   }
   
   const cityVenuePattern = new RegExp(`^(${CITY_KEYWORDS.join('|')})\\s+(bar|grill|club|restaurant|pub|tavern|lounge|brewery|venue|hotel|casino)`, 'i');
   if (cityVenuePattern.test(trimmed)) {
-    return { type: 'place', value: trimmed, confidence: 0.9, original: trimmed };
+    return { type: 'stop', value: trimmed, confidence: 0.9, original: trimmed };
   }
 
   // Handle city + state patterns like "mesa az", "mesa arizona", "phoenix, az"
