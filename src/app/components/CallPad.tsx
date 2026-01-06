@@ -401,15 +401,19 @@ export default function CallPad() {
       
       // Use normalized city (major metro) for vehicle search, but show original for display
       // e.g., "mesa az" shows as Mesa AZ but searches vehicles for Phoenix
+      // For ZIP codes, show "ZIP XXXXX" and the metro area it maps to
       const searchCity = chip.normalizedCity || chip.value;
       const wasNormalized = chip.normalizedCity && chip.normalizedCity.toLowerCase() !== chip.value.toLowerCase();
+      const isZipCode = chip.type === 'zip';
       
       // Update cityOrZip (for vehicle search), searchedCity (original for display), and pickupAddress
       setConfirmedData(prev => ({ 
         ...prev, 
         cityOrZip: searchCity, // Use normalized city for vehicle search
-        searchedCity: wasNormalized ? chip.value : '', // Only set if different from normalized
-        pickupAddress: chip.value // Keep original for display/Zoho
+        // For ZIP codes: always show "ZIP XXXXX" format even if we don't know the metro
+        // For cities: only set if different from normalized
+        searchedCity: isZipCode ? `ZIP ${chip.value}` : (wasNormalized ? chip.value : ''),
+        pickupAddress: isZipCode ? '' : chip.value // Don't set pickup address for ZIPs
       }));
       
       // Show notification if city was normalized

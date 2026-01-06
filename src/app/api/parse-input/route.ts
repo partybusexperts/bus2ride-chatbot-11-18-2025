@@ -40,6 +40,117 @@ interface DetectedItem {
 const PHONE_REGEX = /^[\d\s\-\(\)\.]{10,}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ZIP_REGEX = /^\d{5}(-\d{4})?$/;
+
+// ZIP code prefix to metro area mapping (first 3 digits)
+const ZIP_TO_METRO: Record<string, string> = {
+  // Phoenix AZ (850-853, 855-857, 859-860)
+  '850': 'Phoenix', '851': 'Phoenix', '852': 'Phoenix', '853': 'Phoenix',
+  '855': 'Phoenix', '856': 'Phoenix', '857': 'Phoenix', '859': 'Phoenix', '860': 'Phoenix',
+  // Los Angeles CA (900-908, 910-918, 935)
+  '900': 'Los Angeles', '901': 'Los Angeles', '902': 'Los Angeles', '903': 'Los Angeles',
+  '904': 'Los Angeles', '905': 'Los Angeles', '906': 'Los Angeles', '907': 'Los Angeles',
+  '908': 'Los Angeles', '910': 'Los Angeles', '911': 'Los Angeles', '912': 'Los Angeles',
+  '913': 'Los Angeles', '914': 'Los Angeles', '915': 'Los Angeles', '916': 'Sacramento',
+  '917': 'Los Angeles', '918': 'Los Angeles', '935': 'Los Angeles',
+  // San Diego CA (919-921)
+  '919': 'San Diego', '920': 'San Diego', '921': 'San Diego',
+  // San Francisco/Bay Area (940-949, 943-945 Oakland, 950-951 San Jose)
+  '940': 'San Francisco', '941': 'San Francisco', '942': 'San Francisco',
+  '943': 'San Francisco', '944': 'San Francisco', '945': 'San Francisco',
+  '946': 'San Francisco', '947': 'San Francisco', '948': 'San Francisco', '949': 'San Francisco',
+  '950': 'San Jose', '951': 'San Jose',
+  // Denver CO (800-803, 805-806, 808-809)
+  '800': 'Denver', '801': 'Denver', '802': 'Denver', '803': 'Denver',
+  '805': 'Denver', '806': 'Denver', '808': 'Denver', '809': 'Denver', '804': 'Denver',
+  // Miami FL (330-332, 334)
+  '330': 'Miami', '331': 'Miami', '332': 'Miami', '334': 'Miami', '333': 'Miami',
+  // Orlando FL (327-329)
+  '327': 'Orlando', '328': 'Orlando', '329': 'Orlando',
+  // Tampa FL (335-337, 346)
+  '335': 'Tampa', '336': 'Tampa', '337': 'Tampa', '346': 'Tampa', '338': 'Tampa',
+  // Atlanta GA (300-303, 306, 311-313)
+  '300': 'Atlanta', '301': 'Atlanta', '302': 'Atlanta', '303': 'Atlanta',
+  '306': 'Atlanta', '311': 'Atlanta', '312': 'Atlanta', '313': 'Atlanta',
+  // Chicago IL (606-608, 600-605)
+  '600': 'Chicago', '601': 'Chicago', '602': 'Chicago', '603': 'Chicago',
+  '604': 'Chicago', '605': 'Chicago', '606': 'Chicago', '607': 'Chicago', '608': 'Chicago',
+  // Indianapolis IN (460-462, 466)
+  '460': 'Indianapolis', '461': 'Indianapolis', '462': 'Indianapolis', '466': 'Indianapolis',
+  // Boston MA (010-024, 021-022)
+  '010': 'Boston', '011': 'Boston', '012': 'Boston', '013': 'Boston', '014': 'Boston',
+  '015': 'Boston', '016': 'Boston', '017': 'Boston', '018': 'Boston', '019': 'Boston',
+  '020': 'Boston', '021': 'Boston', '022': 'Boston', '023': 'Boston', '024': 'Boston',
+  // Detroit MI (480-484)
+  '480': 'Detroit', '481': 'Detroit', '482': 'Detroit', '483': 'Detroit', '484': 'Detroit',
+  // Minneapolis MN (550-551, 553-555)
+  '550': 'Minneapolis', '551': 'Minneapolis', '553': 'Minneapolis', '554': 'Minneapolis', '555': 'Minneapolis',
+  // Kansas City MO/KS (640-641, 660-662, 664-666)
+  '640': 'Kansas City', '641': 'Kansas City', '660': 'Kansas City', '661': 'Kansas City',
+  '662': 'Kansas City', '664': 'Kansas City', '665': 'Kansas City', '666': 'Kansas City',
+  // St. Louis MO (630-631, 633, 636, 620-622)
+  '630': 'St. Louis', '631': 'St. Louis', '633': 'St. Louis', '636': 'St. Louis',
+  '620': 'St. Louis', '621': 'St. Louis', '622': 'St. Louis',
+  // Las Vegas NV (889-891)
+  '889': 'Las Vegas', '890': 'Las Vegas', '891': 'Las Vegas',
+  // New York NY (100-104, 106-109, 110-119)
+  '100': 'New York', '101': 'New York', '102': 'New York', '103': 'New York', '104': 'New York',
+  '106': 'New York', '107': 'New York', '108': 'New York', '109': 'New York',
+  '110': 'New York', '111': 'New York', '112': 'New York', '113': 'New York', '114': 'New York',
+  '115': 'New York', '116': 'New York', '117': 'New York', '118': 'New York', '119': 'New York',
+  // Cleveland OH (440-442, 444)
+  '440': 'Cleveland', '441': 'Cleveland', '442': 'Cleveland', '444': 'Cleveland',
+  // Columbus OH (430-432)
+  '430': 'Columbus', '431': 'Columbus', '432': 'Columbus',
+  // Cincinnati OH (450-452)
+  '450': 'Cincinnati', '451': 'Cincinnati', '452': 'Cincinnati',
+  // Philadelphia PA (190-191, 193-196)
+  '190': 'Philadelphia', '191': 'Philadelphia', '193': 'Philadelphia',
+  '194': 'Philadelphia', '195': 'Philadelphia', '196': 'Philadelphia',
+  // Pittsburgh PA (150-152)
+  '150': 'Pittsburgh', '151': 'Pittsburgh', '152': 'Pittsburgh',
+  // Nashville TN (370-372)
+  '370': 'Nashville', '371': 'Nashville', '372': 'Nashville',
+  // Austin TX (787, 786, 789, 785)
+  '786': 'Austin', '787': 'Austin', '789': 'Austin', '785': 'Austin', '788': 'Austin',
+  // Dallas TX (750-753, 755-759, 760-761, 762-763, 764-766, 768-769, 730-731)
+  '750': 'Dallas', '751': 'Dallas', '752': 'Dallas', '753': 'Dallas',
+  '755': 'Dallas', '756': 'Dallas', '757': 'Dallas', '758': 'Dallas', '759': 'Dallas',
+  '760': 'Dallas', '761': 'Dallas', '762': 'Dallas', '763': 'Dallas',
+  '764': 'Dallas', '765': 'Dallas', '766': 'Dallas', '768': 'Dallas', '769': 'Dallas',
+  '730': 'Dallas', '731': 'Dallas', '754': 'Dallas',
+  // Houston TX (770-772, 773-778)
+  '770': 'Houston', '771': 'Houston', '772': 'Houston', '773': 'Houston',
+  '774': 'Houston', '775': 'Houston', '776': 'Houston', '777': 'Houston', '778': 'Houston',
+  // San Antonio TX (780-782, 784)
+  '780': 'San Antonio', '781': 'San Antonio', '782': 'San Antonio', '784': 'San Antonio', '783': 'San Antonio',
+  // Salt Lake City UT (840-841, 843, 846-847)
+  '840': 'Salt Lake City', '841': 'Salt Lake City', '843': 'Salt Lake City', '846': 'Salt Lake City', '847': 'Salt Lake City',
+  // Seattle WA (980-981, 983-984, 990-994)
+  '980': 'Seattle', '981': 'Seattle', '983': 'Seattle', '984': 'Seattle',
+  '990': 'Seattle', '991': 'Seattle', '992': 'Seattle', '993': 'Seattle', '994': 'Seattle',
+  // Washington DC (200-205, 209)
+  '200': 'Washington DC', '201': 'Washington DC', '202': 'Washington DC',
+  '203': 'Washington DC', '204': 'Washington DC', '205': 'Washington DC', '209': 'Washington DC',
+  // Baltimore MD (210-212, 214-215, 217, 219)
+  '210': 'Baltimore', '211': 'Baltimore', '212': 'Baltimore', '214': 'Baltimore',
+  '215': 'Baltimore', '217': 'Baltimore', '219': 'Baltimore',
+  // Charlotte NC (280-282, 284)
+  '280': 'Charlotte', '281': 'Charlotte', '282': 'Charlotte', '284': 'Charlotte',
+  // Raleigh NC (276-277)
+  '276': 'Raleigh', '277': 'Raleigh',
+  // New Orleans LA (700-701, 704)
+  '700': 'New Orleans', '701': 'New Orleans', '704': 'New Orleans',
+  // Portland OR (970-972, 974-975)
+  '970': 'Portland', '971': 'Portland', '972': 'Portland', '974': 'Portland', '975': 'Portland',
+  // Milwaukee WI (530-532, 534)
+  '530': 'Milwaukee', '531': 'Milwaukee', '532': 'Milwaukee', '534': 'Milwaukee',
+};
+
+// Get metro area from ZIP code
+function getMetroFromZip(zip: string): string | null {
+  const prefix = zip.substring(0, 3);
+  return ZIP_TO_METRO[prefix] || null;
+}
 // Accept "5pm", "5p", "5 pm", "5:30pm", "5:30 p", etc.
 const TIME_REGEX = /^(\d{1,2})(:\d{2})?\s*([ap]\.?m?\.?)$/i;
 const DATE_PATTERNS = [
@@ -1003,7 +1114,14 @@ function detectPattern(text: string): DetectedItem | null {
   }
 
   if (ZIP_REGEX.test(trimmed)) {
-    return { type: 'zip', value: trimmed, confidence: 0.95, original: trimmed };
+    const metro = getMetroFromZip(trimmed);
+    return { 
+      type: 'zip', 
+      value: trimmed, 
+      confidence: 0.95, 
+      original: trimmed,
+      ...(metro && { normalizedCity: metro })
+    };
   }
 
   const lowerText = trimmed.toLowerCase();
