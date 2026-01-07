@@ -325,6 +325,77 @@ function formatDate(date: Date): string {
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+function convertToISODate(text: string): string | null {
+  const lower = text.toLowerCase().trim();
+  const today = new Date();
+  
+  // Handle mm/dd or mm/dd/yyyy formats (US format)
+  const slashMatch = lower.match(/^(\d{1,2})\/(\d{1,2})(\/(\d{2,4}))?$/);
+  if (slashMatch) {
+    const month = parseInt(slashMatch[1], 10);
+    const day = parseInt(slashMatch[2], 10);
+    let year = slashMatch[4] ? parseInt(slashMatch[4], 10) : today.getFullYear();
+    
+    // Handle 2-digit year
+    if (year < 100) {
+      year += 2000;
+    }
+    
+    // If date has passed this year, assume next year
+    if (!slashMatch[4]) {
+      const targetDate = new Date(year, month - 1, day);
+      if (targetDate < today) {
+        year++;
+      }
+    }
+    
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+  }
+  
+  // Handle "march 29", "march 29th", "mar 29", "march 29 2026", "on march 29"
+  const monthDayMatch = lower.match(/^(?:on\s+)?(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t)?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?(?:\s*,?\s*(\d{4}))?$/i);
+  if (monthDayMatch) {
+    const monthStr = monthDayMatch[1].toLowerCase();
+    const day = parseInt(monthDayMatch[2], 10);
+    let year = monthDayMatch[3] ? parseInt(monthDayMatch[3], 10) : today.getFullYear();
+    
+    const monthNum = MONTH_ABBREVS[monthStr];
+    if (monthNum !== undefined && day >= 1 && day <= 31) {
+      // If date has passed this year, assume next year
+      if (!monthDayMatch[3]) {
+        const targetDate = new Date(year, monthNum, day);
+        if (targetDate < today) {
+          year++;
+        }
+      }
+      return `${year}-${String(monthNum + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+  }
+  
+  // Handle "29th march", "29 march 2026"
+  const dayMonthMatch = lower.match(/^(\d{1,2})(?:st|nd|rd|th)?\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t)?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s*,?\s*(\d{4}))?$/i);
+  if (dayMonthMatch) {
+    const day = parseInt(dayMonthMatch[1], 10);
+    const monthStr = dayMonthMatch[2].toLowerCase();
+    let year = dayMonthMatch[3] ? parseInt(dayMonthMatch[3], 10) : today.getFullYear();
+    
+    const monthNum = MONTH_ABBREVS[monthStr];
+    if (monthNum !== undefined && day >= 1 && day <= 31) {
+      if (!dayMonthMatch[3]) {
+        const targetDate = new Date(year, monthNum, day);
+        if (targetDate < today) {
+          year++;
+        }
+      }
+      return `${year}-${String(monthNum + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+  }
+  
+  return null;
+}
 // Handle typos like "poeple", "passangers", "peolpe", "ppl"
 const PASSENGERS_REGEX = /^(\d{1,3})\s*(people|poeple|peolpe|ppl|passengers?|passangers?|pax|guests?|persons?)$/i;
 const PASSENGERS_SHORT_REGEX = /^(\d{1,2})$/;
@@ -1528,8 +1599,14 @@ function detectPattern(text: string): DetectedItem | null {
     return { type: 'time', value: trimmed, confidence: 0.9, original: trimmed };
   }
 
+  // Check for date patterns and convert to ISO format (YYYY-MM-DD)
   for (const pattern of DATE_PATTERNS) {
     if (pattern.test(trimmed)) {
+      const isoDate = convertToISODate(trimmed);
+      if (isoDate) {
+        return { type: 'date', value: isoDate, confidence: 0.9, original: trimmed };
+      }
+      // Fallback to raw value if conversion fails
       return { type: 'date', value: trimmed, confidence: 0.9, original: trimmed };
     }
   }
