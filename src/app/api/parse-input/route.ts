@@ -108,6 +108,10 @@ const ZIP_TO_METRO: Record<string, string> = {
   '430': 'Columbus', '431': 'Columbus', '432': 'Columbus',
   // Cincinnati OH (450-452)
   '450': 'Cincinnati', '451': 'Cincinnati', '452': 'Cincinnati',
+  // Lexington KY (403-406)
+  '403': 'Lexington', '404': 'Lexington', '405': 'Lexington', '406': 'Lexington',
+  // Louisville KY (400-402)
+  '400': 'Louisville', '401': 'Louisville', '402': 'Louisville',
   // Philadelphia PA (190-191, 193-196)
   '190': 'Philadelphia', '191': 'Philadelphia', '193': 'Philadelphia',
   '194': 'Philadelphia', '195': 'Philadelphia', '196': 'Philadelphia',
