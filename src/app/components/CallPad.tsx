@@ -2071,27 +2071,61 @@ export default function CallPad() {
               gap: '8px',
               flexWrap: 'wrap',
             }}>
-              {confirmedData.searchedCity && confirmedData.searchedCity.toLowerCase() !== confirmedData.cityOrZip.toLowerCase() ? (
-                <>
-                  <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: 500 }}>SEARCHED:</span>
-                  <span style={{ fontSize: '16px', fontWeight: 600, color: '#bfdbfe', letterSpacing: '0.5px' }}>
-                    {confirmedData.searchedCity.toUpperCase()}
-                  </span>
-                  <span style={{ fontSize: '16px', color: '#93c5fd', fontWeight: 500 }}>→</span>
-                  <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: 500 }}>SHOWING:</span>
-                  <span style={{ fontSize: '22px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
-                    {confirmedData.cityOrZip.toUpperCase()}
-                  </span>
-                  <span style={{ fontSize: '11px', color: '#fcd34d', fontWeight: 500, marginLeft: '4px' }}>RATES</span>
-                </>
-              ) : (
-                <>
-                  <span style={{ fontSize: '12px', color: '#93c5fd', fontWeight: 500 }}>SEARCHING:</span>
-                  <span style={{ fontSize: '22px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
-                    {confirmedData.cityOrZip.toUpperCase()}
-                  </span>
-                </>
-              )}
+              {(() => {
+              const isZipSearch = confirmedData.searchedCity?.startsWith('ZIP ');
+              const zipNumber = isZipSearch ? confirmedData.searchedCity.replace('ZIP ', '') : '';
+              const cityOrZipIsJustZip = isZipSearch && confirmedData.cityOrZip === zipNumber;
+              const hasServiceArea = !cityOrZipIsJustZip && confirmedData.cityOrZip;
+              
+              if (isZipSearch) {
+                return (
+                  <>
+                    <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: 500 }}>SEARCHED:</span>
+                    <span style={{ fontSize: '16px', fontWeight: 600, color: '#bfdbfe', letterSpacing: '0.5px' }}>
+                      {confirmedData.searchedCity.toUpperCase()}
+                    </span>
+                    <span style={{ fontSize: '16px', color: '#93c5fd', fontWeight: 500 }}>→</span>
+                    <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: 500 }}>SHOWING:</span>
+                    {hasServiceArea ? (
+                      <>
+                        <span style={{ fontSize: '22px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
+                          {confirmedData.cityOrZip.toUpperCase()}
+                        </span>
+                        <span style={{ fontSize: '11px', color: '#fcd34d', fontWeight: 500, marginLeft: '4px' }}>RATES</span>
+                      </>
+                    ) : (
+                      <span style={{ fontSize: '18px', fontWeight: 700, color: '#fca5a5', letterSpacing: '0.5px' }}>
+                        NO SERVICE AREA
+                      </span>
+                    )}
+                  </>
+                );
+              } else if (confirmedData.searchedCity && confirmedData.searchedCity.toLowerCase() !== confirmedData.cityOrZip.toLowerCase()) {
+                return (
+                  <>
+                    <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: 500 }}>SEARCHED:</span>
+                    <span style={{ fontSize: '16px', fontWeight: 600, color: '#bfdbfe', letterSpacing: '0.5px' }}>
+                      {confirmedData.searchedCity.toUpperCase()}
+                    </span>
+                    <span style={{ fontSize: '16px', color: '#93c5fd', fontWeight: 500 }}>→</span>
+                    <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: 500 }}>SHOWING:</span>
+                    <span style={{ fontSize: '22px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
+                      {confirmedData.cityOrZip.toUpperCase()}
+                    </span>
+                    <span style={{ fontSize: '11px', color: '#fcd34d', fontWeight: 500, marginLeft: '4px' }}>RATES</span>
+                  </>
+                );
+              } else {
+                return (
+                  <>
+                    <span style={{ fontSize: '12px', color: '#93c5fd', fontWeight: 500 }}>SEARCHING:</span>
+                    <span style={{ fontSize: '22px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
+                      {confirmedData.cityOrZip.toUpperCase()}
+                    </span>
+                  </>
+                );
+              }
+            })()}
               <span style={{ fontSize: '12px', color: '#93c5fd', marginLeft: 'auto' }}>
                 {vehicles.length} vehicle{vehicles.length !== 1 ? 's' : ''} found
               </span>
