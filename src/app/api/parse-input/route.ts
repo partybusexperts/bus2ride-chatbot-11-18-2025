@@ -54,11 +54,16 @@ const ZIP_TO_METRO: Record<string, string> = {
   '917': 'Los Angeles', '918': 'Los Angeles', '935': 'Los Angeles',
   // San Diego CA (919-921)
   '919': 'San Diego', '920': 'San Diego', '921': 'San Diego',
-  // San Francisco/Bay Area (940-949, 943-945 Oakland, 950-951 San Jose)
+  // San Francisco Bay Area (940-944, 946-948)
   '940': 'San Francisco', '941': 'San Francisco', '942': 'San Francisco',
-  '943': 'San Francisco', '944': 'San Francisco', '945': 'San Francisco',
-  '946': 'San Francisco', '947': 'San Francisco', '948': 'San Francisco', '949': 'San Francisco',
+  '943': 'San Francisco', '944': 'San Francisco',
+  '946': 'San Francisco', '947': 'San Francisco', '948': 'San Francisco',
+  // San Jose (950-951)
   '950': 'San Jose', '951': 'San Jose',
+  // Napa (945)
+  '945': 'Napa',
+  // Santa Rosa/Sonoma (949, 954-955)
+  '949': 'Santa Rosa', '954': 'Santa Rosa', '955': 'Santa Rosa',
   // Denver CO (800-803, 805-806, 808-809)
   '800': 'Denver', '801': 'Denver', '802': 'Denver', '803': 'Denver',
   '805': 'Denver', '806': 'Denver', '808': 'Denver', '809': 'Denver', '804': 'Denver',
@@ -689,14 +694,19 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'oceanside': 'Los Angeles', 'escondido': 'Los Angeles', 'temecula': 'Los Angeles',
   'riverside': 'Los Angeles', 'riverside ca': 'Los Angeles', 'corona': 'Los Angeles',
   'fontana': 'Los Angeles', 'moreno valley': 'Los Angeles', 'san bernardino': 'Los Angeles',
-  // San Francisco Bay Area
-  'oakland': 'San Francisco', 'san jose': 'San Francisco', 'fremont': 'San Francisco',
-  'hayward': 'San Francisco', 'sunnyvale': 'San Francisco', 'santa clara': 'San Francisco',
-  'concord': 'San Francisco', 'berkeley': 'San Francisco', 'palo alto': 'San Francisco',
-  'mountain view': 'San Francisco', 'redwood city': 'San Francisco', 'san mateo': 'San Francisco',
+  // San Francisco Bay Area (excluding San Jose and Napa which have own rates)
+  'oakland': 'San Francisco', 'fremont': 'San Francisco',
+  'hayward': 'San Francisco', 'concord': 'San Francisco', 'berkeley': 'San Francisco',
   'daly city': 'San Francisco', 'walnut creek': 'San Francisco', 'pleasanton': 'San Francisco',
-  'livermore': 'San Francisco', 'milpitas': 'San Francisco', 'cupertino': 'San Francisco',
-  'menlo park': 'San Francisco', 'santa rosa': 'San Francisco', 'napa': 'San Francisco',
+  'livermore': 'San Francisco', 'san mateo': 'San Francisco', 'redwood city': 'San Francisco',
+  // San Jose metro (separate from SF)
+  'sunnyvale': 'San Jose', 'santa clara': 'San Jose', 'milpitas': 'San Jose',
+  'cupertino': 'San Jose', 'mountain view': 'San Jose', 'palo alto': 'San Jose',
+  'menlo park': 'San Jose', 'los gatos': 'San Jose', 'campbell': 'San Jose',
+  // Napa/Wine Country (separate from SF)
+  'napa valley': 'Napa', 'yountville': 'Napa', 'st helena': 'Napa', 'calistoga': 'Napa',
+  // Santa Rosa/Sonoma (could be separate or grouped)
+  'santa rosa': 'Santa Rosa', 'sonoma': 'Santa Rosa', 'petaluma': 'Santa Rosa', 'rohnert park': 'Santa Rosa',
   // Chicago metro (extended)
   'naperville': 'Chicago', 'naperville il': 'Chicago', 'aurora il': 'Chicago', 'joliet': 'Chicago', 
   'elgin': 'Chicago', 'waukegan': 'Chicago', 'cicero': 'Chicago', 
