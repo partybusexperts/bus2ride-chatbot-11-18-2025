@@ -125,9 +125,13 @@ const ZIP_TO_METRO: Record<string, string> = {
   '780': 'San Antonio', '781': 'San Antonio', '782': 'San Antonio', '784': 'San Antonio', '783': 'San Antonio',
   // Salt Lake City UT (840-841, 843, 846-847)
   '840': 'Salt Lake City', '841': 'Salt Lake City', '843': 'Salt Lake City', '846': 'Salt Lake City', '847': 'Salt Lake City',
-  // Seattle WA (980-981, 983-984, 990-994)
+  // Seattle WA (980-981, 983-984, 985-986)
   '980': 'Seattle', '981': 'Seattle', '983': 'Seattle', '984': 'Seattle',
-  '990': 'Seattle', '991': 'Seattle', '992': 'Seattle', '993': 'Seattle', '994': 'Seattle',
+  '985': 'Seattle', '986': 'Seattle',
+  // Spokane WA (990-994, 988-989, 992, 994)
+  '988': 'Spokane', '989': 'Spokane', '990': 'Spokane', '991': 'Spokane',
+  '992': 'Spokane', '993': 'Spokane', '994': 'Spokane', '995': 'Spokane', '996': 'Spokane',
+  '997': 'Spokane', '998': 'Spokane', '999': 'Spokane',
   // Washington DC (200-205, 209)
   '200': 'Washington DC', '201': 'Washington DC', '202': 'Washington DC',
   '203': 'Washington DC', '204': 'Washington DC', '205': 'Washington DC', '209': 'Washington DC',
@@ -816,9 +820,12 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'summerlin': 'Las Vegas', 'green valley': 'Las Vegas', 'boulder city': 'Las Vegas',
   // Seattle metro
   'tacoma': 'Seattle', 'bellevue': 'Seattle', 'kent': 'Seattle', 'everett': 'Seattle',
-  'renton': 'Seattle', 'federal way': 'Seattle', 'spokane': 'Seattle', 'kirkland': 'Seattle',
+  'renton': 'Seattle', 'federal way': 'Seattle', 'kirkland': 'Seattle',
   'redmond': 'Seattle', 'auburn wa': 'Seattle', 'sammamish': 'Seattle', 'issaquah': 'Seattle',
   'bothell': 'Seattle', 'lynnwood': 'Seattle', 'edmonds': 'Seattle', 'burien': 'Seattle',
+  // Spokane metro (not part of Seattle)
+  'spokane valley': 'Spokane', 'liberty lake': 'Spokane', 'cheney': 'Spokane',
+  'airway heights': 'Spokane', 'deer park wa': 'Spokane', 'mead': 'Spokane',
   // Minneapolis metro
   'st paul': 'Minneapolis', 'saint paul': 'Minneapolis', 'bloomington mn': 'Minneapolis',
   'brooklyn park': 'Minneapolis', 'plymouth': 'Minneapolis', 'maple grove': 'Minneapolis',
