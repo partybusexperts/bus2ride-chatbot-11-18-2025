@@ -1645,12 +1645,13 @@ export default function CallPad() {
                   key={state}
                   onClick={() => {
                     const fullCity = `${cityDisambiguation.city}, ${state}`;
+                    const cityOnly = cityDisambiguation.city.charAt(0).toUpperCase() + cityDisambiguation.city.slice(1).toLowerCase();
                     setHistoryCities(prev => {
                       const newHistory = prev.map(c => ({ ...c, active: false }));
                       newHistory.push({ value: fullCity, addedAt: Date.now(), active: true });
                       return newHistory;
                     });
-                    setConfirmedData(prev => ({ ...prev, cityOrZip: fullCity, searchedCity: fullCity }));
+                    setConfirmedData(prev => ({ ...prev, cityOrZip: cityOnly, searchedCity: fullCity }));
                     setCityDisambiguation(null);
                   }}
                   style={{
