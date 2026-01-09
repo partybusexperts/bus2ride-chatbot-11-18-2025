@@ -81,6 +81,10 @@ const ZIP_TO_METRO: Record<string, string> = {
   '604': 'Chicago', '605': 'Chicago', '606': 'Chicago', '607': 'Chicago', '608': 'Chicago',
   // Indianapolis IN (460-462, 466)
   '460': 'Indianapolis', '461': 'Indianapolis', '462': 'Indianapolis', '466': 'Indianapolis',
+  // Louisville KY (400-402) - shares vehicles with Lexington
+  '400': 'Louisville', '401': 'Louisville', '402': 'Louisville',
+  // Lexington KY (403-406) - shares vehicles with Louisville
+  '403': 'Louisville', '404': 'Louisville', '405': 'Louisville', '406': 'Louisville',
   // Boston MA (010-024, 021-022)
   '010': 'Boston', '011': 'Boston', '012': 'Boston', '013': 'Boston', '014': 'Boston',
   '015': 'Boston', '016': 'Boston', '017': 'Boston', '018': 'Boston', '019': 'Boston',
@@ -914,6 +918,16 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'broad ripple': 'Indianapolis', 'downtown indy': 'Indianapolis', 'fountain square': 'Indianapolis',
   'mass ave': 'Indianapolis', 'irvington': 'Indianapolis', 'beech grove': 'Indianapolis',
   'southport in': 'Indianapolis', 'pike township': 'Indianapolis', 'washington township in': 'Indianapolis',
+  // Louisville-Lexington metro (share vehicles)
+  'lexington': 'Louisville', 'lexington ky': 'Louisville', 'lexington kentucky': 'Louisville',
+  'frankfort ky': 'Louisville', 'frankfort': 'Louisville', 'georgetown ky': 'Louisville',
+  'elizabethtown': 'Louisville', 'elizabethtown ky': 'Louisville', 'bardstown': 'Louisville',
+  'shelbyville ky': 'Louisville', 'la grange ky': 'Louisville', 'prospect ky': 'Louisville',
+  'jeffersontown': 'Louisville', 'st matthews ky': 'Louisville', 'middletown ky': 'Louisville',
+  'lyndon ky': 'Louisville', 'highlands louisville': 'Louisville', 'nulu': 'Louisville',
+  'downtown louisville': 'Louisville', 'old louisville': 'Louisville', 'germantown louisville': 'Louisville',
+  'bowling green ky': 'Louisville', 'bowling green': 'Louisville', 'richmond ky': 'Louisville',
+  'nicholasville': 'Louisville', 'versailles ky': 'Louisville', 'winchester ky': 'Louisville',
   // Nashville metro
   'franklin tn': 'Nashville', 'brentwood tn': 'Nashville', 'murfreesboro': 'Nashville',
   'smyrna tn': 'Nashville', 'la vergne': 'Nashville', 'hendersonville tn': 'Nashville',
