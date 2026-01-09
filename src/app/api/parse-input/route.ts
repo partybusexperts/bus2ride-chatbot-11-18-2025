@@ -920,13 +920,13 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'southport in': 'Indianapolis', 'pike township': 'Indianapolis', 'washington township in': 'Indianapolis',
   // Louisville-Lexington metro (share vehicles)
   'lexington': 'Louisville', 'lexington ky': 'Louisville', 'lexington kentucky': 'Louisville',
-  'frankfort ky': 'Louisville', 'frankfort': 'Louisville', 'georgetown ky': 'Louisville',
+  'frankfort ky': 'Louisville', 'frankfort kentucky': 'Louisville', 'georgetown ky': 'Louisville',
   'elizabethtown': 'Louisville', 'elizabethtown ky': 'Louisville', 'bardstown': 'Louisville',
   'shelbyville ky': 'Louisville', 'la grange ky': 'Louisville', 'prospect ky': 'Louisville',
   'jeffersontown': 'Louisville', 'st matthews ky': 'Louisville', 'middletown ky': 'Louisville',
   'lyndon ky': 'Louisville', 'highlands louisville': 'Louisville', 'nulu': 'Louisville',
   'downtown louisville': 'Louisville', 'old louisville': 'Louisville', 'germantown louisville': 'Louisville',
-  'bowling green ky': 'Louisville', 'bowling green': 'Louisville', 'richmond ky': 'Louisville',
+  'bowling green ky': 'Louisville', 'richmond ky': 'Louisville',
   'nicholasville': 'Louisville', 'versailles ky': 'Louisville', 'winchester ky': 'Louisville',
   // Nashville metro
   'franklin tn': 'Nashville', 'brentwood tn': 'Nashville', 'murfreesboro': 'Nashville',
