@@ -2372,13 +2372,14 @@ export default function CallPad() {
                 >
                   {v.image && (
                     <div 
-                      style={{ height: '100px', overflow: 'hidden', cursor: 'pointer' }}
+                      style={{ height: '140px', overflow: 'hidden', cursor: 'pointer' }}
                       onClick={() => openPricingModal(v)}
                     >
                       <img 
                         src={v.image} 
                         alt={v.name}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        loading="lazy"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', imageRendering: 'auto' }}
                         onError={(e) => {
                           (e.target as HTMLImageElement).style.display = 'none';
                         }}
@@ -2714,15 +2715,16 @@ export default function CallPad() {
             
             {allPhotos.length > 0 && (
               <div style={{ marginBottom: '20px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: allPhotos.length === 1 ? '1fr' : 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: allPhotos.length === 1 ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
                   {allPhotos.slice(0, 4).map((photo, idx) => (
                     <img 
                       key={idx}
                       src={photo} 
                       alt={`${selectedVehicle.name} ${idx + 1}`}
+                      loading="lazy"
                       style={{ 
                         width: '100%', 
-                        height: '120px', 
+                        height: '160px', 
                         objectFit: 'cover', 
                         borderRadius: '8px',
                         cursor: 'pointer',
@@ -3194,7 +3196,7 @@ export default function CallPad() {
                 <img 
                   src={photos[currentIndex]} 
                   alt={photoModalVehicle.name}
-                  style={{ width: '100%', height: '300px', objectFit: 'cover', borderRadius: '12px' }}
+                  style={{ width: '100%', height: '450px', objectFit: 'cover', borderRadius: '12px' }}
                   onError={(e) => { (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23334155" width="100" height="100"/></svg>'; }}
                 />
                 {photos.length > 1 && (
