@@ -143,11 +143,12 @@ const ZIP_TO_METRO: Record<string, string> = {
   '988': 'Spokane', '989': 'Spokane', '990': 'Spokane', '991': 'Spokane',
   '992': 'Spokane', '993': 'Spokane', '994': 'Spokane', '995': 'Spokane', '996': 'Spokane',
   '997': 'Spokane', '998': 'Spokane', '999': 'Spokane',
-  // Washington DC and Northern Virginia (200-205, 209, 220-223)
-  '200': 'Washington DC', '201': 'Washington DC', '202': 'Washington DC',
-  '203': 'Washington DC', '204': 'Washington DC', '205': 'Washington DC', '209': 'Washington DC',
-  '220': 'Washington DC', '221': 'Washington DC', '222': 'Washington DC', '223': 'Washington DC',
-  '224': 'Washington DC',
+  // Washington DC and Northern Virginia (200-205, 209, 220-224)
+  // Use "Washington" to match database format "Washington, DC"
+  '200': 'Washington', '201': 'Washington', '202': 'Washington',
+  '203': 'Washington', '204': 'Washington', '205': 'Washington', '209': 'Washington',
+  '220': 'Washington', '221': 'Washington', '222': 'Washington', '223': 'Washington',
+  '224': 'Washington',
   // Baltimore MD (210-212, 214-215, 217, 219)
   '210': 'Baltimore', '211': 'Baltimore', '212': 'Baltimore', '214': 'Baltimore',
   '215': 'Baltimore', '217': 'Baltimore', '219': 'Baltimore',
@@ -174,7 +175,7 @@ const ZIP_TO_METRO: Record<string, string> = {
   '060': 'New York', '061': 'New York', '062': 'New York', '063': 'New York', '064': 'New York',
   '065': 'New York', '066': 'New York', '067': 'New York', '068': 'New York', '069': 'New York',
   // Maryland suburbs of DC (206-208, 218, 207)
-  '206': 'Washington DC', '207': 'Washington DC', '208': 'Washington DC', '218': 'Baltimore',
+  '206': 'Washington', '207': 'Washington', '208': 'Washington', '218': 'Baltimore',
   // Note: Tucson (856-857) is served by Phoenix vehicles
   // Richmond VA (230-234)
   '230': 'Richmond', '231': 'Richmond', '232': 'Richmond', '233': 'Richmond', '234': 'Richmond',
@@ -1004,19 +1005,19 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'stamford': 'New York', 'greenwich': 'New York', 'long island': 'New York',
   'garden city': 'New York', 'great neck': 'New York', 'huntington': 'New York',
   // Washington DC metro
-  'arlington va': 'Washington DC', 'alexandria': 'Washington DC',
-  'bethesda': 'Washington DC', 'silver spring': 'Washington DC', 'rockville': 'Washington DC',
-  'tysons': 'Washington DC', 'reston': 'Washington DC', 'fairfax': 'Washington DC',
-  'mclean': 'Washington DC', 'falls church': 'Washington DC',
-  'herndon': 'Washington DC', 'chantilly': 'Washington DC', 'centreville': 'Washington DC',
-  'manassas': 'Washington DC', 'woodbridge': 'Washington DC', 'woodbridge va': 'Washington DC',
-  'springfield va': 'Washington DC', 'burke': 'Washington DC', 'annandale': 'Washington DC',
-  'vienna': 'Washington DC', 'vienna va': 'Washington DC', 'oakton': 'Washington DC',
-  'great falls': 'Washington DC', 'potomac': 'Washington DC', 'gaithersburg': 'Washington DC',
-  'germantown md': 'Washington DC', 'frederick md': 'Washington DC', 'columbia md': 'Washington DC',
-  'laurel md': 'Washington DC', 'bowie': 'Washington DC', 'college park md': 'Washington DC',
-  'hyattsville': 'Washington DC', 'greenbelt': 'Washington DC', 'upper marlboro': 'Washington DC',
-  'waldorf': 'Washington DC', 'la plata': 'Washington DC', 'brandywine md': 'Washington DC',
+  'arlington va': 'Washington', 'alexandria': 'Washington',
+  'bethesda': 'Washington', 'silver spring': 'Washington', 'rockville': 'Washington',
+  'tysons': 'Washington', 'reston': 'Washington', 'fairfax': 'Washington',
+  'mclean': 'Washington', 'falls church': 'Washington',
+  'herndon': 'Washington', 'chantilly': 'Washington', 'centreville': 'Washington',
+  'manassas': 'Washington', 'woodbridge': 'Washington', 'woodbridge va': 'Washington',
+  'springfield va': 'Washington', 'burke': 'Washington', 'annandale': 'Washington',
+  'vienna': 'Washington', 'vienna va': 'Washington', 'oakton': 'Washington',
+  'great falls': 'Washington', 'potomac': 'Washington', 'gaithersburg': 'Washington',
+  'germantown md': 'Washington', 'frederick md': 'Washington', 'columbia md': 'Washington',
+  'laurel md': 'Washington', 'bowie': 'Washington', 'college park md': 'Washington',
+  'hyattsville': 'Washington', 'greenbelt': 'Washington', 'upper marlboro': 'Washington',
+  'waldorf': 'Washington', 'la plata': 'Washington', 'brandywine md': 'Washington',
   // Tampa Bay metro
   'st petersburg': 'Tampa', 'saint petersburg': 'Tampa', 'clearwater': 'Tampa',
   'largo': 'Tampa', 'brandon': 'Tampa', 'palm harbor': 'Tampa', 'dunedin': 'Tampa',
