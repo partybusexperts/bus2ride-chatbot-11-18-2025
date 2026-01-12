@@ -34,6 +34,7 @@ interface DetectedItem {
   confidence: number;
   original: string;
   normalizedCity?: string; // For suburbs/small cities, the major metro area to use for vehicle search
+  displayCity?: string; // For display when different from normalizedCity (e.g., "Washington DC" for display, "Washington" for search)
   isRemote?: boolean; // True if location is 1+ hour from nearest major metro
 }
 
@@ -292,17 +293,35 @@ const ZIP_TO_METRO: Record<string, string> = {
   'J4X': 'Montreal', 'J4Y': 'Montreal', 'J4Z': 'Montreal',
 };
 
+// Display names for cities where search term differs from display
+// Key = search term (what we send to API), Value = display name (what user sees)
+const CITY_DISPLAY_NAMES: Record<string, string> = {
+  'Washington': 'Washington DC',
+};
+
 // Get metro area from ZIP/postal code (US or Canada)
-function getMetroFromZip(zip: string): string | null {
+// Returns { searchCity, displayCity } where searchCity is for API and displayCity is for UI
+function getMetroFromZip(zip: string): { searchCity: string; displayCity: string } | null {
   const cleanZip = zip.toUpperCase().replace(/\s+/g, '');
   // Canadian postal codes: first 3 chars (e.g., M1B, L4K, N8A, R2C)
   const canadianPrefix = cleanZip.substring(0, 3);
   if (ZIP_TO_METRO[canadianPrefix]) {
-    return ZIP_TO_METRO[canadianPrefix];
+    const searchCity = ZIP_TO_METRO[canadianPrefix];
+    return { 
+      searchCity, 
+      displayCity: CITY_DISPLAY_NAMES[searchCity] || searchCity 
+    };
   }
   // US ZIP codes: first 3 digits
   const usPrefix = cleanZip.substring(0, 3);
-  return ZIP_TO_METRO[usPrefix] || null;
+  const searchCity = ZIP_TO_METRO[usPrefix];
+  if (searchCity) {
+    return { 
+      searchCity, 
+      displayCity: CITY_DISPLAY_NAMES[searchCity] || searchCity 
+    };
+  }
+  return null;
 }
 // Accept "5pm", "5p", "5 pm", "5:30pm", "5:30 p", etc.
 const TIME_REGEX = /^(\d{1,2})(:\d{2})?\s*([ap]\.?m?\.?)$/i;
@@ -1412,7 +1431,10 @@ function detectPattern(text: string): DetectedItem | null {
       value: trimmed, 
       confidence: 0.95, 
       original: trimmed,
-      ...(metro && { normalizedCity: metro })
+      ...(metro && { 
+        normalizedCity: metro.searchCity,
+        ...(metro.displayCity !== metro.searchCity && { displayCity: metro.displayCity })
+      })
     };
   }
   
@@ -1424,7 +1446,10 @@ function detectPattern(text: string): DetectedItem | null {
       value: trimmed.toUpperCase().substring(0, 3), 
       confidence: 0.95, 
       original: trimmed,
-      ...(metro && { normalizedCity: metro })
+      ...(metro && { 
+        normalizedCity: metro.searchCity,
+        ...(metro.displayCity !== metro.searchCity && { displayCity: metro.displayCity })
+      })
     };
   }
 

@@ -22,6 +22,7 @@ interface DetectedChip {
   confirmed: boolean;
   autoPopulated: boolean;
   normalizedCity?: string; // For suburbs, the major metro to use for vehicle search
+  displayCity?: string; // For display when different from normalizedCity (e.g., "Washington DC" for display, "Washington" for search)
   isRemote?: boolean; // True if location is 1+ hour from nearest major metro
 }
 
@@ -203,7 +204,8 @@ export default function CallPad() {
     callerName: "",
     phone: "",
     email: "",
-    cityOrZip: "",
+    cityOrZip: "", // For vehicle search (e.g., "Washington")
+    displayCityOrZip: "", // For display (e.g., "Washington DC") - only set when different from cityOrZip
     searchedCity: "", // Original city/suburb entered (for display)
     passengers: "",
     hours: "",
@@ -403,13 +405,15 @@ export default function CallPad() {
       // e.g., "mesa az" shows as Mesa AZ but searches vehicles for Phoenix
       // For ZIP codes, show "ZIP XXXXX" and the metro area it maps to
       const searchCity = chip.normalizedCity || chip.value;
+      const displayCity = chip.displayCity || chip.normalizedCity || chip.value;
       const wasNormalized = chip.normalizedCity && chip.normalizedCity.toLowerCase() !== chip.value.toLowerCase();
       const isZipCode = chip.type === 'zip';
       
-      // Update cityOrZip (for vehicle search), searchedCity (original for display), and pickupAddress
+      // Update cityOrZip (for vehicle search), displayCityOrZip (for display), searchedCity (original for display), and pickupAddress
       setConfirmedData(prev => ({ 
         ...prev, 
         cityOrZip: searchCity, // Use normalized city for vehicle search
+        displayCityOrZip: displayCity, // Use display city for UI (e.g., "Washington DC" instead of "Washington")
         // For ZIP codes: always show "ZIP XXXXX" format even if we don't know the metro
         // For cities: only set if different from normalized
         searchedCity: isZipCode ? `ZIP ${chip.value}` : (wasNormalized ? chip.value : ''),
@@ -418,7 +422,7 @@ export default function CallPad() {
       
       // Show notification if city was normalized
       if (wasNormalized) {
-        console.log(`[City Normalization] "${chip.value}" → searching vehicles for "${chip.normalizedCity}"`);
+        console.log(`[City Normalization] "${chip.value}" → searching vehicles for "${chip.normalizedCity}"${chip.displayCity ? ` (display: ${chip.displayCity})` : ''}`);
       }
       
       // Show warning if this is a remote location (1+ hour from nearest major metro)
@@ -566,6 +570,7 @@ export default function CallPad() {
             confirmed: shouldAutoPopulate,
             autoPopulated: shouldAutoPopulate,
             ...(item.normalizedCity && { normalizedCity: item.normalizedCity }),
+            ...(item.displayCity && { displayCity: item.displayCity }),
             ...(item.isRemote && { isRemote: item.isRemote }),
           };
         });
@@ -606,6 +611,7 @@ export default function CallPad() {
       phone: "",
       email: "",
       cityOrZip: "",
+      displayCityOrZip: "",
       searchedCity: "",
       passengers: "",
       hours: "",
@@ -2089,7 +2095,7 @@ export default function CallPad() {
                     {hasServiceArea ? (
                       <>
                         <span style={{ fontSize: '22px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
-                          {confirmedData.cityOrZip.toUpperCase()}
+                          {(confirmedData.displayCityOrZip || confirmedData.cityOrZip).toUpperCase()}
                         </span>
                         <span style={{ fontSize: '11px', color: '#fcd34d', fontWeight: 500, marginLeft: '4px' }}>RATES</span>
                       </>
@@ -2110,7 +2116,7 @@ export default function CallPad() {
                     <span style={{ fontSize: '16px', color: '#93c5fd', fontWeight: 500 }}>→</span>
                     <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: 500 }}>SHOWING:</span>
                     <span style={{ fontSize: '22px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
-                      {confirmedData.cityOrZip.toUpperCase()}
+                      {(confirmedData.displayCityOrZip || confirmedData.cityOrZip).toUpperCase()}
                     </span>
                     <span style={{ fontSize: '11px', color: '#fcd34d', fontWeight: 500, marginLeft: '4px' }}>RATES</span>
                   </>
@@ -2120,7 +2126,7 @@ export default function CallPad() {
                   <>
                     <span style={{ fontSize: '12px', color: '#93c5fd', fontWeight: 500 }}>SEARCHING:</span>
                     <span style={{ fontSize: '22px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
-                      {confirmedData.cityOrZip.toUpperCase()}
+                      {(confirmedData.displayCityOrZip || confirmedData.cityOrZip).toUpperCase()}
                     </span>
                   </>
                 );
