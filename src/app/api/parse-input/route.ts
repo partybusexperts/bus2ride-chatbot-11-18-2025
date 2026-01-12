@@ -143,9 +143,11 @@ const ZIP_TO_METRO: Record<string, string> = {
   '988': 'Spokane', '989': 'Spokane', '990': 'Spokane', '991': 'Spokane',
   '992': 'Spokane', '993': 'Spokane', '994': 'Spokane', '995': 'Spokane', '996': 'Spokane',
   '997': 'Spokane', '998': 'Spokane', '999': 'Spokane',
-  // Washington DC (200-205, 209)
+  // Washington DC and Northern Virginia (200-205, 209, 220-223)
   '200': 'Washington DC', '201': 'Washington DC', '202': 'Washington DC',
   '203': 'Washington DC', '204': 'Washington DC', '205': 'Washington DC', '209': 'Washington DC',
+  '220': 'Washington DC', '221': 'Washington DC', '222': 'Washington DC', '223': 'Washington DC',
+  '224': 'Washington DC',
   // Baltimore MD (210-212, 214-215, 217, 219)
   '210': 'Baltimore', '211': 'Baltimore', '212': 'Baltimore', '214': 'Baltimore',
   '215': 'Baltimore', '217': 'Baltimore', '219': 'Baltimore',
@@ -159,6 +161,47 @@ const ZIP_TO_METRO: Record<string, string> = {
   '970': 'Portland', '971': 'Portland', '972': 'Portland', '974': 'Portland', '975': 'Portland',
   // Milwaukee WI (530-532, 534)
   '530': 'Milwaukee', '531': 'Milwaukee', '532': 'Milwaukee', '534': 'Milwaukee',
+  // Grand Rapids MI (493-495, 496-499)
+  '493': 'Grand Rapids', '494': 'Grand Rapids', '495': 'Grand Rapids',
+  '496': 'Grand Rapids', '497': 'Grand Rapids', '498': 'Grand Rapids', '499': 'Grand Rapids',
+  // New Jersey (near NYC) (070-089)
+  '070': 'New York', '071': 'New York', '072': 'New York', '073': 'New York', '074': 'New York',
+  '075': 'New York', '076': 'New York', '077': 'New York', '078': 'New York', '079': 'New York',
+  '080': 'Philadelphia', '081': 'Philadelphia', '082': 'Philadelphia', '083': 'Philadelphia',
+  '084': 'Philadelphia', '085': 'Philadelphia', '086': 'Philadelphia', '087': 'Philadelphia',
+  '088': 'Philadelphia', '089': 'Philadelphia',
+  // Connecticut (060-069) - near NYC/Boston
+  '060': 'New York', '061': 'New York', '062': 'New York', '063': 'New York', '064': 'New York',
+  '065': 'New York', '066': 'New York', '067': 'New York', '068': 'New York', '069': 'New York',
+  // Maryland suburbs of DC (206-208, 218, 207)
+  '206': 'Washington DC', '207': 'Washington DC', '208': 'Washington DC', '218': 'Baltimore',
+  // Note: Tucson (856-857) is served by Phoenix vehicles
+  // Richmond VA (230-234)
+  '230': 'Richmond', '231': 'Richmond', '232': 'Richmond', '233': 'Richmond', '234': 'Richmond',
+  // Virginia Beach/Norfolk (233-239)
+  '235': 'Virginia Beach', '236': 'Virginia Beach', '237': 'Virginia Beach', '238': 'Virginia Beach', '239': 'Virginia Beach',
+  // Raleigh extended (275, 278-279)
+  '275': 'Raleigh', '278': 'Raleigh', '279': 'Raleigh',
+  // Charlotte extended (283, 285-289)
+  '283': 'Charlotte', '285': 'Charlotte', '286': 'Charlotte', '287': 'Charlotte', '288': 'Charlotte', '289': 'Charlotte',
+  // Jacksonville FL (320-322)
+  '320': 'Jacksonville', '321': 'Jacksonville', '322': 'Jacksonville',
+  // Albuquerque NM (870-871, 873)
+  '870': 'Albuquerque', '871': 'Albuquerque', '873': 'Albuquerque',
+  // Oklahoma City OK (730-731, 733, 734-735)
+  '733': 'Oklahoma City', '734': 'Oklahoma City', '735': 'Oklahoma City',
+  // Tulsa OK (740-741, 743-745)
+  '740': 'Tulsa', '741': 'Tulsa', '743': 'Tulsa', '744': 'Tulsa', '745': 'Tulsa',
+  // Omaha NE (680-681, 683-685)
+  '680': 'Omaha', '681': 'Omaha', '683': 'Omaha', '684': 'Omaha', '685': 'Omaha',
+  // Providence RI (028-029)
+  '028': 'Providence', '029': 'Providence',
+  // Hartford CT (060-061, 062-069) - already covered above with NYC
+  // Sacramento CA (956-958)
+  '956': 'Sacramento', '957': 'Sacramento', '958': 'Sacramento',
+  // Fresno CA (936-937, 939)
+  '936': 'Fresno', '937': 'Fresno', '939': 'Fresno',
+  // Long Island NY (115-119) - already covered
   
   // ===== CANADA =====
   // Toronto ON (M and L postal codes)
