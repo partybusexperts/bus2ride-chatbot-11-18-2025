@@ -216,6 +216,36 @@ const ZIP_TO_METRO: Record<string, string> = {
   'R3T': 'Winnipeg', 'R3V': 'Winnipeg', 'R3W': 'Winnipeg', 'R3X': 'Winnipeg', 'R3Y': 'Winnipeg',
   'R4A': 'Winnipeg', 'R4G': 'Winnipeg', 'R4H': 'Winnipeg', 'R4J': 'Winnipeg', 'R4K': 'Winnipeg',
   'R4L': 'Winnipeg', 'R5A': 'Winnipeg', 'R5G': 'Winnipeg',
+  
+  // Montreal QC (H postal codes)
+  'H1A': 'Montreal', 'H1B': 'Montreal', 'H1C': 'Montreal', 'H1E': 'Montreal', 'H1G': 'Montreal',
+  'H1H': 'Montreal', 'H1J': 'Montreal', 'H1K': 'Montreal', 'H1L': 'Montreal', 'H1M': 'Montreal',
+  'H1N': 'Montreal', 'H1P': 'Montreal', 'H1R': 'Montreal', 'H1S': 'Montreal', 'H1T': 'Montreal',
+  'H1V': 'Montreal', 'H1W': 'Montreal', 'H1X': 'Montreal', 'H1Y': 'Montreal', 'H1Z': 'Montreal',
+  'H2A': 'Montreal', 'H2B': 'Montreal', 'H2C': 'Montreal', 'H2E': 'Montreal', 'H2G': 'Montreal',
+  'H2H': 'Montreal', 'H2J': 'Montreal', 'H2K': 'Montreal', 'H2L': 'Montreal', 'H2M': 'Montreal',
+  'H2N': 'Montreal', 'H2P': 'Montreal', 'H2R': 'Montreal', 'H2S': 'Montreal', 'H2T': 'Montreal',
+  'H2V': 'Montreal', 'H2W': 'Montreal', 'H2X': 'Montreal', 'H2Y': 'Montreal', 'H2Z': 'Montreal',
+  'H3A': 'Montreal', 'H3B': 'Montreal', 'H3C': 'Montreal', 'H3E': 'Montreal', 'H3G': 'Montreal',
+  'H3H': 'Montreal', 'H3J': 'Montreal', 'H3K': 'Montreal', 'H3L': 'Montreal', 'H3M': 'Montreal',
+  'H3N': 'Montreal', 'H3P': 'Montreal', 'H3R': 'Montreal', 'H3S': 'Montreal', 'H3T': 'Montreal',
+  'H3V': 'Montreal', 'H3W': 'Montreal', 'H3X': 'Montreal', 'H3Y': 'Montreal', 'H3Z': 'Montreal',
+  'H4A': 'Montreal', 'H4B': 'Montreal', 'H4C': 'Montreal', 'H4E': 'Montreal', 'H4G': 'Montreal',
+  'H4H': 'Montreal', 'H4J': 'Montreal', 'H4K': 'Montreal', 'H4L': 'Montreal', 'H4M': 'Montreal',
+  'H4N': 'Montreal', 'H4P': 'Montreal', 'H4R': 'Montreal', 'H4S': 'Montreal', 'H4T': 'Montreal',
+  'H4V': 'Montreal', 'H4W': 'Montreal', 'H4X': 'Montreal', 'H4Y': 'Montreal', 'H4Z': 'Montreal',
+  'H5A': 'Montreal', 'H5B': 'Montreal', 'H7A': 'Montreal', 'H7B': 'Montreal', 'H7C': 'Montreal',
+  'H7E': 'Montreal', 'H7G': 'Montreal', 'H7H': 'Montreal', 'H7J': 'Montreal', 'H7K': 'Montreal',
+  'H7L': 'Montreal', 'H7M': 'Montreal', 'H7N': 'Montreal', 'H7P': 'Montreal', 'H7R': 'Montreal',
+  'H7S': 'Montreal', 'H7T': 'Montreal', 'H7V': 'Montreal', 'H7W': 'Montreal', 'H7X': 'Montreal',
+  'H7Y': 'Montreal', 'H8N': 'Montreal', 'H8P': 'Montreal', 'H8R': 'Montreal', 'H8S': 'Montreal',
+  'H8T': 'Montreal', 'H8Y': 'Montreal', 'H8Z': 'Montreal', 'H9A': 'Montreal', 'H9B': 'Montreal',
+  'H9C': 'Montreal', 'H9E': 'Montreal', 'H9G': 'Montreal', 'H9H': 'Montreal', 'H9J': 'Montreal',
+  'H9K': 'Montreal', 'H9P': 'Montreal', 'H9R': 'Montreal', 'H9S': 'Montreal', 'H9W': 'Montreal',
+  'H9X': 'Montreal', 'J4B': 'Montreal', 'J4G': 'Montreal', 'J4H': 'Montreal', 'J4J': 'Montreal',
+  'J4K': 'Montreal', 'J4L': 'Montreal', 'J4M': 'Montreal', 'J4N': 'Montreal', 'J4P': 'Montreal',
+  'J4R': 'Montreal', 'J4S': 'Montreal', 'J4T': 'Montreal', 'J4V': 'Montreal', 'J4W': 'Montreal',
+  'J4X': 'Montreal', 'J4Y': 'Montreal', 'J4Z': 'Montreal',
 };
 
 // Get metro area from ZIP/postal code (US or Canada)
@@ -706,9 +736,10 @@ const CITY_KEYWORDS = [
   'anchorage', 'fairbanks', 'juneau', 'sitka', 'ketchikan', 'wasilla',
   'honolulu', 'pearl city', 'hilo', 'kailua', 'kapolei', 'kaneohe', 'maui', 'kona',
   // Canada
-  'toronto', 'windsor', 'winnipeg', 'windsor ontario', 'windsor on', 'toronto ontario',
-  'toronto on', 'winnipeg manitoba', 'winnipeg mb', 'mississauga', 'brampton', 'markham',
-  'vaughan', 'oakville', 'scarborough', 'north york', 'etobicoke', 'richmond hill',
+  'toronto', 'windsor', 'winnipeg', 'montreal', 'windsor ontario', 'windsor on', 'toronto ontario',
+  'toronto on', 'winnipeg manitoba', 'winnipeg mb', 'montreal quebec', 'montreal qc',
+  'mississauga', 'brampton', 'markham', 'vaughan', 'oakville', 'scarborough', 'north york', 
+  'etobicoke', 'richmond hill', 'laval', 'longueuil', 'brossard', 'terrebonne',
 ];
 
 // City normalization - map suburbs/small cities to their major metro for vehicle search
@@ -1176,6 +1207,14 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'st boniface': 'Winnipeg', 'transcona': 'Winnipeg', 'st vital': 'Winnipeg',
   'charleswood': 'Winnipeg', 'tuxedo mb': 'Winnipeg', 'river heights mb': 'Winnipeg',
   'selkirk mb': 'Winnipeg', 'steinbach': 'Winnipeg',
+  // Montreal QC suburbs
+  'montreal qc': 'Montreal', 'montreal quebec': 'Montreal',
+  'laval': 'Montreal', 'longueuil': 'Montreal', 'brossard': 'Montreal',
+  'terrebonne': 'Montreal', 'repentigny': 'Montreal', 'saint-laurent': 'Montreal',
+  'dollard-des-ormeaux': 'Montreal', 'pointe-claire': 'Montreal', 'dorval': 'Montreal',
+  'kirkland qc': 'Montreal', 'beaconsfield': 'Montreal', 'pierrefonds': 'Montreal',
+  'lasalle qc': 'Montreal', 'verdun': 'Montreal', 'westmount': 'Montreal',
+  'outremont': 'Montreal', 'mount royal': 'Montreal', 'cote-saint-luc': 'Montreal',
 };
 
 // Remote locations that are 1+ hour from the nearest major metro - agent should be warned
