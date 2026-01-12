@@ -40,6 +40,8 @@ interface DetectedItem {
 const PHONE_REGEX = /^[\d\s\-\(\)\.]{10,}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ZIP_REGEX = /^\d{5}(-\d{4})?$/;
+// Canadian postal code regex (e.g., M1B, L4K 2C3, N8A 1B2)
+const CANADIAN_POSTAL_REGEX = /^[A-Za-z]\d[A-Za-z](\s?\d[A-Za-z]\d)?$/;
 
 // ZIP code prefix to metro area mapping (first 3 digits)
 const ZIP_TO_METRO: Record<string, string> = {
@@ -157,12 +159,76 @@ const ZIP_TO_METRO: Record<string, string> = {
   '970': 'Portland', '971': 'Portland', '972': 'Portland', '974': 'Portland', '975': 'Portland',
   // Milwaukee WI (530-532, 534)
   '530': 'Milwaukee', '531': 'Milwaukee', '532': 'Milwaukee', '534': 'Milwaukee',
+  
+  // ===== CANADA =====
+  // Toronto ON (M and L postal codes)
+  'M1B': 'Toronto', 'M1C': 'Toronto', 'M1E': 'Toronto', 'M1G': 'Toronto', 'M1H': 'Toronto',
+  'M1J': 'Toronto', 'M1K': 'Toronto', 'M1L': 'Toronto', 'M1M': 'Toronto', 'M1N': 'Toronto',
+  'M1P': 'Toronto', 'M1R': 'Toronto', 'M1S': 'Toronto', 'M1T': 'Toronto', 'M1V': 'Toronto',
+  'M1W': 'Toronto', 'M1X': 'Toronto', 'M2H': 'Toronto', 'M2J': 'Toronto', 'M2K': 'Toronto',
+  'M2L': 'Toronto', 'M2M': 'Toronto', 'M2N': 'Toronto', 'M2P': 'Toronto', 'M2R': 'Toronto',
+  'M3A': 'Toronto', 'M3B': 'Toronto', 'M3C': 'Toronto', 'M3H': 'Toronto', 'M3J': 'Toronto',
+  'M3K': 'Toronto', 'M3L': 'Toronto', 'M3M': 'Toronto', 'M3N': 'Toronto', 'M4A': 'Toronto',
+  'M4B': 'Toronto', 'M4C': 'Toronto', 'M4E': 'Toronto', 'M4G': 'Toronto', 'M4H': 'Toronto',
+  'M4J': 'Toronto', 'M4K': 'Toronto', 'M4L': 'Toronto', 'M4M': 'Toronto', 'M4N': 'Toronto',
+  'M4P': 'Toronto', 'M4R': 'Toronto', 'M4S': 'Toronto', 'M4T': 'Toronto', 'M4V': 'Toronto',
+  'M4W': 'Toronto', 'M4X': 'Toronto', 'M4Y': 'Toronto', 'M5A': 'Toronto', 'M5B': 'Toronto',
+  'M5C': 'Toronto', 'M5E': 'Toronto', 'M5G': 'Toronto', 'M5H': 'Toronto', 'M5J': 'Toronto',
+  'M5K': 'Toronto', 'M5L': 'Toronto', 'M5M': 'Toronto', 'M5N': 'Toronto', 'M5P': 'Toronto',
+  'M5R': 'Toronto', 'M5S': 'Toronto', 'M5T': 'Toronto', 'M5V': 'Toronto', 'M5W': 'Toronto',
+  'M5X': 'Toronto', 'M6A': 'Toronto', 'M6B': 'Toronto', 'M6C': 'Toronto', 'M6E': 'Toronto',
+  'M6G': 'Toronto', 'M6H': 'Toronto', 'M6J': 'Toronto', 'M6K': 'Toronto', 'M6L': 'Toronto',
+  'M6M': 'Toronto', 'M6N': 'Toronto', 'M6P': 'Toronto', 'M6R': 'Toronto', 'M6S': 'Toronto',
+  'M7A': 'Toronto', 'M7Y': 'Toronto', 'M8V': 'Toronto', 'M8W': 'Toronto', 'M8X': 'Toronto',
+  'M8Y': 'Toronto', 'M8Z': 'Toronto', 'M9A': 'Toronto', 'M9B': 'Toronto', 'M9C': 'Toronto',
+  'M9L': 'Toronto', 'M9M': 'Toronto', 'M9N': 'Toronto', 'M9P': 'Toronto', 'M9R': 'Toronto',
+  'M9V': 'Toronto', 'M9W': 'Toronto',
+  // Toronto GTA (L postal codes)
+  'L4B': 'Toronto', 'L4C': 'Toronto', 'L4E': 'Toronto', 'L4G': 'Toronto', 'L4H': 'Toronto',
+  'L4J': 'Toronto', 'L4K': 'Toronto', 'L4L': 'Toronto', 'L4S': 'Toronto', 'L4T': 'Toronto',
+  'L4V': 'Toronto', 'L4W': 'Toronto', 'L4X': 'Toronto', 'L4Y': 'Toronto', 'L4Z': 'Toronto',
+  'L5A': 'Toronto', 'L5B': 'Toronto', 'L5C': 'Toronto', 'L5E': 'Toronto', 'L5G': 'Toronto',
+  'L5H': 'Toronto', 'L5J': 'Toronto', 'L5K': 'Toronto', 'L5L': 'Toronto', 'L5M': 'Toronto',
+  'L5N': 'Toronto', 'L5P': 'Toronto', 'L5R': 'Toronto', 'L5S': 'Toronto', 'L5T': 'Toronto',
+  'L5V': 'Toronto', 'L5W': 'Toronto', 'L6B': 'Toronto', 'L6C': 'Toronto', 'L6E': 'Toronto',
+  'L6G': 'Toronto', 'L6H': 'Toronto', 'L6J': 'Toronto', 'L6K': 'Toronto', 'L6L': 'Toronto',
+  'L6M': 'Toronto', 'L6P': 'Toronto', 'L6R': 'Toronto', 'L6S': 'Toronto', 'L6T': 'Toronto',
+  'L6V': 'Toronto', 'L6W': 'Toronto', 'L6X': 'Toronto', 'L6Y': 'Toronto', 'L6Z': 'Toronto',
+  'L7A': 'Toronto', 'L3P': 'Toronto', 'L3R': 'Toronto', 'L3S': 'Toronto', 'L3T': 'Toronto',
+  'L1S': 'Toronto', 'L1T': 'Toronto', 'L1V': 'Toronto', 'L1W': 'Toronto', 'L1X': 'Toronto',
+  'L1Y': 'Toronto', 'L1Z': 'Toronto', 'L3X': 'Toronto', 'L3Y': 'Toronto',
+  
+  // Windsor ON (N postal codes)
+  'N0P': 'Windsor', 'N0R': 'Windsor', 'N8A': 'Windsor', 'N8H': 'Windsor', 'N8M': 'Windsor',
+  'N8N': 'Windsor', 'N8P': 'Windsor', 'N8R': 'Windsor', 'N8S': 'Windsor', 'N8T': 'Windsor',
+  'N8V': 'Windsor', 'N8W': 'Windsor', 'N8X': 'Windsor', 'N8Y': 'Windsor', 'N9A': 'Windsor',
+  'N9B': 'Windsor', 'N9C': 'Windsor', 'N9E': 'Windsor', 'N9G': 'Windsor', 'N9H': 'Windsor',
+  'N9J': 'Windsor', 'N9K': 'Windsor', 'N9V': 'Windsor', 'N9Y': 'Windsor',
+  
+  // Winnipeg MB (R postal codes)
+  'R0C': 'Winnipeg', 'R0G': 'Winnipeg', 'R0H': 'Winnipeg', 'R1A': 'Winnipeg', 'R1B': 'Winnipeg',
+  'R1C': 'Winnipeg', 'R2C': 'Winnipeg', 'R2E': 'Winnipeg', 'R2G': 'Winnipeg', 'R2H': 'Winnipeg',
+  'R2J': 'Winnipeg', 'R2K': 'Winnipeg', 'R2L': 'Winnipeg', 'R2M': 'Winnipeg', 'R2N': 'Winnipeg',
+  'R2P': 'Winnipeg', 'R2R': 'Winnipeg', 'R2V': 'Winnipeg', 'R2W': 'Winnipeg', 'R2X': 'Winnipeg',
+  'R2Y': 'Winnipeg', 'R3A': 'Winnipeg', 'R3B': 'Winnipeg', 'R3C': 'Winnipeg', 'R3E': 'Winnipeg',
+  'R3G': 'Winnipeg', 'R3H': 'Winnipeg', 'R3J': 'Winnipeg', 'R3K': 'Winnipeg', 'R3L': 'Winnipeg',
+  'R3M': 'Winnipeg', 'R3N': 'Winnipeg', 'R3P': 'Winnipeg', 'R3R': 'Winnipeg', 'R3S': 'Winnipeg',
+  'R3T': 'Winnipeg', 'R3V': 'Winnipeg', 'R3W': 'Winnipeg', 'R3X': 'Winnipeg', 'R3Y': 'Winnipeg',
+  'R4A': 'Winnipeg', 'R4G': 'Winnipeg', 'R4H': 'Winnipeg', 'R4J': 'Winnipeg', 'R4K': 'Winnipeg',
+  'R4L': 'Winnipeg', 'R5A': 'Winnipeg', 'R5G': 'Winnipeg',
 };
 
-// Get metro area from ZIP code
+// Get metro area from ZIP/postal code (US or Canada)
 function getMetroFromZip(zip: string): string | null {
-  const prefix = zip.substring(0, 3);
-  return ZIP_TO_METRO[prefix] || null;
+  const cleanZip = zip.toUpperCase().replace(/\s+/g, '');
+  // Canadian postal codes: first 3 chars (e.g., M1B, L4K, N8A, R2C)
+  const canadianPrefix = cleanZip.substring(0, 3);
+  if (ZIP_TO_METRO[canadianPrefix]) {
+    return ZIP_TO_METRO[canadianPrefix];
+  }
+  // US ZIP codes: first 3 digits
+  const usPrefix = cleanZip.substring(0, 3);
+  return ZIP_TO_METRO[usPrefix] || null;
 }
 // Accept "5pm", "5p", "5 pm", "5:30pm", "5:30 p", etc.
 const TIME_REGEX = /^(\d{1,2})(:\d{2})?\s*([ap]\.?m?\.?)$/i;
@@ -639,6 +705,10 @@ const CITY_KEYWORDS = [
   // Alaska / Hawaii
   'anchorage', 'fairbanks', 'juneau', 'sitka', 'ketchikan', 'wasilla',
   'honolulu', 'pearl city', 'hilo', 'kailua', 'kapolei', 'kaneohe', 'maui', 'kona',
+  // Canada
+  'toronto', 'windsor', 'winnipeg', 'windsor ontario', 'windsor on', 'toronto ontario',
+  'toronto on', 'winnipeg manitoba', 'winnipeg mb', 'mississauga', 'brampton', 'markham',
+  'vaughan', 'oakville', 'scarborough', 'north york', 'etobicoke', 'richmond hill',
 ];
 
 // City normalization - map suburbs/small cities to their major metro for vehicle search
@@ -1085,6 +1155,27 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'downtown slc': 'Salt Lake City', 'sugar house': 'Salt Lake City', 'the avenues': 'Salt Lake City',
   // Madison WI - major city (not a suburb, maps to itself)
   'madison wi': 'Madison', 'madison wisconsin': 'Madison', 'madison, wi': 'Madison', 'madison, wisconsin': 'Madison',
+  
+  // ===== CANADA =====
+  // Toronto GTA suburbs
+  'mississauga': 'Toronto', 'brampton': 'Toronto', 'markham': 'Toronto', 'vaughan': 'Toronto',
+  'oakville on': 'Toronto', 'oakville ontario': 'Toronto', 'richmond hill': 'Toronto', 'scarborough': 'Toronto', 'north york': 'Toronto',
+  'etobicoke': 'Toronto', 'pickering': 'Toronto', 'ajax': 'Toronto', 'whitby': 'Toronto',
+  'oshawa': 'Toronto', 'newmarket': 'Toronto', 'aurora on': 'Toronto', 'king city': 'Toronto',
+  'thornhill': 'Toronto', 'maple on': 'Toronto', 'woodbridge on': 'Toronto', 'concord on': 'Toronto',
+  'bolton on': 'Toronto', 'caledon': 'Toronto', 'milton on': 'Toronto', 'burlington on': 'Toronto',
+  'hamilton on': 'Toronto', 'st catharines': 'Toronto', 'niagara falls on': 'Toronto',
+  'georgetown on': 'Toronto', 'halton hills': 'Toronto', 'stouffville': 'Toronto',
+  'toronto on': 'Toronto', 'toronto ontario': 'Toronto',
+  // Windsor ON suburbs
+  'windsor on': 'Windsor', 'windsor ontario': 'Windsor', 'tecumseh on': 'Windsor',
+  'lakeshore on': 'Windsor', 'lasalle on': 'Windsor', 'amherstburg': 'Windsor',
+  'kingsville on': 'Windsor', 'leamington on': 'Windsor', 'essex on': 'Windsor',
+  // Winnipeg MB suburbs
+  'winnipeg mb': 'Winnipeg', 'winnipeg manitoba': 'Winnipeg',
+  'st boniface': 'Winnipeg', 'transcona': 'Winnipeg', 'st vital': 'Winnipeg',
+  'charleswood': 'Winnipeg', 'tuxedo mb': 'Winnipeg', 'river heights mb': 'Winnipeg',
+  'selkirk mb': 'Winnipeg', 'steinbach': 'Winnipeg',
 };
 
 // Remote locations that are 1+ hour from the nearest major metro - agent should be warned
@@ -1230,11 +1321,24 @@ function detectPattern(text: string): DetectedItem | null {
     return { type: 'email', value: trimmed.toLowerCase(), confidence: 0.99, original: trimmed };
   }
 
+  // US ZIP codes (5 digits, optionally with -4 extension)
   if (ZIP_REGEX.test(trimmed)) {
     const metro = getMetroFromZip(trimmed);
     return { 
       type: 'zip', 
       value: trimmed, 
+      confidence: 0.95, 
+      original: trimmed,
+      ...(metro && { normalizedCity: metro })
+    };
+  }
+  
+  // Canadian postal codes (e.g., M1B, L4K, N8A 1B2)
+  if (CANADIAN_POSTAL_REGEX.test(trimmed)) {
+    const metro = getMetroFromZip(trimmed);
+    return { 
+      type: 'zip', 
+      value: trimmed.toUpperCase().substring(0, 3), 
       confidence: 0.95, 
       original: trimmed,
       ...(metro && { normalizedCity: metro })
