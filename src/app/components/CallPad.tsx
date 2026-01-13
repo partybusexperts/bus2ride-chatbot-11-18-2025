@@ -405,7 +405,15 @@ export default function CallPad() {
       // e.g., "mesa az" shows as Mesa AZ but searches vehicles for Phoenix
       // For ZIP codes, show "ZIP XXXXX" and the metro area it maps to
       const searchCity = chip.normalizedCity || chip.value;
-      const displayCity = chip.displayCity || chip.normalizedCity || chip.value;
+      // displayCityOrZip is what we show in "SHOWING: X RATES"
+      // - For formatting variations: "Washington DC" includes "Washington" → show "Washington DC"
+      // - For different metros: "Arlington" doesn't include "Dallas" → show "Dallas"
+      const isFormattingVariation = chip.displayCity && chip.normalizedCity && 
+        (chip.displayCity.toLowerCase().includes(chip.normalizedCity.toLowerCase()) ||
+         chip.normalizedCity.toLowerCase().includes(chip.displayCity.toLowerCase()));
+      const displayForRates = isFormattingVariation 
+        ? (chip.displayCity || chip.value)  // Formatting variation: show nicer name (e.g., Washington DC)
+        : (chip.normalizedCity || chip.displayCity || chip.value); // Different metro: show rates city (e.g., Dallas)
       const wasNormalized = chip.normalizedCity && chip.normalizedCity.toLowerCase() !== chip.value.toLowerCase();
       const isZipCode = chip.type === 'zip';
       
@@ -413,7 +421,7 @@ export default function CallPad() {
       setConfirmedData(prev => ({ 
         ...prev, 
         cityOrZip: searchCity, // Use normalized city for vehicle search
-        displayCityOrZip: displayCity, // Use display city for UI (e.g., "Washington DC" instead of "Washington")
+        displayCityOrZip: displayForRates, // Use appropriate display city for UI
         // For ZIP codes: always show "ZIP XXXXX" format even if we don't know the metro
         // For cities: only set if different from normalized
         searchedCity: isZipCode ? `ZIP ${chip.value}` : (wasNormalized ? chip.value : ''),

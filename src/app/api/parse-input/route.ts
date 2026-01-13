@@ -1313,7 +1313,23 @@ const REMOTE_LOCATIONS: Set<string> = new Set([
 ]);
 
 // Get normalized city for vehicle search
-function getNormalizedCity(city: string): { normalized: string; original: string; isRemote: boolean } | null {
+// Cities that exist in multiple states - track which metro they default to
+// When user searches these without state qualifier, we show "SEARCHED: X → SHOWING: Y RATES"
+const AMBIGUOUS_CITIES: Record<string, { metro: string; displayAs: string }> = {
+  'arlington': { metro: 'Dallas', displayAs: 'Arlington' },
+  'aurora': { metro: 'Denver', displayAs: 'Aurora' },
+  'pasadena': { metro: 'Los Angeles', displayAs: 'Pasadena' },
+  'ontario': { metro: 'Los Angeles', displayAs: 'Ontario' },
+  'springfield': { metro: 'St Louis', displayAs: 'Springfield' },
+  'columbia': { metro: 'Columbia', displayAs: 'Columbia' },
+  'jacksonville': { metro: 'Jacksonville', displayAs: 'Jacksonville' },
+  'columbus': { metro: 'Columbus', displayAs: 'Columbus' },
+  'birmingham': { metro: 'Birmingham', displayAs: 'Birmingham' },
+  'memphis': { metro: 'Memphis', displayAs: 'Memphis' },
+  'portland': { metro: 'Portland', displayAs: 'Portland' },
+};
+
+function getNormalizedCity(city: string): { normalized: string; original: string; isRemote: boolean; displayCity?: string } | null {
   const lower = city.toLowerCase().trim();
   // Remove trailing state abbreviations for lookup
   const withoutState = lower.replace(/,?\s*(az|co|tx|ca|il|mi|fl|ga|nv|wa|mn|oh|pa|ny|nj|ma)\.?$/i, '').trim();
@@ -1322,6 +1338,18 @@ function getNormalizedCity(city: string): { normalized: string; original: string
   // This ensures "aurora il" maps to Chicago, not Denver
   const normalized = CITY_NORMALIZATION[lower] || CITY_NORMALIZATION[withoutState];
   const isRemote = REMOTE_LOCATIONS.has(lower) || REMOTE_LOCATIONS.has(withoutState);
+  
+  // Check if this is an ambiguous city (without state qualifier)
+  const ambiguous = AMBIGUOUS_CITIES[withoutState];
+  if (ambiguous && !CITY_NORMALIZATION[lower]) {
+    // User entered ambiguous city without state - normalize but track display name
+    return { 
+      normalized: ambiguous.metro, 
+      original: city, 
+      isRemote,
+      displayCity: ambiguous.displayAs
+    };
+  }
   
   if (normalized) {
     return { normalized, original: city, isRemote };
@@ -1476,7 +1504,11 @@ function detectPattern(text: string): DetectedItem | null {
         value: trimmed, 
         confidence: 0.95, 
         original: trimmed,
-        ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote })
+        ...(normalized && { 
+          normalizedCity: normalized.normalized, 
+          isRemote: normalized.isRemote,
+          ...(normalized.displayCity && { displayCity: normalized.displayCity })
+        })
       };
     }
   }
@@ -1490,7 +1522,8 @@ function detectPattern(text: string): DetectedItem | null {
       value: trimmed, 
       confidence: 0.92, 
       original: trimmed,
-      normalizedCity: normalizedEarly.normalized
+      normalizedCity: normalizedEarly.normalized,
+      ...(normalizedEarly.displayCity && { displayCity: normalizedEarly.displayCity })
     };
   }
   
@@ -1639,7 +1672,7 @@ function detectPattern(text: string): DetectedItem | null {
         value: `Near ${location}`, 
         confidence: 0.92, 
         original: trimmed,
-        ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote })
+        ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote, ...(normalized.displayCity && { displayCity: normalized.displayCity }) })
       };
     }
   }
@@ -1655,7 +1688,7 @@ function detectPattern(text: string): DetectedItem | null {
         value: `Near ${location}`, 
         confidence: 0.92, 
         original: trimmed,
-        ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote })
+        ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote, ...(normalized.displayCity && { displayCity: normalized.displayCity }) })
       };
     }
   }
@@ -1678,7 +1711,7 @@ function detectPattern(text: string): DetectedItem | null {
         value: location, 
         confidence: 0.92, 
         original: trimmed,
-        ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote })
+        ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote, ...(normalized.displayCity && { displayCity: normalized.displayCity }) })
       };
     }
   }
@@ -1707,7 +1740,7 @@ function detectPattern(text: string): DetectedItem | null {
           value: rest, 
           confidence: 0.92, 
           original: trimmed,
-          ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote })
+          ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote, ...(normalized.displayCity && { displayCity: normalized.displayCity }) })
         };
       }
     }
@@ -1730,7 +1763,7 @@ function detectPattern(text: string): DetectedItem | null {
         value: location, 
         confidence: 0.92, 
         original: trimmed,
-        ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote })
+        ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote, ...(normalized.displayCity && { displayCity: normalized.displayCity }) })
       };
     }
   }
@@ -1759,7 +1792,7 @@ function detectPattern(text: string): DetectedItem | null {
           value: rest, 
           confidence: 0.92, 
           original: trimmed,
-          ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote })
+          ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote, ...(normalized.displayCity && { displayCity: normalized.displayCity }) })
         };
       }
     }
@@ -1789,7 +1822,7 @@ function detectPattern(text: string): DetectedItem | null {
       value: trimmed, 
       confidence: 0.92, 
       original: trimmed,
-      ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote })
+      ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote, ...(normalized.displayCity && { displayCity: normalized.displayCity }) })
     };
   }
   
@@ -1802,7 +1835,8 @@ function detectPattern(text: string): DetectedItem | null {
       confidence: 0.9, 
       original: trimmed,
       normalizedCity: normalizedBeforeName.normalized,
-      isRemote: normalizedBeforeName.isRemote
+      isRemote: normalizedBeforeName.isRemote,
+      ...(normalizedBeforeName.displayCity && { displayCity: normalizedBeforeName.displayCity })
     };
   }
   
@@ -1956,7 +1990,11 @@ function detectPattern(text: string): DetectedItem | null {
         value: trimmed, 
         confidence: 0.95, 
         original: trimmed,
-        ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote })
+        ...(normalized && { 
+          normalizedCity: normalized.normalized, 
+          isRemote: normalized.isRemote,
+          ...(normalized.displayCity && { displayCity: normalized.displayCity })
+        })
       };
     }
     
@@ -1969,7 +2007,7 @@ function detectPattern(text: string): DetectedItem | null {
           value: trimmed, 
           confidence: 0.95, 
           original: trimmed,
-          ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote })
+          ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote, ...(normalized.displayCity && { displayCity: normalized.displayCity }) })
         };
       }
     }
@@ -1981,7 +2019,7 @@ function detectPattern(text: string): DetectedItem | null {
         value: trimmed, 
         confidence: 0.9, 
         original: trimmed,
-        ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote })
+        ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote, ...(normalized.displayCity && { displayCity: normalized.displayCity }) })
       };
     }
   }
@@ -1996,7 +2034,8 @@ function detectPattern(text: string): DetectedItem | null {
       confidence: 0.9, 
       original: trimmed,
       normalizedCity: normalized.normalized,
-      isRemote: normalized.isRemote
+      isRemote: normalized.isRemote,
+      ...(normalized.displayCity && { displayCity: normalized.displayCity })
     };
   }
 
