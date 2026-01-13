@@ -664,6 +664,7 @@ const CITY_KEYWORDS = [
   'el paso', 'milwaukee', 'albuquerque', 'raleigh', 'omaha', 'virginia beach',
   'colorado springs', 'long beach', 'oakland', 'sacramento', 'fresno', 'tulsa',
   'cleveland', 'pittsburgh', 'cincinnati', 'bakersfield', 'wichita', 'arlington',
+  'aurora', 'pasadena', 'ontario', 'richmond',
   // Michigan cities
   'battle creek', 'kalamazoo', 'lansing', 'flint', 'saginaw', 'muskegon', 'traverse city',
   'holland', 'port huron', 'jackson', 'midland', 'bay city', 'dearborn', 'livonia',
@@ -816,7 +817,7 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'apache junction': 'Phoenix', 'buckeye': 'Phoenix', 'maricopa': 'Phoenix',
   'anthem': 'Phoenix', 'carefree': 'Phoenix', 'casa grande': 'Phoenix',
   // Denver metro
-  'silverthorne': 'Denver', 'silverthorn': 'Denver', 'aurora': 'Denver', 'aurora co': 'Denver',
+  'silverthorne': 'Denver', 'silverthorn': 'Denver', 'aurora co': 'Denver',
   'lakewood': 'Denver', 'thornton': 'Denver', 'arvada': 'Denver', 'westminster': 'Denver', 
   'centennial': 'Denver', 'highlands ranch': 'Denver', 'boulder': 'Denver', 
   'broomfield': 'Denver', 'littleton': 'Denver', 'parker': 'Denver', 'castle rock': 'Denver', 
@@ -824,7 +825,7 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'lone tree': 'Denver', 'greenwood village': 'Denver', 'fort collins': 'Denver',
   'colorado springs': 'Denver', 'vail': 'Denver', 'breckenridge': 'Denver', 'aspen': 'Denver',
   // Dallas-Fort Worth metro
-  'fort worth': 'Dallas', 'arlington': 'Dallas', 'arlington tx': 'Dallas', 'plano': 'Dallas', 
+  'fort worth': 'Dallas', 'arlington tx': 'Dallas', 'plano': 'Dallas', 
   'irving': 'Dallas', 'garland': 'Dallas', 'frisco': 'Dallas', 'mckinney': 'Dallas', 
   'denton': 'Dallas', 'carrollton': 'Dallas', 'richardson': 'Dallas', 'lewisville': 'Dallas', 
   'allen': 'Dallas', 'flower mound': 'Dallas', 'grapevine': 'Dallas', 'mesquite': 'Dallas', 
@@ -834,7 +835,7 @@ const CITY_NORMALIZATION: Record<string, string> = {
   // Houston metro (including Galveston)
   'the woodlands': 'Houston', 'sugar land': 'Houston', 'pearland': 'Houston', 
   'league city': 'Houston', 'katy': 'Houston', 'baytown': 'Houston', 'conroe': 'Houston', 
-  'pasadena': 'Houston', 'pasadena tx': 'Houston', 'missouri city': 'Houston', 
+  'pasadena tx': 'Houston', 'missouri city': 'Houston', 
   'spring': 'Houston', 'cypress': 'Houston', 'humble': 'Houston',
   'galveston': 'Houston', 'galveston tx': 'Houston', 'texas city': 'Houston',
   'jamaica beach': 'Houston', 'jamaica beach tx': 'Houston', 'crystal beach': 'Houston',
@@ -842,7 +843,7 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'surfside': 'Houston', 'surfside beach': 'Houston', 'freeport': 'Houston', 'freeport tx': 'Houston',
   'clear lake': 'Houston', 'friendswood': 'Houston', 'seabrook': 'Houston',
   'kemah': 'Houston', 'webster': 'Houston', 'la porte': 'Houston', 'deer park': 'Houston',
-  'tomball': 'Houston', 'kingwood': 'Houston', 'atascocita': 'Houston', 'richmond': 'Houston',
+  'tomball': 'Houston', 'kingwood': 'Houston', 'atascocita': 'Houston', 'richmond tx': 'Houston',
   // Austin metro
   'round rock': 'Austin', 'cedar park': 'Austin', 'pflugerville': 'Austin', 
   'georgetown': 'Austin', 'georgetown tx': 'Austin', 'san marcos': 'Austin', 
@@ -854,7 +855,7 @@ const CITY_NORMALIZATION: Record<string, string> = {
   // Los Angeles metro
   'long beach': 'Los Angeles', 'anaheim': 'Los Angeles', 'santa ana': 'Los Angeles',
   'irvine': 'Los Angeles', 'glendale ca': 'Los Angeles', 'huntington beach': 'Los Angeles',
-  'santa clarita': 'Los Angeles', 'garden grove': 'Los Angeles', 'ontario': 'Los Angeles',
+  'santa clarita': 'Los Angeles', 'garden grove': 'Los Angeles',
   'ontario ca': 'Los Angeles', 'rancho cucamonga': 'Los Angeles', 'pomona': 'Los Angeles', 
   'fullerton': 'Los Angeles', 'pasadena ca': 'Los Angeles', 'burbank': 'Los Angeles', 
   'torrance': 'Los Angeles', 'costa mesa': 'Los Angeles', 'newport beach': 'Los Angeles',
@@ -1037,6 +1038,10 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'laurel md': 'Washington', 'bowie': 'Washington', 'college park md': 'Washington',
   'hyattsville': 'Washington', 'greenbelt': 'Washington', 'upper marlboro': 'Washington',
   'waldorf': 'Washington', 'la plata': 'Washington', 'brandywine md': 'Washington',
+  // Richmond VA metro (distinct from Richmond TX suburb of Houston)
+  'richmond': 'Richmond', 'richmond va': 'Richmond', 'richmond virginia': 'Richmond',
+  'henrico': 'Richmond', 'chesterfield va': 'Richmond', 'mechanicsville': 'Richmond',
+  'glen allen': 'Richmond', 'midlothian va': 'Richmond', 'short pump': 'Richmond',
   // Tampa Bay metro
   'st petersburg': 'Tampa', 'saint petersburg': 'Tampa', 'clearwater': 'Tampa',
   'largo': 'Tampa', 'brandon': 'Tampa', 'palm harbor': 'Tampa', 'dunedin': 'Tampa',
