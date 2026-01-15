@@ -204,6 +204,14 @@ const ZIP_TO_METRO: Record<string, string> = {
   // Fresno CA (936-937, 939)
   '936': 'Fresno', '937': 'Fresno', '939': 'Fresno',
   // Long Island NY (115-119) - already covered
+  // Birmingham AL (350-352, 354-359)
+  '350': 'Birmingham', '351': 'Birmingham', '352': 'Birmingham', '354': 'Birmingham',
+  '355': 'Birmingham', '356': 'Birmingham', '357': 'Birmingham', '358': 'Birmingham', '359': 'Birmingham',
+  // Montgomery AL (360-361, 363)
+  '360': 'Montgomery', '361': 'Montgomery', '363': 'Montgomery',
+  // Mobile AL (365-366)
+  '365': 'Mobile', '366': 'Mobile',
+  // Huntsville AL (357-358) - already covered by Birmingham
   
   // ===== CANADA =====
   // Toronto ON (M and L postal codes)
