@@ -934,26 +934,22 @@ export default function CallPad() {
       // Use 'vehicle_title' from API, fallback to 'name' for compatibility
       const name = (v.vehicle_title || v.name || '').toLowerCase();
       
-      // Check for Limo Sprinter specifically (it's a limo, not a shuttle)
-      const isLimoSprinter = category.includes('limo sprinter') || category.includes('limo-sprinter');
-      
+      // TRUST Supabase categories - if it says "party bus", it's a party bus
       const isPartyBus = category.includes('party bus') || category.includes('limo bus') || 
                          name.includes('party bus') || name.includes('limo bus');
       const isCarSuv = category.includes('sedan') || category.includes('suv') || 
                        category.includes('hummer') || category.includes('escalade') ||
                        name.includes('sedan') || name.includes('suv') || name.includes('escalade');
-      // Limo Sprinter Vans should be categorized as Limo, not Shuttle
+      // Party buses are NOT limos, even if they have "limo" in the name/category
       const isLimo = !isPartyBus && !isCarSuv && (
-        isLimoSprinter ||
-        category.includes('limo') || category.includes('limousine') || 
-        name.includes('limousine') || name.includes('stretch limo') ||
-        (name.includes('sprinter') && name.includes('limo'))
+        category.includes('limousine') || 
+        (category.includes('limo') && !category.includes('shuttle') && !category.includes('coach')) ||
+        name.includes('limousine') || name.includes('stretch limo')
       );
-      // Exclude Limo Sprinters from shuttle category
-      const isShuttle = !isLimoSprinter && !isLimo && (
-                        category.includes('shuttle') || category.includes('executive sprinter') ||
-                        category.includes('executive') || category.includes('coach') ||
-                        category.includes('charter') || category.includes('mini coach') ||
+      // Shuttle/Coach - anything with shuttle or coach that isn't already categorized
+      const isShuttle = !isPartyBus && !isLimo && !isCarSuv && (
+                        category.includes('shuttle') || category.includes('executive') || 
+                        category.includes('coach') || category.includes('charter') ||
                         name.includes('shuttle') || name.includes('coach') ||
                         (name.includes('sprinter') && !name.includes('limo')));
       const isTransfer = v.is_transfer === true || v.is_transfer === 'true';
@@ -2316,33 +2312,29 @@ export default function CallPad() {
                 : "Enter a city or ZIP to see vehicles"}
             </div>
           ) : (() => {
-            // Categorize vehicles using correct API field names
+            // Categorize vehicles - TRUST the Supabase categories field first
             const isPartyBus = (v: typeof filteredVehicles[0]) => {
-              const name = (v.vehicle_title || v.name || '').toLowerCase();
               const cat = (v.categories || v.category || '').toLowerCase();
-              return name.includes('party bus') || name.includes('limo bus') || name.includes('party-bus') || 
-                     name.includes('partybus') || cat.includes('party bus') || cat.includes('limo bus');
+              const name = (v.vehicle_title || v.name || '').toLowerCase();
+              // If category says party bus, it's a party bus - period
+              return cat.includes('party bus') || cat.includes('limo bus') ||
+                     name.includes('party bus') || name.includes('limo bus');
             };
             const isLimo = (v: typeof filteredVehicles[0]) => {
+              // Party buses are NOT limos, even if they have "limo" in category
               if (isPartyBus(v)) return false;
-              const name = (v.vehicle_title || v.name || '').toLowerCase();
               const cat = (v.categories || v.category || '').toLowerCase();
-              const combined = name + ' ' + cat;
-              // Check for Limo Sprinter (it's a limo, not a shuttle)
-              const isLimoSprinter = cat.includes('limo sprinter') || cat.includes('limo-sprinter') ||
-                                     (name.includes('sprinter') && name.includes('limo'));
-              if (isLimoSprinter) return true;
-              // Exclude regular shuttles/sprinters/vans
-              if ((combined.includes('sprinter') || combined.includes('shuttle') || combined.includes('coach') || 
-                  combined.includes('charter') || combined.includes('mini bus') || combined.includes('minibus')) &&
-                  !isLimoSprinter) {
-                return false;
+              const name = (v.vehicle_title || v.name || '').toLowerCase();
+              // Check category first - trust Supabase data
+              if (cat.includes('limousine') || (cat.includes('limo') && !cat.includes('shuttle') && !cat.includes('coach'))) {
+                return true;
               }
-              return combined.includes('limo') || combined.includes('limousine') || combined.includes('stretch') ||
-                     combined.includes('hummer') || combined.includes('escalade') || combined.includes('navigator') ||
-                     combined.includes('chrysler') || combined.includes('lincoln') || combined.includes('rolls') ||
-                     combined.includes('bentley') || combined.includes('sedan') || combined.includes('suv') ||
-                     combined.includes('towncar') || combined.includes('town car') || combined.includes('cadillac');
+              // Then check name for limo indicators
+              return name.includes('limousine') || name.includes('stretch limo') ||
+                     name.includes('hummer') || name.includes('escalade') || name.includes('navigator') ||
+                     name.includes('chrysler') || name.includes('lincoln') || name.includes('rolls') ||
+                     name.includes('bentley') || name.includes('sedan') || name.includes('suv') ||
+                     name.includes('towncar') || name.includes('town car') || name.includes('cadillac');
             };
             const isCoach = (v: typeof filteredVehicles[0]) => {
               return !isPartyBus(v) && !isLimo(v);
