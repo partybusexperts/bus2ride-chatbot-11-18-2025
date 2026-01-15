@@ -929,22 +929,33 @@ export default function CallPad() {
 
   const filteredVehicles = useMemo(() => {
     let filtered = vehicles.filter(v => {
-      const category = (v.category || '').toLowerCase();
-      const name = (v.name || '').toLowerCase();
+      // Use 'categories' (plural) from API, fallback to 'category' for compatibility
+      const category = (v.categories || v.category || '').toLowerCase();
+      // Use 'vehicle_title' from API, fallback to 'name' for compatibility
+      const name = (v.vehicle_title || v.name || '').toLowerCase();
+      
+      // Check for Limo Sprinter specifically (it's a limo, not a shuttle)
+      const isLimoSprinter = category.includes('limo sprinter') || category.includes('limo-sprinter');
       
       const isPartyBus = category.includes('party bus') || category.includes('limo bus') || 
                          name.includes('party bus') || name.includes('limo bus');
       const isCarSuv = category.includes('sedan') || category.includes('suv') || 
                        category.includes('hummer') || category.includes('escalade') ||
                        name.includes('sedan') || name.includes('suv') || name.includes('escalade');
+      // Limo Sprinter Vans should be categorized as Limo, not Shuttle
       const isLimo = !isPartyBus && !isCarSuv && (
+        isLimoSprinter ||
         category.includes('limo') || category.includes('limousine') || 
-        name.includes('limousine') || name.includes('stretch limo')
+        name.includes('limousine') || name.includes('stretch limo') ||
+        (name.includes('sprinter') && name.includes('limo'))
       );
-      const isShuttle = category.includes('shuttle') || category.includes('sprinter') || 
+      // Exclude Limo Sprinters from shuttle category
+      const isShuttle = !isLimoSprinter && !isLimo && (
+                        category.includes('shuttle') || category.includes('executive sprinter') ||
                         category.includes('executive') || category.includes('coach') ||
                         category.includes('charter') || category.includes('mini coach') ||
-                        name.includes('shuttle') || name.includes('sprinter') || name.includes('coach');
+                        name.includes('shuttle') || name.includes('coach') ||
+                        (name.includes('sprinter') && !name.includes('limo')));
       const isTransfer = v.is_transfer === true || v.is_transfer === 'true';
       
       if (vehicleFilters.oneWayTransfer && !isTransfer) return false;
@@ -2305,21 +2316,26 @@ export default function CallPad() {
                 : "Enter a city or ZIP to see vehicles"}
             </div>
           ) : (() => {
-            // Categorize vehicles by name (since category field is often null)
+            // Categorize vehicles using correct API field names
             const isPartyBus = (v: typeof filteredVehicles[0]) => {
-              const name = (v.name || '').toLowerCase();
-              const cat = (v.category || '').toLowerCase();
+              const name = (v.vehicle_title || v.name || '').toLowerCase();
+              const cat = (v.categories || v.category || '').toLowerCase();
               return name.includes('party bus') || name.includes('limo bus') || name.includes('party-bus') || 
                      name.includes('partybus') || cat.includes('party bus') || cat.includes('limo bus');
             };
             const isLimo = (v: typeof filteredVehicles[0]) => {
               if (isPartyBus(v)) return false;
-              const name = (v.name || '').toLowerCase();
-              const cat = (v.category || '').toLowerCase();
+              const name = (v.vehicle_title || v.name || '').toLowerCase();
+              const cat = (v.categories || v.category || '').toLowerCase();
               const combined = name + ' ' + cat;
-              // Exclude shuttles/sprinters/vans first
-              if (combined.includes('sprinter') || combined.includes('shuttle') || combined.includes('coach') || 
-                  combined.includes('charter') || combined.includes('mini bus') || combined.includes('minibus')) {
+              // Check for Limo Sprinter (it's a limo, not a shuttle)
+              const isLimoSprinter = cat.includes('limo sprinter') || cat.includes('limo-sprinter') ||
+                                     (name.includes('sprinter') && name.includes('limo'));
+              if (isLimoSprinter) return true;
+              // Exclude regular shuttles/sprinters/vans
+              if ((combined.includes('sprinter') || combined.includes('shuttle') || combined.includes('coach') || 
+                  combined.includes('charter') || combined.includes('mini bus') || combined.includes('minibus')) &&
+                  !isLimoSprinter) {
                 return false;
               }
               return combined.includes('limo') || combined.includes('limousine') || combined.includes('stretch') ||
@@ -2598,12 +2614,12 @@ export default function CallPad() {
         
         const getComparableVehicles = () => {
           const currentCap = parseInt(selectedVehicle.capacity) || 0;
-          const currentCategory = (selectedVehicle.category || '').toLowerCase();
+          const currentCategory = (selectedVehicle.categories || selectedVehicle.category || '').toLowerCase();
           
           const pool = vehicles.filter(v => v.id !== selectedVehicle.id);
           const scored = pool.map(v => {
             const cap = parseInt(v.capacity) || 0;
-            const cat = (v.category || '').toLowerCase();
+            const cat = (v.categories || v.category || '').toLowerCase();
             const price = getVehiclePrice(v, modalHours);
             
             let score = 0;
