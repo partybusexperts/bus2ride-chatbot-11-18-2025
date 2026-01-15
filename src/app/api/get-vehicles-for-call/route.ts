@@ -251,6 +251,7 @@ export async function POST(req: Request) {
       return {
         id: v.id,
         name: v.vehicle_title,
+        vehicle_title: v.vehicle_title,
         capacity: capacityStr,
         price: priceInfo?.price || 0,
         hours: priceInfo?.hours || hours || 4,
@@ -261,7 +262,8 @@ export async function POST(req: Request) {
         image_2: v.image_2 || null,
         image_3: v.image_3 || null,
         gallery_all: v.gallery_all || null,
-        category: v.category || null,
+        categories: v.categories || null,
+        category_slugs: v.category_slugs || null,
         city: v.city || null,
         short_description: v.short_description || null,
         tags: v.tags || null,
