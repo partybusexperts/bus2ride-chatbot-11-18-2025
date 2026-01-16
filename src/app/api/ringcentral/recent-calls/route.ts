@@ -39,32 +39,23 @@ interface CallLogResponse {
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
 async function getAccessToken(): Promise<string> {
+  // Return cached token if still valid (with 60s buffer)
   if (cachedToken && cachedToken.expiresAt > Date.now() + 60000) {
     return cachedToken.token;
   }
 
   const clientId = process.env.RINGCENTRAL_CLIENT_ID?.trim();
   const clientSecret = process.env.RINGCENTRAL_CLIENT_SECRET?.trim();
-  const jwtToken = process.env.RINGCENTRAL_JWT_TOKEN?.trim();
 
-  if (!clientId || !clientSecret || !jwtToken) {
-    throw new Error("Missing RingCentral credentials");
-  }
-
-  // Debug: Log JWT format (first 20 chars only for security)
-  const jwtPreview = jwtToken.substring(0, 20);
-  const dotCount = (jwtToken.match(/\./g) || []).length;
-  console.log(`JWT format check: starts with "${jwtPreview}...", has ${dotCount} dots, length ${jwtToken.length}`);
-  
-  if (dotCount !== 2) {
-    throw new Error(`Invalid JWT format: expected 2 dots but found ${dotCount}. JWT should be in format: header.payload.signature`);
+  if (!clientId || !clientSecret) {
+    throw new Error("Missing RingCentral credentials (CLIENT_ID or CLIENT_SECRET)");
   }
 
   const tokenUrl = "https://platform.ringcentral.com/restapi/oauth/token";
   
+  // OAuth client_credentials flow
   const params = new URLSearchParams();
-  params.append("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer");
-  params.append("assertion", jwtToken);
+  params.append("grant_type", "client_credentials");
 
   const authHeader = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
 
