@@ -36,6 +36,7 @@ interface DetectedItem {
   normalizedCity?: string; // For suburbs/small cities, the major metro area to use for vehicle search
   displayCity?: string; // For display when different from normalizedCity (e.g., "Washington DC" for display, "Washington" for search)
   isRemote?: boolean; // True if location is 1+ hour from nearest major metro
+  travelMinutes?: number; // Estimated drive time in minutes from location to metro center
 }
 
 const PHONE_REGEX = /^[\d\s\-\(\)\.]{10,}$/;
@@ -1321,6 +1322,70 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'outremont': 'Montreal', 'mount royal': 'Montreal', 'cote-saint-luc': 'Montreal',
 };
 
+// Estimated travel times in minutes from suburb to metro center (one-way driving)
+const CITY_TRAVEL_TIMES: Record<string, number> = {
+  // Chicago suburbs (from downtown Chicago)
+  'glen ellyn': 35, 'glen ellyn il': 35, 'wheaton': 35, 'wheaton il': 35,
+  'naperville': 40, 'naperville il': 40, 'aurora il': 45, 'joliet': 50,
+  'downers grove': 30, 'oak brook': 25, 'schaumburg': 35, 'arlington heights': 30,
+  'evanston': 20, 'oak park': 15, 'skokie': 20, 'palatine': 35,
+  'elgin': 45, 'waukegan': 45, 'highland park': 30, 'lake forest': 35,
+  'orland park': 30, 'tinley park': 35, 'bolingbrook': 35, 'lombard': 25,
+  'elmhurst': 20, 'hinsdale': 25, 'la grange': 20, 'barrington': 40,
+  'crystal lake': 55, 'libertyville': 40, 'gurnee': 45, 'st charles': 45,
+  'geneva': 45, 'batavia': 40, 'west chicago': 40, 'carol stream': 35,
+  // Dallas-Fort Worth suburbs
+  'fort worth': 35, 'arlington tx': 25, 'plano': 25, 'frisco': 35,
+  'irving': 15, 'garland': 20, 'mckinney': 40, 'denton': 45,
+  'carrollton': 20, 'richardson': 15, 'lewisville': 25, 'grapevine': 25,
+  'southlake': 30, 'keller': 35, 'flower mound': 30, 'allen': 30,
+  'mesquite': 20, 'grand prairie': 20, 'rockwall': 30, 'rowlett': 25,
+  // Houston suburbs
+  'the woodlands': 35, 'sugar land': 30, 'katy': 35, 'pearland': 25,
+  'league city': 35, 'baytown': 30, 'conroe': 45, 'spring': 25,
+  'cypress': 35, 'humble': 25, 'galveston': 55, 'galveston tx': 55,
+  'clear lake': 30, 'friendswood': 30, 'tomball': 35, 'kingwood': 30,
+  // Phoenix suburbs
+  'mesa': 25, 'mesa az': 25, 'tempe': 15, 'scottsdale': 20,
+  'glendale': 15, 'glendale az': 15, 'chandler': 25, 'gilbert': 30,
+  'peoria': 25, 'peoria az': 25, 'surprise': 35, 'goodyear': 30,
+  'fountain hills': 35, 'queen creek': 40, 'cave creek': 35,
+  // Denver suburbs
+  'aurora co': 20, 'lakewood': 15, 'boulder': 35, 'thornton': 20,
+  'arvada': 20, 'westminster': 20, 'broomfield': 25, 'littleton': 20,
+  'centennial': 20, 'highlands ranch': 25, 'parker': 30, 'castle rock': 35,
+  'fort collins': 65, 'colorado springs': 70, 'golden': 20,
+  'vail': 100, 'breckenridge': 90, 'aspen': 180, 'silverthorne': 75,
+  // Los Angeles suburbs
+  'long beach': 30, 'anaheim': 35, 'irvine': 45, 'santa ana': 40,
+  'glendale ca': 15, 'pasadena ca': 20, 'burbank': 15, 'torrance': 25,
+  'huntington beach': 45, 'costa mesa': 45, 'newport beach': 50,
+  'ontario ca': 45, 'rancho cucamonga': 50, 'riverside': 60, 'riverside ca': 60,
+  'temecula': 90, 'palm desert': 120, 'san bernardino': 65,
+  // San Francisco suburbs
+  'oakland': 20, 'fremont': 40, 'berkeley': 20, 'hayward': 35,
+  'concord': 35, 'walnut creek': 30, 'pleasanton': 45, 'livermore': 50,
+  'daly city': 15, 'san mateo': 25, 'redwood city': 30,
+  // Miami suburbs
+  'fort lauderdale': 35, 'boca raton': 50, 'west palm beach': 75,
+  'hollywood': 25, 'hollywood fl': 25, 'pembroke pines': 30, 'coral springs': 45,
+  'davie': 30, 'weston': 35, 'plantation': 30, 'sunrise': 35,
+  'delray beach': 60, 'boynton beach': 55, 'coral gables': 15,
+  // Atlanta suburbs
+  'marietta': 25, 'alpharetta': 30, 'roswell': 25, 'sandy springs': 15,
+  'dunwoody': 15, 'smyrna': 20, 'kennesaw': 30, 'lawrenceville': 35,
+  'duluth': 30, 'duluth ga': 30, 'johns creek': 30, 'peachtree city': 35,
+  'newnan': 40, 'douglasville': 25, 'cumming': 40, 'cumming ga': 40,
+  // Detroit suburbs
+  'ann arbor': 45, 'troy': 25, 'sterling heights': 25, 'dearborn': 15,
+  'livonia': 25, 'warren': 20, 'farmington hills': 25, 'royal oak': 15,
+  'southfield': 20, 'novi': 30, 'rochester hills': 30,
+  // Remote locations (1+ hour)
+  'sedona': 120, 'flagstaff': 150, 'prescott': 100,
+  'lake tahoe': 200, 'south lake tahoe': 200, 'mammoth lakes': 300,
+  'key west': 180, 'traverse city': 250,
+};
+
 // Remote locations that are 1+ hour from the nearest major metro - agent should be warned
 const REMOTE_LOCATIONS: Set<string> = new Set([
   // Texas Gulf Coast (1+ hour from Houston)
@@ -1365,7 +1430,7 @@ const AMBIGUOUS_CITIES: Record<string, { metro: string; displayAs: string }> = {
   'portland': { metro: 'Portland', displayAs: 'Portland' },
 };
 
-function getNormalizedCity(city: string): { normalized: string; original: string; isRemote: boolean; displayCity?: string } | null {
+function getNormalizedCity(city: string): { normalized: string; original: string; isRemote: boolean; displayCity?: string; travelMinutes?: number } | null {
   const lower = city.toLowerCase().trim();
   // Remove trailing state abbreviations for lookup
   const withoutState = lower.replace(/,?\s*(az|co|tx|ca|il|mi|fl|ga|nv|wa|mn|oh|pa|ny|nj|ma)\.?$/i, '').trim();
@@ -1375,6 +1440,9 @@ function getNormalizedCity(city: string): { normalized: string; original: string
   const normalized = CITY_NORMALIZATION[lower] || CITY_NORMALIZATION[withoutState];
   const isRemote = REMOTE_LOCATIONS.has(lower) || REMOTE_LOCATIONS.has(withoutState);
   
+  // Get travel time (check with state first, then without)
+  const travelMinutes = CITY_TRAVEL_TIMES[lower] || CITY_TRAVEL_TIMES[withoutState];
+  
   // Check if this is an ambiguous city (without state qualifier)
   const ambiguous = AMBIGUOUS_CITIES[withoutState];
   if (ambiguous && !CITY_NORMALIZATION[lower]) {
@@ -1383,12 +1451,13 @@ function getNormalizedCity(city: string): { normalized: string; original: string
       normalized: ambiguous.metro, 
       original: city, 
       isRemote,
-      displayCity: ambiguous.displayAs
+      displayCity: ambiguous.displayAs,
+      travelMinutes
     };
   }
   
   if (normalized) {
-    return { normalized, original: city, isRemote };
+    return { normalized, original: city, isRemote, travelMinutes };
   }
   return null;
 }
@@ -1544,7 +1613,8 @@ function detectPattern(text: string): DetectedItem | null {
         ...(normalized && { 
           normalizedCity: normalized.normalized, 
           isRemote: normalized.isRemote,
-          ...(normalized.displayCity && { displayCity: normalized.displayCity })
+          ...(normalized.displayCity && { displayCity: normalized.displayCity }),
+          ...(normalized.travelMinutes && { travelMinutes: normalized.travelMinutes })
         })
       };
     }
@@ -1560,7 +1630,8 @@ function detectPattern(text: string): DetectedItem | null {
       confidence: 0.92, 
       original: trimmed,
       normalizedCity: normalizedEarly.normalized,
-      ...(normalizedEarly.displayCity && { displayCity: normalizedEarly.displayCity })
+      ...(normalizedEarly.displayCity && { displayCity: normalizedEarly.displayCity }),
+      ...(normalizedEarly.travelMinutes && { travelMinutes: normalizedEarly.travelMinutes })
     };
   }
   
@@ -2053,7 +2124,8 @@ function detectPattern(text: string): DetectedItem | null {
         ...(normalized && { 
           normalizedCity: normalized.normalized, 
           isRemote: normalized.isRemote,
-          ...(normalized.displayCity && { displayCity: normalized.displayCity })
+          ...(normalized.displayCity && { displayCity: normalized.displayCity }),
+          ...(normalized.travelMinutes && { travelMinutes: normalized.travelMinutes })
         })
       };
     }
@@ -2067,7 +2139,7 @@ function detectPattern(text: string): DetectedItem | null {
           value: trimmed, 
           confidence: 0.95, 
           original: trimmed,
-          ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote, ...(normalized.displayCity && { displayCity: normalized.displayCity }) })
+          ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote, ...(normalized.displayCity && { displayCity: normalized.displayCity }), ...(normalized.travelMinutes && { travelMinutes: normalized.travelMinutes }) })
         };
       }
     }
@@ -2079,7 +2151,7 @@ function detectPattern(text: string): DetectedItem | null {
         value: trimmed, 
         confidence: 0.9, 
         original: trimmed,
-        ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote, ...(normalized.displayCity && { displayCity: normalized.displayCity }) })
+        ...(normalized && { normalizedCity: normalized.normalized, isRemote: normalized.isRemote, ...(normalized.displayCity && { displayCity: normalized.displayCity }), ...(normalized.travelMinutes && { travelMinutes: normalized.travelMinutes }) })
       };
     }
   }
@@ -2095,7 +2167,8 @@ function detectPattern(text: string): DetectedItem | null {
       original: trimmed,
       normalizedCity: normalized.normalized,
       isRemote: normalized.isRemote,
-      ...(normalized.displayCity && { displayCity: normalized.displayCity })
+      ...(normalized.displayCity && { displayCity: normalized.displayCity }),
+      ...(normalized.travelMinutes && { travelMinutes: normalized.travelMinutes })
     };
   }
 

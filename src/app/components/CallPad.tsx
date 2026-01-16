@@ -24,6 +24,7 @@ interface DetectedChip {
   normalizedCity?: string; // For suburbs, the major metro to use for vehicle search
   displayCity?: string; // For display when different from normalizedCity (e.g., "Washington DC" for display, "Washington" for search)
   isRemote?: boolean; // True if location is 1+ hour from nearest major metro
+  travelMinutes?: number; // Estimated drive time in minutes from location to metro center
 }
 
 type QuotedVehicle = {
@@ -208,6 +209,7 @@ export default function CallPad() {
     displayCityOrZip: "", // For display (e.g., "Washington DC") - only set when different from cityOrZip
     searchCity: "", // For vehicle search when different from cityOrZip (e.g., ZIP→metro)
     searchedCity: "", // Original city/suburb entered (for display)
+    travelMinutes: 0, // Estimated drive time from searched location to metro center
     passengers: "",
     hours: "",
     eventType: "",
@@ -430,6 +432,7 @@ export default function CallPad() {
         // For ZIP codes: always show "ZIP XXXXX" format even if we don't know the metro
         // For cities: only set if different from normalized
         searchedCity: isZipCode ? `ZIP ${chip.value}` : (wasNormalized ? chip.value : ''),
+        travelMinutes: chip.travelMinutes || 0, // Store travel time from suburb to metro
         pickupAddress: isZipCode ? '' : chip.value // Don't set pickup address for ZIPs
       }));
       
@@ -585,6 +588,7 @@ export default function CallPad() {
             ...(item.normalizedCity && { normalizedCity: item.normalizedCity }),
             ...(item.displayCity && { displayCity: item.displayCity }),
             ...(item.isRemote && { isRemote: item.isRemote }),
+            ...(item.travelMinutes && { travelMinutes: item.travelMinutes }),
           };
         });
         
@@ -627,6 +631,7 @@ export default function CallPad() {
       displayCityOrZip: "",
       searchCity: "",
       searchedCity: "",
+      travelMinutes: 0,
       passengers: "",
       hours: "",
       eventType: "",
@@ -2129,12 +2134,30 @@ export default function CallPad() {
                   </>
                 );
               } else if (confirmedData.searchedCity && confirmedData.searchedCity.toLowerCase() !== confirmedData.cityOrZip.toLowerCase()) {
+                const travelTime = confirmedData.travelMinutes;
+                const travelDisplay = travelTime >= 60 
+                  ? `${Math.floor(travelTime / 60)}h ${travelTime % 60}m` 
+                  : travelTime > 0 ? `${travelTime} min` : '';
                 return (
                   <>
                     <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: 500 }}>SEARCHED:</span>
                     <span style={{ fontSize: '16px', fontWeight: 600, color: '#bfdbfe', letterSpacing: '0.5px' }}>
                       {confirmedData.searchedCity.toUpperCase()}
                     </span>
+                    {travelDisplay && (
+                      <span style={{ 
+                        fontSize: '13px', 
+                        fontWeight: 700, 
+                        color: '#fff', 
+                        background: 'linear-gradient(135deg, #f59e0b 0%, #dc2626 100%)',
+                        padding: '4px 10px', 
+                        borderRadius: '12px',
+                        animation: 'pulseAlert 1.5s ease-in-out infinite',
+                        boxShadow: '0 0 10px rgba(245,158,11,0.5)',
+                      }}>
+                        🚗 ~{travelDisplay} away
+                      </span>
+                    )}
                     <span style={{ fontSize: '16px', color: '#93c5fd', fontWeight: 500 }}>→</span>
                     <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: 500 }}>SHOWING:</span>
                     <span style={{ fontSize: '22px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
