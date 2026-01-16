@@ -11,11 +11,15 @@ export async function GET(request: NextRequest) {
 
   const state = Math.random().toString(36).substring(7);
   
+  console.log("OAuth Login - Using redirect_uri:", redirectUri);
+  
   const authUrl = new URL(`${baseUrl}/restapi/oauth/authorize`);
   authUrl.searchParams.set("response_type", "code");
   authUrl.searchParams.set("client_id", clientId);
   authUrl.searchParams.set("redirect_uri", redirectUri);
   authUrl.searchParams.set("state", state);
+
+  console.log("OAuth Login - Full auth URL:", authUrl.toString());
 
   return NextResponse.redirect(authUrl.toString());
 }
