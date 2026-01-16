@@ -1,0 +1,116 @@
+You MUST Create This Callback Route (This Is Why You’re Getting 404)
+
+Tell Replit:
+
+“Create an API endpoint at /api/ringcentral/callback to handle the OAuth redirect and exchange the authorization code for tokens.”
+
+✅ Required backend logic (Node / Express example)
+import fetch from "node-fetch";
+
+app.get("/api/ringcentral/callback", async (req, res) => {
+  const code = req.query.code;
+  if (!code) {
+    return res.status(400).send("Missing OAuth code");
+  }
+
+  const auth = Buffer.from(
+    `${process.env.RINGCENTRAL_CLIENT_ID}:${process.env.RINGCENTRAL_CLIENT_SECRET}`
+  ).toString("base64");
+
+  const tokenRes = await fetch(
+    `${process.env.RINGCENTRAL_BASE_URL}/restapi/oauth/token`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Basic ${auth}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: process.env.RINGCENTRAL_REDIRECT_URI,
+      }),
+    }
+  );
+
+  const tokenData = await tokenRes.json();
+
+  // SAVE THESE
+  // tokenData.access_token
+  // tokenData.refresh_token
+  // tokenData.expires_in
+
+  // Store in DB / KV / encrypted env
+  await saveTokens(tokenData);
+
+  res.send("RingCentral connected. You can close this window.");
+});
+
+
+📌 This endpoint MUST exist, or RingCentral will always show 404 after login.
+
+3️⃣ OAuth “Connect RingCentral” Button (Frontend)
+
+Tell Replit:
+
+“Add a ‘Connect RingCentral’ button in the chatbot admin that redirects to RingCentral OAuth authorize URL.”
+
+const authUrl =
+  "https://platform.ringcentral.com/restapi/oauth/authorize" +
+  "?response_type=code" +
+  "&client_id=" + process.env.RINGCENTRAL_CLIENT_ID +
+  "&redirect_uri=" + encodeURIComponent(process.env.RINGCENTRAL_REDIRECT_URI);
+
+window.location.href = authUrl;
+
+
+This is the only time a human logs in.
+
+4️⃣ Using RingCentral After OAuth (Fetching Calls)
+
+Once access token exists, calls are fetched like this:
+
+const res = await fetch(
+  "https://platform.ringcentral.com/restapi/v1.0/account/~/call-log",
+  {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  }
+);
+
+const data = await res.json();
+
+
+You do NOT need:
+
+read extensions
+
+read call sessions
+
+JWT scopes
+
+multiple seats
+
+Shared RingCentral account is fine.
+
+5️⃣ “Populate Phone Number” Button Logic (Important)
+
+Tell Replit this rule:
+
+“When multiple calls exist, show a dropdown with caller number + timestamp. Selecting one populates the phone field.”
+
+Logic:
+
+Pull last 30–60 minutes of inbound calls
+
+Filter direction === "Inbound"
+
+Use from.phoneNumber
+
+Display:
+
+(602) 555-1234 — 2 min ago
+
+
+No concurrency issues even with 2 calls — you just show both.

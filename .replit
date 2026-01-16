@@ -42,5 +42,5 @@ build = ["npm", "run", "build"]
 [userenv]
 
 [userenv.shared]
-RINGCENTRAL_REDIRECT_URI = "https://www.bus2ride.com/api/ringcentral/callback"
+RINGCENTRAL_REDIRECT_URI = "https://7a4fd0a2-6b1c-4915-8d56-e3ba064c3663-00-pqow6flhli24.janeway.replit.dev/api/ringcentral/callback"
 RINGCENTRAL_BASE_URL = "https://platform.ringcentral.com"
