@@ -38,3 +38,9 @@ externalPort = 80
 deploymentTarget = "autoscale"
 run = ["npm", "run", "start"]
 build = ["npm", "run", "build"]
+
+[userenv]
+
+[userenv.shared]
+RINGCENTRAL_REDIRECT_URI = "https://www.bus2ride.com/api/ringcentral/callback"
+RINGCENTRAL_BASE_URL = "https://platform.ringcentral.com"
