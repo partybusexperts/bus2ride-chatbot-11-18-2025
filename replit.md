@@ -14,6 +14,7 @@ The application features a modern, three-panel "Smart Call Pad" layout with dist
 ### Technical Implementations
 - **Smart Input Parsing:** The system uses AI (OpenAI) to parse natural language input for various data points like agent names, phone numbers, emails, ZIP codes, cities, dates, times, passenger counts, event types, and venue lookups.
 - **City Normalization:** Suburbs and small cities are automatically mapped to their nearest major metropolitan areas for vehicle searching (e.g., Mesa, AZ maps to Phoenix).
+- **Nationwide City-to-ZIP Lookup:** When a city name search doesn't find direct matches, the system automatically looks up ZIP codes for that city via the zippopotam.us API and searches for vehicles serving those ZIP codes. This enables searching by any city name nationwide (e.g., "Azle Texas") even if that city isn't explicitly listed in the vehicle database.
 - **Vehicle Gallery:** Vehicles are displayed in a large 3-column grid with a dark theme. Smart sorting prioritizes vehicles matching passenger requirements.
 - **Pricing Modal:** An interactive modal displays detailed pricing tiers, hour selections, and calculates quotes. It also suggests similar vehicles based on capacity, category, and price.
 - **AI Selling Points:** OpenAI generates 3 concise selling points for a quoted vehicle based on trip context.
