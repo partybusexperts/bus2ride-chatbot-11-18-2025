@@ -93,25 +93,18 @@ const COMMON_STATES = ['TX', 'AZ', 'CA', 'NY', 'NJ', 'FL', 'GA', 'IL', 'PA', 'OH
 export async function getZipsForLocation(query: string): Promise<{ zips: string[]; city: string; state?: string }> {
   const { city, state } = parseLocationQuery(query);
   
-  console.log('ZIP lookup - parsed query:', query, '-> city:', city, 'state:', state);
-  
   if (state) {
     const zips = await lookupZipsForCity(city, state);
-    console.log('ZIP lookup - found zips:', zips);
     return { zips, city, state };
   }
-  
-  console.log('ZIP lookup - no state found, trying common states for city:', city);
   
   for (const tryState of COMMON_STATES) {
     const zips = await lookupZipsForCity(city, tryState);
     if (zips.length > 0) {
-      console.log(`ZIP lookup - found ${zips.length} zips in state ${tryState} for city ${city}`);
       return { zips, city, state: tryState };
     }
   }
   
-  console.log('ZIP lookup - no matches found in any common state');
   return { zips: [], city, state: undefined };
 }
 
@@ -197,13 +190,7 @@ export async function buildCityZipIndex(zips: string[]): Promise<Map<string, str
   
   cacheBuilt = true;
   cacheBuilding = false;
-  console.log(`City-ZIP index built with ${cityToZipsCache.size} cities, ${failedCount} ZIPs failed`);
-  if (failedZips.length > 0) {
-    console.log('Sample failed ZIPs:', failedZips.slice(0, 10));
-  }
-  
-  const hasAzle = cityToZipsCache.has('azle');
-  console.log('Cache contains azle:', hasAzle);
+  console.log(`City-ZIP index built with ${cityToZipsCache.size} cities`);
   
   return cityToZipsCache;
 }
@@ -211,22 +198,15 @@ export async function buildCityZipIndex(zips: string[]): Promise<Map<string, str
 export function searchCityIndex(cityName: string): string[] {
   const searchTerm = cityName.toLowerCase().trim();
   
-  console.log(`City index search for "${searchTerm}", cache has ${cityToZipsCache.size} cities`);
-  
   if (cityToZipsCache.has(searchTerm)) {
-    console.log(`Found exact match for "${searchTerm}"`);
     return cityToZipsCache.get(searchTerm) || [];
   }
   
   for (const [city, zips] of cityToZipsCache.entries()) {
     if (city.includes(searchTerm) || searchTerm.includes(city)) {
-      console.log(`Found partial match: "${city}" for search "${searchTerm}"`);
       return zips;
     }
   }
-  
-  const sampleCities = Array.from(cityToZipsCache.keys()).slice(0, 10);
-  console.log('Sample cities in cache:', sampleCities);
   
   return [];
 }
