@@ -44,4 +44,15 @@ a {
     color: var(--foreground);
     background: var(--background);
   }
+}
+
+@keyframes pulseAlert {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 10px rgba(251,191,36,0.5);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 25px rgba(251,191,36,0.8), 0 0 40px rgba(220,38,38,0.5);
+  }
 } 

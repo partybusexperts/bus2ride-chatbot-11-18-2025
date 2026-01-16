@@ -2447,16 +2447,20 @@ export default function CallPad() {
                     </div>
                     {v.custom_instructions && (
                       <div style={{ 
-                        fontSize: '9px', 
-                        color: '#fbbf24', 
+                        fontSize: '10px', 
+                        fontWeight: 700,
+                        color: '#fff', 
                         marginBottom: '6px', 
-                        padding: '4px 6px', 
-                        background: 'rgba(251,191,36,0.1)', 
-                        borderRadius: '4px',
-                        border: '1px solid rgba(251,191,36,0.3)',
-                        lineHeight: 1.3
+                        padding: '6px 8px', 
+                        background: 'linear-gradient(135deg, #dc2626 0%, #ea580c 100%)', 
+                        borderRadius: '6px',
+                        border: '2px solid #fbbf24',
+                        lineHeight: 1.4,
+                        animation: 'pulseAlert 1.5s ease-in-out infinite',
+                        boxShadow: '0 0 10px rgba(251,191,36,0.5)',
                       }}>
-                        {v.custom_instructions.length > 60 ? v.custom_instructions.substring(0, 60) + '...' : v.custom_instructions}
+                        <span style={{ marginRight: '4px' }}>⚠️</span>
+                        {v.custom_instructions.length > 50 ? v.custom_instructions.substring(0, 50) + '...' : v.custom_instructions}
                       </div>
                     )}
                     <div style={{ display: 'flex', gap: '6px' }}>
@@ -2734,6 +2738,28 @@ export default function CallPad() {
                 &#10005;
               </button>
             </div>
+
+            {/* CUSTOM INSTRUCTIONS - ALWAYS FIRST AND PROMINENT */}
+            {(selectedVehicle.description || selectedVehicle.custom_instructions) && (
+              <div style={{ 
+                marginBottom: '20px', 
+                padding: '18px', 
+                background: 'linear-gradient(135deg, #dc2626 0%, #ea580c 100%)', 
+                borderRadius: '14px', 
+                border: '4px solid #fbbf24',
+                animation: 'pulseAlert 1.5s ease-in-out infinite',
+                boxShadow: '0 0 25px rgba(251,191,36,0.7)',
+              }}>
+                <div style={{ fontSize: '16px', fontWeight: 900, color: '#fff', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                  <span style={{ fontSize: '24px' }}>⚠️</span> 
+                  READ THIS FIRST - CUSTOM INSTRUCTIONS
+                  <span style={{ fontSize: '24px' }}>⚠️</span>
+                </div>
+                <div style={{ fontSize: '16px', fontWeight: 700, color: '#fff', lineHeight: 1.7, textAlign: 'center', textShadow: '0 2px 4px rgba(0,0,0,0.4)' }}>
+                  {selectedVehicle.custom_instructions || selectedVehicle.description}
+                </div>
+              </div>
+            )}
             
             {allPhotos.length > 0 && (
               <div style={{ marginBottom: '20px' }}>
@@ -3015,15 +3041,6 @@ export default function CallPad() {
               )}
             </div>
 
-            {(selectedVehicle.description || selectedVehicle.custom_instructions) && (
-              <div style={{ marginBottom: '16px', padding: '12px', background: '#fffbeb', borderRadius: '8px', border: '1px solid #fcd34d' }}>
-                <div style={{ fontSize: '12px', fontWeight: 600, color: '#92400e', marginBottom: '4px' }}>Notes / Custom Instructions</div>
-                <div style={{ fontSize: '13px', color: '#78350f', lineHeight: 1.5 }}>
-                  {selectedVehicle.custom_instructions || selectedVehicle.description}
-                </div>
-              </div>
-            )}
-
             {comparableVehicles.length > 0 && (
               <div style={{ marginBottom: '16px', padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                 <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#334155', marginBottom: '12px' }}>Similar Options for This Customer</h3>
@@ -3212,6 +3229,26 @@ export default function CallPad() {
                 style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: '36px', height: '36px', cursor: 'pointer', fontSize: '18px', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >&#10005;</button>
             </div>
+
+            {/* CUSTOM INSTRUCTIONS - FIRST AND PROMINENT */}
+            {customInstructions && (
+              <div style={{ 
+                background: 'linear-gradient(135deg, #dc2626 0%, #ea580c 100%)', 
+                border: '4px solid #fbbf24', 
+                borderRadius: '14px', 
+                padding: '16px', 
+                marginBottom: '16px', 
+                animation: 'pulseAlert 1.5s ease-in-out infinite',
+                boxShadow: '0 0 25px rgba(251,191,36,0.7)',
+              }}>
+                <div style={{ fontSize: '14px', fontWeight: 900, color: '#fff', textTransform: 'uppercase', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '20px' }}>⚠️</span> 
+                  READ THIS - CUSTOM INSTRUCTIONS
+                  <span style={{ fontSize: '20px' }}>⚠️</span>
+                </div>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff', lineHeight: 1.6, textAlign: 'center', textShadow: '0 2px 4px rgba(0,0,0,0.4)' }}>{customInstructions}</div>
+              </div>
+            )}
             
             {photos.length > 0 && (
               <div style={{ position: 'relative', marginBottom: '16px' }}>
@@ -3232,13 +3269,6 @@ export default function CallPad() {
                     </div>
                   </>
                 )}
-              </div>
-            )}
-            
-            {customInstructions && (
-              <div style={{ background: 'rgba(249,115,22,0.15)', border: '2px solid #f97316', borderRadius: '10px', padding: '12px', marginBottom: '16px', animation: 'pulse 2s infinite' }}>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: '#f97316', textTransform: 'uppercase', marginBottom: '6px' }}>Custom Instructions</div>
-                <div style={{ fontSize: '13px', color: '#fed7aa', lineHeight: 1.5 }}>{customInstructions}</div>
               </div>
             )}
             
