@@ -2010,6 +2010,19 @@ function detectPattern(text: string): DetectedItem | null {
   if (twoWordName && trimmed.length >= 5 && trimmed.length <= 40) {
     const firstName = twoWordName[1].toLowerCase();
     const lastName = twoWordName[2].toLowerCase();
+    
+    // Check if this is a city+state pattern (e.g., "Azle Texas", "Dallas TX", "Mesa Arizona")
+    const STATE_ABBREVS_TWO = ['al', 'ak', 'az', 'ar', 'ca', 'co', 'ct', 'de', 'fl', 'ga', 'hi', 'id', 'il', 'in', 'ia', 'ks', 'ky', 'la', 'me', 'md', 'ma', 'mi', 'mn', 'ms', 'mo', 'mt', 'ne', 'nv', 'nh', 'nj', 'nm', 'ny', 'nc', 'nd', 'oh', 'ok', 'or', 'pa', 'ri', 'sc', 'sd', 'tn', 'tx', 'ut', 'vt', 'va', 'wa', 'wv', 'wi', 'wy', 'dc'];
+    const STATE_NAMES_FULL = ['alabama', 'alaska', 'arizona', 'arkansas', 'california', 'colorado', 'connecticut', 'delaware', 'florida', 'georgia', 'hawaii', 'idaho', 'illinois', 'indiana', 'iowa', 'kansas', 'kentucky', 'louisiana', 'maine', 'maryland', 'massachusetts', 'michigan', 'minnesota', 'mississippi', 'missouri', 'montana', 'nebraska', 'nevada', 'new hampshire', 'new jersey', 'new mexico', 'new york', 'north carolina', 'north dakota', 'ohio', 'oklahoma', 'oregon', 'pennsylvania', 'rhode island', 'south carolina', 'south dakota', 'tennessee', 'texas', 'utah', 'vermont', 'virginia', 'washington', 'west virginia', 'wisconsin', 'wyoming'];
+    const isStateAbbrev = STATE_ABBREVS_TWO.includes(lastName);
+    const isStateName = STATE_NAMES_FULL.includes(lastName);
+    if (isStateAbbrev || isStateName) {
+      // This is a city+state pattern - return as city for vehicle search
+      const cityName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+      const statePart = isStateAbbrev ? lastName.toUpperCase() : lastName.charAt(0).toUpperCase() + lastName.slice(1);
+      return { type: 'city', value: `${cityName}, ${statePart}`, confidence: 0.95, original: trimmed };
+    }
+    
     // Double-check it's not a city (should have been caught above, but just in case)
     const isNotCity = !CITY_KEYWORDS.some(c => c.toLowerCase() === trimmed.toLowerCase());
     const isNotVehicle = !Object.keys(VEHICLE_TYPE_KEYWORDS).some(v => v.toLowerCase() === trimmed.toLowerCase());
@@ -2208,10 +2221,48 @@ function detectPattern(text: string): DetectedItem | null {
   return null;
 }
 
+const US_STATE_NAMES = [
+  'alabama', 'alaska', 'arizona', 'arkansas', 'california', 'colorado', 'connecticut',
+  'delaware', 'florida', 'georgia', 'hawaii', 'idaho', 'illinois', 'indiana', 'iowa',
+  'kansas', 'kentucky', 'louisiana', 'maine', 'maryland', 'massachusetts', 'michigan',
+  'minnesota', 'mississippi', 'missouri', 'montana', 'nebraska', 'nevada', 'new hampshire',
+  'new jersey', 'new mexico', 'new york', 'north carolina', 'north dakota', 'ohio',
+  'oklahoma', 'oregon', 'pennsylvania', 'rhode island', 'south carolina', 'south dakota',
+  'tennessee', 'texas', 'utah', 'vermont', 'virginia', 'washington', 'west virginia',
+  'wisconsin', 'wyoming', 'district of columbia'
+];
+
+const US_STATE_ABBREVS = [
+  'al', 'ak', 'az', 'ar', 'ca', 'co', 'ct', 'de', 'fl', 'ga', 'hi', 'id', 'il', 'in',
+  'ia', 'ks', 'ky', 'la', 'me', 'md', 'ma', 'mi', 'mn', 'ms', 'mo', 'mt', 'ne', 'nv',
+  'nh', 'nj', 'nm', 'ny', 'nc', 'nd', 'oh', 'ok', 'or', 'pa', 'ri', 'sc', 'sd', 'tn',
+  'tx', 'ut', 'vt', 'va', 'wa', 'wv', 'wi', 'wy', 'dc'
+];
+
+function isCityStatePattern(text: string): boolean {
+  const lower = text.toLowerCase().trim();
+  const parts = lower.split(/[\s,]+/);
+  if (parts.length < 2) return false;
+  
+  const lastPart = parts[parts.length - 1];
+  const lastTwoParts = parts.slice(-2).join(' ');
+  
+  if (US_STATE_ABBREVS.includes(lastPart)) return true;
+  if (US_STATE_NAMES.includes(lastPart)) return true;
+  if (US_STATE_NAMES.includes(lastTwoParts)) return true;
+  
+  return false;
+}
+
 async function detectNameWithAI(text: string): Promise<{ isName: boolean; confidence: number }> {
   const trimmed = text.trim();
   if (!trimmed || trimmed.length < 2 || trimmed.length > 50) {
     return { isName: false, confidence: 0 };
+  }
+  
+  // Skip if it's a city+state pattern (e.g., "Azle Texas", "Dallas TX")
+  if (isCityStatePattern(trimmed)) {
+    return { isName: false, confidence: 0.99 };
   }
   
   // Skip if it contains numbers, special chars (except hyphens/apostrophes in names)
@@ -2241,6 +2292,8 @@ NOT names:
 - Common English words (trip, party, event, airport, hotel, etc.)
 - Place names (cities, countries, venues)
 - Event types (wedding, concert, etc.)
+- CITY + STATE patterns like "Azle Texas", "Dallas TX", "Mesa Arizona" - these are LOCATIONS, not names
+- Any word followed by a US state name or abbreviation (e.g., "Weatherford Texas", "Hoboken NJ")
 
 Examples:
 "Terry" → {"isName": true, "confidence": 0.95}
@@ -2250,7 +2303,11 @@ Examples:
 "trip" → {"isName": false, "confidence": 0.98}
 "airport" → {"isName": false, "confidence": 0.99}
 "Phoenix" → {"isName": false, "confidence": 0.85}
-"Terry Smith" → {"isName": true, "confidence": 0.98}`
+"Terry Smith" → {"isName": true, "confidence": 0.98}
+"Azle Texas" → {"isName": false, "confidence": 0.99}
+"Dallas TX" → {"isName": false, "confidence": 0.99}
+"Weatherford Texas" → {"isName": false, "confidence": 0.99}
+"Mesa AZ" → {"isName": false, "confidence": 0.99}`
         },
         {
           role: "user",
