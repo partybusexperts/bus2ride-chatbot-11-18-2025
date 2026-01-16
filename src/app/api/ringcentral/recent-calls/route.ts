@@ -70,8 +70,19 @@ async function getAccessToken(): Promise<string> {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error("RingCentral auth error:", errorText);
-    throw new Error(`Failed to authenticate with RingCentral: ${response.status}`);
+    console.error("RingCentral auth error:", response.status, errorText);
+    let errorMessage = `Failed to authenticate with RingCentral: ${response.status}`;
+    try {
+      const errorJson = JSON.parse(errorText);
+      if (errorJson.error_description) {
+        errorMessage = `RingCentral: ${errorJson.error_description}`;
+      } else if (errorJson.message) {
+        errorMessage = `RingCentral: ${errorJson.message}`;
+      }
+    } catch (e) {
+      // Use default error message
+    }
+    throw new Error(errorMessage);
   }
 
   const data: RingCentralTokenResponse = await response.json();

@@ -410,64 +410,8 @@ export default function CallPad() {
         return;
       }
       
-      // If city/ZIP isn't in the static list (no normalizedCity), use AI to find the metro
       const isZipCode = chip.type === 'zip';
-      if (!chip.normalizedCity && !isZipCode) {
-        // Unknown city - use AI to determine metro
-        setCalculatingDistance(true);
-        fetch('/api/normalize-location', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ location: chip.value }),
-        })
-          .then(res => res.json())
-          .then(data => {
-            if (data.success && data.metro) {
-              console.log(`[AI City Normalization] "${chip.value}" → "${data.metro}" (${data.cityName}, ${data.state})`);
-              // Re-apply chip with AI-determined metro
-              const enhancedChip = {
-                ...chip,
-                normalizedCity: data.metro,
-                isRemote: data.isRemote,
-                travelMinutes: data.driveMinutes,
-              };
-              applyChipToData(enhancedChip);
-            } else {
-              console.log(`[AI City Normalization] "${chip.value}" → No metro found, using as-is`);
-              // No metro found - apply as-is (will show "no service area" if city not in database)
-              proceedWithCityApplication(chip, false);
-            }
-          })
-          .catch(err => {
-            console.error('AI normalization error:', err);
-            proceedWithCityApplication(chip, false);
-          })
-          .finally(() => setCalculatingDistance(false));
-        return;
-      }
       
-      proceedWithCityApplication(chip, isZipCode);
-      return;
-    }
-    
-    if (chip.type === 'stop') {
-      // Add stop directly to trip notes
-      setConfirmedData(prev => ({
-        ...prev,
-        tripNotes: prev.tripNotes
-          ? `${prev.tripNotes}\nStop: ${chip.value}`
-          : `Stop: ${chip.value}`,
-      }));
-      return;
-    }
-
-    const field = fieldMap[chip.type];
-    if (field) {
-      setConfirmedData(prev => ({ ...prev, [field]: chip.value }));
-    }
-  }, []);
-
-  const proceedWithCityApplication = useCallback((chip: DetectedChip, isZipCode: boolean) => {
       setHistoryCities(prev => {
         const newHistory = prev.map(c => ({ ...c, active: false }));
         const existing = newHistory.find(c => c.value.toLowerCase() === chip.value.toLowerCase());
@@ -480,41 +424,30 @@ export default function CallPad() {
       });
       
       // Use normalized city (major metro) for vehicle search, but show original for display
-      // e.g., "mesa az" shows as Mesa AZ but searches vehicles for Phoenix
-      // For ZIP codes, show "ZIP XXXXX" and the metro area it maps to
       const searchCity = chip.normalizedCity || chip.value;
-      // displayCityOrZip is what we show in "SHOWING: X RATES"
-      // - For formatting variations: "Washington DC" includes "Washington" → show "Washington DC"
-      // - For different metros: "Arlington" doesn't include "Dallas" → show "Dallas"
       const isFormattingVariation = chip.displayCity && chip.normalizedCity && 
         (chip.displayCity.toLowerCase().includes(chip.normalizedCity.toLowerCase()) ||
          chip.normalizedCity.toLowerCase().includes(chip.displayCity.toLowerCase()));
       const displayForRates = isFormattingVariation 
-        ? (chip.displayCity || chip.value)  // Formatting variation: show nicer name (e.g., Washington DC)
-        : (chip.normalizedCity || chip.displayCity || chip.value); // Different metro: show rates city (e.g., Dallas)
+        ? (chip.displayCity || chip.value)
+        : (chip.normalizedCity || chip.displayCity || chip.value);
       const wasNormalized = chip.normalizedCity && chip.normalizedCity.toLowerCase() !== chip.value.toLowerCase();
-      const isZipCode = chip.type === 'zip';
       
-      // Update cityOrZip (for vehicle search), displayCityOrZip (for display), searchedCity (original for display), and pickupAddress
-      // For ZIP codes: show the ZIP in the field but use normalized city for search
       const fieldValue = isZipCode ? chip.value : searchCity;
       setConfirmedData(prev => ({ 
         ...prev, 
-        cityOrZip: fieldValue, // For ZIPs: show the ZIP code; for cities: show normalized city
-        displayCityOrZip: displayForRates, // Use appropriate display city for UI
-        // Store the normalized city for vehicle search when different from field value
-        searchCity: isZipCode ? searchCity : '', // For ZIPs: store the metro for vehicle search
-        // For ZIP codes: always show "ZIP XXXXX" format even if we don't know the metro
-        // For cities: only set if different from normalized
+        cityOrZip: fieldValue,
+        displayCityOrZip: displayForRates,
+        searchCity: isZipCode ? searchCity : '',
         searchedCity: isZipCode ? `ZIP ${chip.value}` : (wasNormalized ? chip.value : ''),
-        travelMinutes: chip.travelMinutes || 0, // Store travel time from suburb to metro
-        pickupAddress: isZipCode ? '' : chip.value // Don't set pickup address for ZIPs
+        travelMinutes: chip.travelMinutes || 0,
+        pickupAddress: isZipCode ? '' : chip.value
       }));
       
       // Calculate distance using AI for ZIP codes and cities that normalize to a different metro
       const shouldCalculateDistance = (isZipCode && searchCity) || (wasNormalized && chip.normalizedCity);
       if (shouldCalculateDistance) {
-        const locationToSearch = isZipCode ? chip.value : chip.value;
+        const locationToSearch = chip.value;
         const metroToSearch = isZipCode ? searchCity : chip.normalizedCity!;
         setCalculatingDistance(true);
         setCalculatedDistance(null);
@@ -536,12 +469,10 @@ export default function CallPad() {
         setCalculatedDistance(null);
       }
       
-      // Show notification if city was normalized
       if (wasNormalized) {
         console.log(`[City Normalization] "${chip.value}" → searching vehicles for "${chip.normalizedCity}"${chip.displayCity ? ` (display: ${chip.displayCity})` : ''}`);
       }
       
-      // Show warning if this is a remote location (1+ hour from nearest major metro)
       if (chip.isRemote) {
         setRemoteLocationWarning(`"${chip.value}" is over 1 hour from ${chip.normalizedCity || 'the nearest major city'}. Confirm with manager about travel surcharge.`);
       } else {
@@ -553,10 +484,11 @@ export default function CallPad() {
     }
     
     if (chip.type === 'stop') {
-      // Add stop directly to trip notes
       setConfirmedData(prev => ({
         ...prev,
-        tripNotes: prev.tripNotes ? `${prev.tripNotes}\nStop: ${chip.value}` : `Stop: ${chip.value}`,
+        tripNotes: prev.tripNotes
+          ? `${prev.tripNotes}\nStop: ${chip.value}`
+          : `Stop: ${chip.value}`,
       }));
       return;
     }
