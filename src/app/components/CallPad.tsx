@@ -438,20 +438,23 @@ export default function CallPad() {
         pickupAddress: isZipCode ? '' : chip.value // Don't set pickup address for ZIPs
       }));
       
-      // For ZIP codes, calculate distance using AI
-      if (isZipCode && searchCity) {
+      // Calculate distance using AI for ZIP codes and cities that normalize to a different metro
+      const shouldCalculateDistance = (isZipCode && searchCity) || (wasNormalized && chip.normalizedCity);
+      if (shouldCalculateDistance) {
+        const locationToSearch = isZipCode ? chip.value : chip.value;
+        const metroToSearch = isZipCode ? searchCity : chip.normalizedCity!;
         setCalculatingDistance(true);
         setCalculatedDistance(null);
         fetch('/api/calculate-distance', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ zipCode: chip.value, metroCity: searchCity }),
+          body: JSON.stringify({ zipCode: locationToSearch, metroCity: metroToSearch }),
         })
           .then(res => res.json())
           .then(data => {
             if (data.success && (data.miles || data.minutes)) {
               setCalculatedDistance({ miles: data.miles, minutes: data.minutes, description: data.description });
-              console.log(`[Distance Calculated] ZIP ${chip.value} → ${searchCity}: ${data.miles} miles, ${data.minutes} min`);
+              console.log(`[Distance Calculated] ${locationToSearch} → ${metroToSearch}: ${data.miles} miles, ${data.minutes} min`);
             }
           })
           .catch(err => console.error('Distance calculation error:', err))
@@ -2182,17 +2185,21 @@ export default function CallPad() {
                   </>
                 );
               } else if (confirmedData.searchedCity && confirmedData.searchedCity.toLowerCase() !== confirmedData.cityOrZip.toLowerCase()) {
-                const travelTime = confirmedData.travelMinutes;
+                // Use AI-calculated distance if available, otherwise fall back to static travelMinutes
+                const travelTime = calculatedDistance?.minutes || confirmedData.travelMinutes;
                 const travelDisplay = travelTime >= 60 
                   ? `${Math.floor(travelTime / 60)}h ${travelTime % 60}m` 
                   : travelTime > 0 ? `${travelTime} min` : '';
+                const milesDisplay = calculatedDistance?.miles ? `${calculatedDistance.miles} mi` : '';
                 return (
                   <>
                     <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: 500 }}>SEARCHED:</span>
                     <span style={{ fontSize: '16px', fontWeight: 600, color: '#bfdbfe', letterSpacing: '0.5px' }}>
                       {confirmedData.searchedCity.toUpperCase()}
                     </span>
-                    {travelDisplay && (
+                    {calculatingDistance ? (
+                      <span style={{ fontSize: '12px', color: '#fcd34d', fontStyle: 'italic' }}>calculating...</span>
+                    ) : (travelDisplay || milesDisplay) && (
                       <span style={{ 
                         fontSize: '13px', 
                         fontWeight: 700, 
@@ -2203,7 +2210,7 @@ export default function CallPad() {
                         animation: 'pulseAlert 1.5s ease-in-out infinite',
                         boxShadow: '0 0 10px rgba(245,158,11,0.5)',
                       }}>
-                        🚗 ~{travelDisplay} away
+                        🚗 ~{travelDisplay}{milesDisplay ? ` (${milesDisplay})` : ''}
                       </span>
                     )}
                     <span style={{ fontSize: '16px', color: '#93c5fd', fontWeight: 500 }}>→</span>
