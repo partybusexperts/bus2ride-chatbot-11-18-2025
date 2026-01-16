@@ -52,6 +52,11 @@ async function getAccessToken(): Promise<string> {
     throw new Error("Missing RingCentral credentials (CLIENT_ID, CLIENT_SECRET, or JWT_TOKEN)");
   }
 
+  // Debug: Check JWT format
+  const jwtPreview = jwtToken.substring(0, 30);
+  const dotCount = (jwtToken.match(/\./g) || []).length;
+  console.log(`JWT Debug: "${jwtPreview}...", dots: ${dotCount}, length: ${jwtToken.length}`);
+
   const tokenUrl = "https://platform.ringcentral.com/restapi/oauth/token";
   
   // JWT bearer grant flow
