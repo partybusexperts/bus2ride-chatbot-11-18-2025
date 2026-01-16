@@ -254,6 +254,8 @@ export default function CallPad() {
   const [lookingUpPlace, setLookingUpPlace] = useState(false);
   const [cityDisambiguation, setCityDisambiguation] = useState<{ city: string; options: string[] } | null>(null);
   const [remoteLocationWarning, setRemoteLocationWarning] = useState<string | null>(null);
+  const [calculatedDistance, setCalculatedDistance] = useState<{ miles: number | null; minutes: number | null; description: string | null } | null>(null);
+  const [calculatingDistance, setCalculatingDistance] = useState(false);
   
   const [zohoExistingLead, setZohoExistingLead] = useState<any>(null);
   const [zohoUpdateConfirmation, setZohoUpdateConfirmation] = useState<{
@@ -435,6 +437,28 @@ export default function CallPad() {
         travelMinutes: chip.travelMinutes || 0, // Store travel time from suburb to metro
         pickupAddress: isZipCode ? '' : chip.value // Don't set pickup address for ZIPs
       }));
+      
+      // For ZIP codes, calculate distance using AI
+      if (isZipCode && searchCity) {
+        setCalculatingDistance(true);
+        setCalculatedDistance(null);
+        fetch('/api/calculate-distance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ zipCode: chip.value, metroCity: searchCity }),
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && (data.miles || data.minutes)) {
+              setCalculatedDistance({ miles: data.miles, minutes: data.minutes, description: data.description });
+              console.log(`[Distance Calculated] ZIP ${chip.value} → ${searchCity}: ${data.miles} miles, ${data.minutes} min`);
+            }
+          })
+          .catch(err => console.error('Distance calculation error:', err))
+          .finally(() => setCalculatingDistance(false));
+      } else {
+        setCalculatedDistance(null);
+      }
       
       // Show notification if city was normalized
       if (wasNormalized) {
@@ -659,6 +683,7 @@ export default function CallPad() {
     setVehicleRecommendation("");
     setCityDisambiguation(null);
     setSelectedVehicle(null);
+    setCalculatedDistance(null);
   }, []);
 
 
@@ -2112,12 +2137,34 @@ export default function CallPad() {
               const displayMetro = isZipSearch ? confirmedData.searchCity : (confirmedData.displayCityOrZip || confirmedData.cityOrZip);
               
               if (isZipSearch) {
+                const distanceDisplay = calculatedDistance?.minutes 
+                  ? (calculatedDistance.minutes >= 60 
+                      ? `${Math.floor(calculatedDistance.minutes / 60)}h ${calculatedDistance.minutes % 60}m` 
+                      : `${calculatedDistance.minutes} min`)
+                  : null;
+                const milesDisplay = calculatedDistance?.miles ? `${calculatedDistance.miles} mi` : null;
                 return (
                   <>
                     <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: 500 }}>SEARCHED:</span>
                     <span style={{ fontSize: '16px', fontWeight: 600, color: '#bfdbfe', letterSpacing: '0.5px' }}>
                       {confirmedData.searchedCity.toUpperCase()}
                     </span>
+                    {calculatingDistance ? (
+                      <span style={{ fontSize: '12px', color: '#fcd34d', fontStyle: 'italic' }}>calculating...</span>
+                    ) : (distanceDisplay || milesDisplay) && (
+                      <span style={{ 
+                        fontSize: '13px', 
+                        fontWeight: 700, 
+                        color: '#fff', 
+                        background: 'linear-gradient(135deg, #f59e0b 0%, #dc2626 100%)',
+                        padding: '4px 10px', 
+                        borderRadius: '12px',
+                        animation: 'pulseAlert 1.5s ease-in-out infinite',
+                        boxShadow: '0 0 10px rgba(245,158,11,0.5)',
+                      }}>
+                        🚗 ~{distanceDisplay}{milesDisplay ? ` (${milesDisplay})` : ''}
+                      </span>
+                    )}
                     <span style={{ fontSize: '16px', color: '#93c5fd', fontWeight: 500 }}>→</span>
                     <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: 500 }}>SHOWING:</span>
                     {hasServiceArea ? (
