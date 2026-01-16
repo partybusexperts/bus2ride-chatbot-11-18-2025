@@ -1456,6 +1456,7 @@ const COMMON_FIRST_NAMES = [
   'tiffany', 'whitney', 'brittany', 'courtney', 'crystal', 'danielle', 'erica', 'heidi', 'holly', 'jenny',
   'jenna', 'jessie', 'katelyn', 'kelsey', 'kristen', 'kristin', 'lindsey', 'mandy', 'megan', 'melanie',
   'stacy', 'tara', 'tracy', 'vanessa', 'wendy', 'chelsea', 'brandy', 'candy', 'cindy', 'gina',
+  'terry', 'carrie', 'jerry', 'barry', 'gary', 'larry', 'harry', 'mary', 'perry', 'sherry', 'kerry',
   'chad', 'brad', 'brett', 'brent', 'cody', 'corey', 'derek', 'drew', 'dustin', 'garrett',
   'grant', 'hunter', 'jarrod', 'jared', 'lance', 'logan', 'mason', 'mitchell', 'nathan', 'parker',
   'pierce', 'preston', 'ricky', 'roger', 'ross', 'shane', 'spencer', 'tanner', 'taylor', 'todd',
@@ -2101,6 +2102,71 @@ function detectPattern(text: string): DetectedItem | null {
   return null;
 }
 
+async function detectNameWithAI(text: string): Promise<{ isName: boolean; confidence: number }> {
+  const trimmed = text.trim();
+  if (!trimmed || trimmed.length < 2 || trimmed.length > 50) {
+    return { isName: false, confidence: 0 };
+  }
+  
+  // Skip if it contains numbers, special chars (except hyphens/apostrophes in names)
+  if (/[0-9@#$%^&*()+=\[\]{}|\\:;<>,.?\/~`]/.test(trimmed)) {
+    return { isName: false, confidence: 0 };
+  }
+  
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `You are a name detector. Determine if the given text is a person's first name or full name.
+
+Return JSON with:
+- isName: boolean (true if this is likely a person's name)
+- confidence: number 0-1 (how confident you are)
+
+Consider:
+- First names from ANY culture/language (American, Hispanic, Asian, African, European, Middle Eastern, etc.)
+- Nicknames and diminutives (Terry, Carrie, Bobby, etc.)
+- Unusual or uncommon names are still names
+- Two-word inputs like "Terry Smith" or "Maria Garcia" are full names
+
+NOT names:
+- Common English words (trip, party, event, airport, hotel, etc.)
+- Place names (cities, countries, venues)
+- Event types (wedding, concert, etc.)
+
+Examples:
+"Terry" → {"isName": true, "confidence": 0.95}
+"Carrie" → {"isName": true, "confidence": 0.95}
+"Xiang" → {"isName": true, "confidence": 0.9}
+"D'Andre" → {"isName": true, "confidence": 0.95}
+"trip" → {"isName": false, "confidence": 0.98}
+"airport" → {"isName": false, "confidence": 0.99}
+"Phoenix" → {"isName": false, "confidence": 0.85}
+"Terry Smith" → {"isName": true, "confidence": 0.98}`
+        },
+        {
+          role: "user",
+          content: trimmed
+        }
+      ],
+      response_format: { type: "json_object" },
+      max_tokens: 50,
+    });
+
+    const content = response.choices[0]?.message?.content || "{}";
+    const parsed = JSON.parse(content);
+    return {
+      isName: parsed.isName === true,
+      confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0
+    };
+  } catch (error) {
+    console.error("AI name detection error:", error);
+    return { isName: false, confidence: 0 };
+  }
+}
+
 async function parseWithAI(text: string): Promise<DetectedItem[]> {
   try {
     const response = await openai.chat.completions.create({
@@ -2195,9 +2261,33 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (useAI && unknownSegments.length > 0) {
+    // Always try AI name detection for unknown segments (names are important to detect)
+    if (unknownSegments.length > 0) {
       for (const segment of unknownSegments) {
-        if (segment.length > 3) {
+        // First, try AI name detection for single words or two-word patterns that look like names
+        const trimmedSegment = segment.trim();
+        const wordCount = trimmedSegment.split(/\s+/).length;
+        
+        if (wordCount <= 2 && trimmedSegment.length >= 2 && trimmedSegment.length <= 40) {
+          // Could be a name - ask AI
+          const nameResult = await detectNameWithAI(trimmedSegment);
+          if (nameResult.isName && nameResult.confidence >= 0.7) {
+            const capitalizedName = trimmedSegment
+              .split(/\s+/)
+              .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+              .join(' ');
+            allItems.push({ 
+              type: 'name', 
+              value: capitalizedName, 
+              confidence: nameResult.confidence, 
+              original: segment 
+            });
+            continue;
+          }
+        }
+        
+        // Fall back to full AI parsing if enabled
+        if (useAI && segment.length > 3) {
           const aiResults = await parseWithAI(segment);
           if (aiResults.length > 0) {
             allItems.push(...aiResults);
@@ -2207,10 +2297,6 @@ export async function POST(request: NextRequest) {
         } else {
           allItems.push({ type: 'unknown', value: segment, confidence: 0, original: segment });
         }
-      }
-    } else {
-      for (const segment of unknownSegments) {
-        allItems.push({ type: 'unknown', value: segment, confidence: 0, original: segment });
       }
     }
 
