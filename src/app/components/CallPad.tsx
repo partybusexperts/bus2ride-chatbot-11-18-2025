@@ -257,6 +257,21 @@ export default function CallPad() {
   const [calculatedDistance, setCalculatedDistance] = useState<{ miles: number | null; minutes: number | null; description: string | null; cityName: string | null; state: string | null } | null>(null);
   const [calculatingDistance, setCalculatingDistance] = useState(false);
   
+  const [showCallPicker, setShowCallPicker] = useState(false);
+  const [recentCalls, setRecentCalls] = useState<Array<{
+    id: string;
+    fromPhoneNumber: string | null;
+    fromPhoneNumberFormatted: string;
+    fromName: string | null;
+    toPhoneNumber: string | null;
+    toPhoneNumberFormatted: string;
+    startTime: string;
+    result: string;
+    duration: number;
+  }>>([]);
+  const [loadingCalls, setLoadingCalls] = useState(false);
+  const [callsError, setCallsError] = useState<string | null>(null);
+  
   const [zohoExistingLead, setZohoExistingLead] = useState<any>(null);
   const [zohoUpdateConfirmation, setZohoUpdateConfirmation] = useState<{
     show: boolean;
@@ -1782,7 +1797,48 @@ export default function CallPad() {
               </div>
               <div>
                 <label style={labelStyle}>Phone</label>
-                <input style={getInputStyle(confirmedData.phone)} placeholder="Phone number" value={confirmedData.phone} onChange={(e) => setConfirmedData(prev => ({ ...prev, phone: e.target.value }))} />
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <input style={{ ...getInputStyle(confirmedData.phone), flex: 1 }} placeholder="Phone number" value={confirmedData.phone} onChange={(e) => setConfirmedData(prev => ({ ...prev, phone: e.target.value }))} />
+                  <button
+                    onClick={async () => {
+                      setShowCallPicker(true);
+                      setLoadingCalls(true);
+                      setCallsError(null);
+                      try {
+                        const res = await fetch('/api/ringcentral/recent-calls');
+                        const data = await res.json();
+                        if (data.success) {
+                          setRecentCalls(data.calls);
+                          if (data.calls.length === 0) {
+                            setCallsError('No recent inbound calls found in the last hour.');
+                          }
+                        } else {
+                          setCallsError(data.error || 'Failed to fetch calls');
+                        }
+                      } catch (err) {
+                        setCallsError('Failed to connect to RingCentral');
+                      } finally {
+                        setLoadingCalls(false);
+                      }
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #3b82f6',
+                      background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                      color: '#fff',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    📞 From Call
+                  </button>
+                </div>
               </div>
               <div>
                 <label style={labelStyle}>Email</label>
@@ -3651,6 +3707,201 @@ export default function CallPad() {
                 }}
               >
                 {saving ? 'Updating...' : `Update ${selectedFieldsToUpdate.size} Field${selectedFieldsToUpdate.size !== 1 ? 's' : ''}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCallPicker && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+        }}>
+          <div style={{
+            background: '#fff',
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '500px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflow: 'auto',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1e3a5f', margin: 0 }}>
+                📞 Select Caller
+              </h3>
+              <button
+                onClick={() => setShowCallPicker(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#6b7280',
+                  lineHeight: 1,
+                }}
+              >
+                ×
+              </button>
+            </div>
+            
+            <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '16px' }}>
+              Select the call to populate the phone field. Recent inbound calls from the last hour:
+            </p>
+
+            {loadingCalls ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+                Loading recent calls...
+              </div>
+            ) : callsError ? (
+              <div style={{ 
+                padding: '16px', 
+                background: '#fef2f2', 
+                border: '1px solid #fecaca', 
+                borderRadius: '8px',
+                color: '#dc2626',
+                fontSize: '14px',
+              }}>
+                {callsError}
+              </div>
+            ) : recentCalls.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+                No recent calls found.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {recentCalls.map((call) => {
+                  const callTime = new Date(call.startTime);
+                  const timeAgo = Math.round((Date.now() - callTime.getTime()) / 60000);
+                  const timeDisplay = timeAgo < 1 ? 'Just now' : timeAgo === 1 ? '1 min ago' : `${timeAgo} min ago`;
+                  
+                  return (
+                    <button
+                      key={call.id}
+                      onClick={() => {
+                        if (call.fromPhoneNumber) {
+                          setConfirmedData(prev => ({ ...prev, phone: call.fromPhoneNumber || '' }));
+                        }
+                        setShowCallPicker(false);
+                      }}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        padding: '14px 16px',
+                        borderRadius: '8px',
+                        border: '1px solid #e5e7eb',
+                        background: '#f9fafb',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        transition: 'all 0.15s ease',
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.background = '#dbeafe';
+                        e.currentTarget.style.borderColor = '#3b82f6';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.background = '#f9fafb';
+                        e.currentTarget.style.borderColor = '#e5e7eb';
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ 
+                          fontSize: '16px', 
+                          fontWeight: 700, 
+                          color: '#1e40af',
+                          fontFamily: 'monospace',
+                        }}>
+                          {call.fromPhoneNumberFormatted}
+                        </span>
+                        <span style={{
+                          fontSize: '11px',
+                          padding: '3px 8px',
+                          borderRadius: '12px',
+                          background: call.result === 'Accepted' ? '#dcfce7' : call.result === 'Ringing' ? '#fef3c7' : '#e0e7ff',
+                          color: call.result === 'Accepted' ? '#166534' : call.result === 'Ringing' ? '#92400e' : '#3730a3',
+                          fontWeight: 600,
+                        }}>
+                          {call.result}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#6b7280', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>→ {call.toPhoneNumberFormatted}</span>
+                        <span>{timeDisplay}</span>
+                      </div>
+                      {call.fromName && (
+                        <div style={{ fontSize: '12px', color: '#374151', marginTop: '4px', fontWeight: 500 }}>
+                          {call.fromName}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            <div style={{ marginTop: '16px', display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setShowCallPicker(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1px solid #d1d5db',
+                  background: '#fff',
+                  color: '#374151',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  setLoadingCalls(true);
+                  setCallsError(null);
+                  try {
+                    const res = await fetch('/api/ringcentral/recent-calls');
+                    const data = await res.json();
+                    if (data.success) {
+                      setRecentCalls(data.calls);
+                      if (data.calls.length === 0) {
+                        setCallsError('No recent inbound calls found in the last hour.');
+                      }
+                    } else {
+                      setCallsError(data.error || 'Failed to fetch calls');
+                    }
+                  } catch (err) {
+                    setCallsError('Failed to connect to RingCentral');
+                  } finally {
+                    setLoadingCalls(false);
+                  }
+                }}
+                disabled={loadingCalls}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#3b82f6',
+                  color: '#fff',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: loadingCalls ? 'not-allowed' : 'pointer',
+                  opacity: loadingCalls ? 0.7 : 1,
+                }}
+              >
+                🔄 Refresh
               </button>
             </div>
           </div>
