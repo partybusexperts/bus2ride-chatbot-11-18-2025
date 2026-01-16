@@ -1802,6 +1802,8 @@ export default function CallPad() {
                           if (data.calls.length === 0) {
                             setCallsError('No recent inbound calls found in the last hour.');
                           }
+                        } else if (data.needsAuth) {
+                          setCallsError('Not connected to RingCentral. Please connect first.');
                         } else {
                           setCallsError(data.error || 'Failed to fetch calls');
                         }
@@ -3753,6 +3755,40 @@ export default function CallPad() {
               <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
                 Loading recent calls...
               </div>
+            ) : callsError && callsError.includes('Please connect') ? (
+              <div style={{ textAlign: 'center', padding: '24px' }}>
+                <div style={{ 
+                  padding: '16px', 
+                  background: '#fef3c7', 
+                  border: '1px solid #fcd34d', 
+                  borderRadius: '8px',
+                  color: '#92400e',
+                  fontSize: '14px',
+                  marginBottom: '16px',
+                }}>
+                  {callsError}
+                </div>
+                <button
+                  onClick={() => {
+                    window.open('/api/ringcentral/login', '_blank', 'width=600,height=700');
+                  }}
+                  style={{
+                    padding: '12px 24px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                    color: '#fff',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  🔗 Connect to RingCentral
+                </button>
+                <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '12px' }}>
+                  After connecting, click Refresh to see recent calls.
+                </p>
+              </div>
             ) : callsError ? (
               <div style={{ 
                 padding: '16px', 
@@ -3865,9 +3901,12 @@ export default function CallPad() {
                     const data = await res.json();
                     if (data.success) {
                       setRecentCalls(data.calls);
+                      setCallsError(null);
                       if (data.calls.length === 0) {
                         setCallsError('No recent inbound calls found in the last hour.');
                       }
+                    } else if (data.needsAuth) {
+                      setCallsError('Not connected to RingCentral. Please connect first.');
                     } else {
                       setCallsError(data.error || 'Failed to fetch calls');
                     }
