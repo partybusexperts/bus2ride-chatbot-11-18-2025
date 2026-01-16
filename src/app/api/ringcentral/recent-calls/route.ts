@@ -43,12 +43,21 @@ async function getAccessToken(): Promise<string> {
     return cachedToken.token;
   }
 
-  const clientId = process.env.RINGCENTRAL_CLIENT_ID;
-  const clientSecret = process.env.RINGCENTRAL_CLIENT_SECRET;
-  const jwtToken = process.env.RINGCENTRAL_JWT_TOKEN;
+  const clientId = process.env.RINGCENTRAL_CLIENT_ID?.trim();
+  const clientSecret = process.env.RINGCENTRAL_CLIENT_SECRET?.trim();
+  const jwtToken = process.env.RINGCENTRAL_JWT_TOKEN?.trim();
 
   if (!clientId || !clientSecret || !jwtToken) {
     throw new Error("Missing RingCentral credentials");
+  }
+
+  // Debug: Log JWT format (first 20 chars only for security)
+  const jwtPreview = jwtToken.substring(0, 20);
+  const dotCount = (jwtToken.match(/\./g) || []).length;
+  console.log(`JWT format check: starts with "${jwtPreview}...", has ${dotCount} dots, length ${jwtToken.length}`);
+  
+  if (dotCount !== 2) {
+    throw new Error(`Invalid JWT format: expected 2 dots but found ${dotCount}. JWT should be in format: header.payload.signature`);
   }
 
   const tokenUrl = "https://platform.ringcentral.com/restapi/oauth/token";
