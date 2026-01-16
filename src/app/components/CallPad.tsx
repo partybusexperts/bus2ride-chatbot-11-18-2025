@@ -254,7 +254,7 @@ export default function CallPad() {
   const [lookingUpPlace, setLookingUpPlace] = useState(false);
   const [cityDisambiguation, setCityDisambiguation] = useState<{ city: string; options: string[] } | null>(null);
   const [remoteLocationWarning, setRemoteLocationWarning] = useState<string | null>(null);
-  const [calculatedDistance, setCalculatedDistance] = useState<{ miles: number | null; minutes: number | null; description: string | null } | null>(null);
+  const [calculatedDistance, setCalculatedDistance] = useState<{ miles: number | null; minutes: number | null; description: string | null; cityName: string | null; state: string | null } | null>(null);
   const [calculatingDistance, setCalculatingDistance] = useState(false);
   
   const [zohoExistingLead, setZohoExistingLead] = useState<any>(null);
@@ -453,8 +453,8 @@ export default function CallPad() {
           .then(res => res.json())
           .then(data => {
             if (data.success && (data.miles || data.minutes)) {
-              setCalculatedDistance({ miles: data.miles, minutes: data.minutes, description: data.description });
-              console.log(`[Distance Calculated] ${locationToSearch} → ${metroToSearch}: ${data.miles} miles, ${data.minutes} min`);
+              setCalculatedDistance({ miles: data.miles, minutes: data.minutes, description: data.description, cityName: data.cityName, state: data.state });
+              console.log(`[Distance Calculated] ${locationToSearch}${data.cityName ? ` (${data.cityName}, ${data.state})` : ''} → ${metroToSearch}: ${data.miles} miles, ${data.minutes} min`);
             }
           })
           .catch(err => console.error('Distance calculation error:', err))
@@ -2146,11 +2146,19 @@ export default function CallPad() {
                       : `${calculatedDistance.minutes} min`)
                   : null;
                 const milesDisplay = calculatedDistance?.miles ? `${calculatedDistance.miles} mi` : null;
+                const zipCityDisplay = calculatedDistance?.cityName 
+                  ? `${calculatedDistance.cityName}${calculatedDistance.state ? `, ${calculatedDistance.state}` : ''}`
+                  : null;
                 return (
                   <>
                     <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: 500 }}>SEARCHED:</span>
                     <span style={{ fontSize: '16px', fontWeight: 600, color: '#bfdbfe', letterSpacing: '0.5px' }}>
                       {confirmedData.searchedCity.toUpperCase()}
+                      {zipCityDisplay && (
+                        <span style={{ fontSize: '14px', color: '#fcd34d', marginLeft: '6px' }}>
+                          ({zipCityDisplay})
+                        </span>
+                      )}
                     </span>
                     {calculatingDistance ? (
                       <span style={{ fontSize: '12px', color: '#fcd34d', fontStyle: 'italic' }}>calculating...</span>

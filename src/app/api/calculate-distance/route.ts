@@ -19,12 +19,14 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: "system",
-          content: `You are a distance calculator. Given a ZIP code and a metro city, estimate the driving distance and time from that ZIP code area to the downtown/center of the metro city.
+          content: `You are a distance calculator. Given a location (ZIP code or city name) and a metro city, estimate the driving distance and time to the downtown/center of the metro city.
 
 Return ONLY a JSON object with these fields:
 - miles: number (approximate driving distance in miles)
 - minutes: number (approximate driving time in minutes under normal traffic)
 - description: string (brief description like "Northwest suburbs" or "Far south side")
+- cityName: string (the city/town name for this ZIP code, e.g. "Wheaton" for 60189, or null if input is already a city name)
+- state: string (2-letter state abbreviation, e.g. "IL" for Illinois)
 
 Be accurate based on your knowledge of US geography. If you don't know the ZIP code, make a reasonable estimate or return null values.`
         },
@@ -50,6 +52,8 @@ Be accurate based on your knowledge of US geography. If you don't know the ZIP c
           miles: data.miles || null,
           minutes: data.minutes || null,
           description: data.description || null,
+          cityName: data.cityName || null,
+          state: data.state || null,
         });
       }
     } catch (parseError) {
@@ -63,6 +67,8 @@ Be accurate based on your knowledge of US geography. If you don't know the ZIP c
       miles: null,
       minutes: null,
       description: null,
+      cityName: null,
+      state: null,
     });
 
   } catch (error) {
