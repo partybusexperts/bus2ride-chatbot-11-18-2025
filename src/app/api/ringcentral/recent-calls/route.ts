@@ -53,9 +53,10 @@ async function getAccessToken(): Promise<string> {
 
   const tokenUrl = "https://platform.ringcentral.com/restapi/oauth/token";
   
-  // OAuth client_credentials flow
+  // OAuth client_credentials flow with account context
   const params = new URLSearchParams();
   params.append("grant_type", "client_credentials");
+  params.append("account_id", "~");
 
   const authHeader = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
 
