@@ -46,17 +46,18 @@ async function getAccessToken(): Promise<string> {
 
   const clientId = process.env.RINGCENTRAL_CLIENT_ID?.trim();
   const clientSecret = process.env.RINGCENTRAL_CLIENT_SECRET?.trim();
+  const jwtToken = process.env.RINGCENTRAL_JWT_TOKEN?.trim();
 
-  if (!clientId || !clientSecret) {
-    throw new Error("Missing RingCentral credentials (CLIENT_ID or CLIENT_SECRET)");
+  if (!clientId || !clientSecret || !jwtToken) {
+    throw new Error("Missing RingCentral credentials (CLIENT_ID, CLIENT_SECRET, or JWT_TOKEN)");
   }
 
   const tokenUrl = "https://platform.ringcentral.com/restapi/oauth/token";
   
-  // OAuth client_credentials flow with account context
+  // JWT bearer grant flow
   const params = new URLSearchParams();
-  params.append("grant_type", "client_credentials");
-  params.append("account_id", "~");
+  params.append("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer");
+  params.append("assertion", jwtToken);
 
   const authHeader = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
 
