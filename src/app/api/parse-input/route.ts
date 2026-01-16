@@ -602,10 +602,38 @@ const WORD_TO_NUMBER: Record<string, number> = {
 // Handle word-based passenger counts like "five people", "twenty passengers"
 const WORD_PASSENGERS_REGEX = /^(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|twenty[\s-]?(one|two|three|four|five|six|seven|eight|nine)|thirty|forty|fifty|sixty)\s*(people|poeple|peolpe|ppl|passengers?|passangers?|pax|guests?|persons?)$/i;
 
+// Single-word event identifiers
 const EVENT_KEYWORDS = [
   'wedding', 'prom', 'birthday', 'bachelor', 'bachelorette', 'graduation',
   'concert', 'party', 'quinceanera', 'anniversary', 'corporate', 'airport',
   'funeral', 'church', 'bar mitzvah', 'bat mitzvah', 'homecoming', 'formal',
+  'reception', 'ceremony', 'gala', 'banquet', 'retreat', 'conference',
+  'meeting', 'seminar', 'symposium', 'convention', 'expo', 'showcase',
+  'festival', 'carnival', 'fair', 'parade', 'rally', 'fundraiser',
+  'charity', 'auction', 'premiere', 'launch', 'reveal', 'opening',
+  'celebration', 'shower', 'rehearsal', 'engagement', 'proposal',
+];
+
+// Multi-word event phrases that should ALWAYS be detected as events
+// These take priority over name detection
+const EVENT_PHRASES = [
+  'corporate event', 'corporate outing', 'corporate trip', 'corporate party',
+  'company event', 'company outing', 'company party', 'team building',
+  'birthday party', 'birthday celebration', 'birthday bash',
+  'bachelor party', 'bachelorette party', 'bridal shower', 'baby shower',
+  'wedding reception', 'wedding ceremony', 'rehearsal dinner',
+  'wine tour', 'wine tasting', 'brewery tour', 'bar crawl', 'bar hopping',
+  'night out', 'night on the town', 'girls night', 'guys night', 'ladies night',
+  'sweet sixteen', 'sweet 16', 'quince', 'quinces',
+  'sporting event', 'football game', 'basketball game', 'baseball game',
+  'hockey game', 'soccer game', 'golf outing', 'golf tournament',
+  'holiday party', 'christmas party', 'new years', 'new year',
+  'casino trip', 'casino night', 'vegas trip',
+  'airport transfer', 'airport pickup', 'airport dropoff', 'airport run',
+  'school dance', 'prom night', 'homecoming dance', 'formal dance',
+  'business trip', 'business meeting', 'client event', 'client meeting',
+  'award ceremony', 'awards dinner', 'awards gala',
+  'private event', 'special event', 'special occasion',
 ];
 
 const VEHICLE_TYPE_KEYWORDS: Record<string, string> = {
@@ -1848,6 +1876,26 @@ function detectPattern(text: string): DetectedItem | null {
     };
   }
   
+  // CHECK EVENT PHRASES BEFORE NAME DETECTION
+  // This prevents "corporate event", "birthday party" etc. from being detected as names
+  for (const phrase of EVENT_PHRASES) {
+    if (lowerText === phrase || lowerText.includes(phrase)) {
+      // Capitalize first letter of each word for display
+      const formatted = trimmed.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+      return { type: 'event_type', value: formatted, confidence: 0.95, original: trimmed };
+    }
+  }
+  
+  // Check if ANY word in input is an event keyword (catches "corporate event" via "corporate")
+  const words = lowerText.split(/\s+/);
+  const hasEventWord = words.some(word => EVENT_KEYWORDS.includes(word));
+  const containsEventModifier = /\b(event|party|outing|trip|celebration|gathering|tour|night|game|meeting|dinner|gala)\b/i.test(lowerText);
+  if (hasEventWord && containsEventModifier) {
+    // Input contains an event keyword + event modifier = definitely an event, not a name
+    const formatted = trimmed.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    return { type: 'event_type', value: formatted, confidence: 0.92, original: trimmed };
+  }
+  
   const nameMatch = trimmed.match(/^(customer|caller|name|cust)\s*:?\s*(.+)/i);
   if (nameMatch && nameMatch[2] && nameMatch[2].length > 2) {
     return { type: 'name', value: nameMatch[2], confidence: 0.85, original: trimmed };
@@ -1860,10 +1908,13 @@ function detectPattern(text: string): DetectedItem | null {
     // Double-check it's not a city (should have been caught above, but just in case)
     const isNotCity = !CITY_KEYWORDS.some(c => c.toLowerCase() === trimmed.toLowerCase());
     const isNotVehicle = !Object.keys(VEHICLE_TYPE_KEYWORDS).some(v => v.toLowerCase() === trimmed.toLowerCase());
-    const isNotEvent = !EVENT_KEYWORDS.some(e => e.toLowerCase() === trimmed.toLowerCase());
+    // Check if EITHER word is an event keyword (not just exact match)
+    const isNotEvent = !EVENT_KEYWORDS.some(e => firstName === e || lastName === e);
     const isNotVenue = !VENUE_KEYWORDS.some(v => firstName.includes(v) || lastName.includes(v) || trimmed.toLowerCase().includes(v));
+    // Also reject if input contains event modifier words
+    const hasEventModifier = /\b(event|party|outing|trip|celebration|gathering|tour|night|game|meeting|dinner|gala|shower|reception)\b/i.test(lowerText);
     const isFirstNameCommon = COMMON_FIRST_NAMES.includes(firstName);
-    if (isNotCity && isNotVehicle && isNotEvent && isNotVenue) {
+    if (isNotCity && isNotVehicle && isNotEvent && isNotVenue && !hasEventModifier) {
       const formattedName = twoWordName[1].charAt(0).toUpperCase() + twoWordName[1].slice(1).toLowerCase() + ' ' + twoWordName[2].charAt(0).toUpperCase() + twoWordName[2].slice(1).toLowerCase();
       const confidence = isFirstNameCommon ? 0.9 : 0.75;
       return { type: 'name', value: formattedName, confidence, original: trimmed };
