@@ -204,8 +204,9 @@ export default function CallPad() {
     callerName: "",
     phone: "",
     email: "",
-    cityOrZip: "", // For vehicle search (e.g., "Washington")
+    cityOrZip: "", // For display in field (ZIP code or city name)
     displayCityOrZip: "", // For display (e.g., "Washington DC") - only set when different from cityOrZip
+    searchCity: "", // For vehicle search when different from cityOrZip (e.g., ZIP→metro)
     searchedCity: "", // Original city/suburb entered (for display)
     passengers: "",
     hours: "",
@@ -418,10 +419,14 @@ export default function CallPad() {
       const isZipCode = chip.type === 'zip';
       
       // Update cityOrZip (for vehicle search), displayCityOrZip (for display), searchedCity (original for display), and pickupAddress
+      // For ZIP codes: show the ZIP in the field but use normalized city for search
+      const fieldValue = isZipCode ? chip.value : searchCity;
       setConfirmedData(prev => ({ 
         ...prev, 
-        cityOrZip: searchCity, // Use normalized city for vehicle search
+        cityOrZip: fieldValue, // For ZIPs: show the ZIP code; for cities: show normalized city
         displayCityOrZip: displayForRates, // Use appropriate display city for UI
+        // Store the normalized city for vehicle search when different from field value
+        searchCity: isZipCode ? searchCity : '', // For ZIPs: store the metro for vehicle search
         // For ZIP codes: always show "ZIP XXXXX" format even if we don't know the metro
         // For cities: only set if different from normalized
         searchedCity: isZipCode ? `ZIP ${chip.value}` : (wasNormalized ? chip.value : ''),
@@ -620,6 +625,7 @@ export default function CallPad() {
       email: "",
       cityOrZip: "",
       displayCityOrZip: "",
+      searchCity: "",
       searchedCity: "",
       passengers: "",
       hours: "",
@@ -783,7 +789,8 @@ export default function CallPad() {
       clearTimeout(searchTimeoutRef.current);
     }
 
-    const cityOrZip = confirmedData.cityOrZip.trim();
+    // For ZIP codes, use searchCity (the normalized metro); otherwise use cityOrZip
+    const cityOrZip = (confirmedData.searchCity || confirmedData.cityOrZip).trim();
     const passengers = Number(confirmedData.passengers) || null;
     const hours = Number(confirmedData.hours) || null;
 
@@ -805,7 +812,7 @@ export default function CallPad() {
     return () => {
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     };
-  }, [confirmedData.cityOrZip, confirmedData.passengers, confirmedData.hours, doVehicleSearch]);
+  }, [confirmedData.cityOrZip, confirmedData.searchCity, confirmedData.passengers, confirmedData.hours, doVehicleSearch]);
 
   // Sync rateHours with hours field - when hours changes on left panel, update the rate focus on right
   useEffect(() => {
