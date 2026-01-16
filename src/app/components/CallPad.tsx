@@ -2107,8 +2107,9 @@ export default function CallPad() {
               {(() => {
               const isZipSearch = confirmedData.searchedCity?.startsWith('ZIP ');
               const zipNumber = isZipSearch ? confirmedData.searchedCity.replace('ZIP ', '') : '';
-              const cityOrZipIsJustZip = isZipSearch && confirmedData.cityOrZip === zipNumber;
-              const hasServiceArea = !cityOrZipIsJustZip && confirmedData.cityOrZip;
+              // For ZIP searches, check if we have a searchCity (normalized metro) - that's the service area
+              const hasServiceArea = isZipSearch ? !!confirmedData.searchCity : !!confirmedData.cityOrZip;
+              const displayMetro = isZipSearch ? confirmedData.searchCity : (confirmedData.displayCityOrZip || confirmedData.cityOrZip);
               
               if (isZipSearch) {
                 return (
@@ -2122,7 +2123,7 @@ export default function CallPad() {
                     {hasServiceArea ? (
                       <>
                         <span style={{ fontSize: '22px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
-                          {(confirmedData.displayCityOrZip || confirmedData.cityOrZip).toUpperCase()}
+                          {displayMetro.toUpperCase()}
                         </span>
                         <span style={{ fontSize: '11px', color: '#fcd34d', fontWeight: 500, marginLeft: '4px' }}>RATES</span>
                       </>
