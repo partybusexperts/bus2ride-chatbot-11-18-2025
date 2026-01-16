@@ -55,7 +55,7 @@ The system auto-detects:
 - **Pickup locations** - Flexible parsing (see Pickup/Dropoff Location Parsing below)
 - **Passenger counts** - "30 people", "30 passengers", "five people", "twenty passengers" (word numbers supported)
 - **Hours** - "5 hours", "5 hrs"
-- **Event types** - Wedding, Prom, Birthday, etc.
+- **Event types** - Intelligent detection of event phrases like "corporate event", "birthday party", "wine tour", "team building" - distinguishes events from customer names using keyword + modifier pattern matching
 - **Places/Venues** - TopGolf, bars, restaurants, hotels detected and looked up via OpenAI
 - **Complex addresses** - Uses OpenAI for address parsing
 
