@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-interface RingCentralTokenResponse {
-  access_token: string;
-  token_type: string;
-  expires_in: number;
-}
+import { getValidAccessToken, getStoredTokens } from "@/lib/ringcentral-tokens";
 
 interface CallLogRecord {
   id: string;
@@ -36,72 +31,6 @@ interface CallLogResponse {
   };
 }
 
-let cachedToken: { token: string; expiresAt: number } | null = null;
-
-async function getAccessToken(): Promise<string> {
-  // Return cached token if still valid (with 60s buffer)
-  if (cachedToken && cachedToken.expiresAt > Date.now() + 60000) {
-    return cachedToken.token;
-  }
-
-  const clientId = process.env.RINGCENTRAL_CLIENT_ID?.trim();
-  const clientSecret = process.env.RINGCENTRAL_CLIENT_SECRET?.trim();
-  const jwtToken = process.env.RINGCENTRAL_JWT_TOKEN?.trim();
-
-  if (!clientId || !clientSecret || !jwtToken) {
-    throw new Error("Missing RingCentral credentials (CLIENT_ID, CLIENT_SECRET, or JWT_TOKEN)");
-  }
-
-  // Debug: Check JWT format
-  const jwtPreview = jwtToken.substring(0, 30);
-  const dotCount = (jwtToken.match(/\./g) || []).length;
-  console.log(`JWT Debug: "${jwtPreview}...", dots: ${dotCount}, length: ${jwtToken.length}`);
-
-  const tokenUrl = "https://platform.ringcentral.com/restapi/oauth/token";
-  
-  // JWT bearer grant flow
-  const params = new URLSearchParams();
-  params.append("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer");
-  params.append("assertion", jwtToken);
-
-  const authHeader = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-
-  const response = await fetch(tokenUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      "Authorization": `Basic ${authHeader}`,
-    },
-    body: params.toString(),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("RingCentral auth error:", response.status, errorText);
-    let errorMessage = `Failed to authenticate with RingCentral: ${response.status}`;
-    try {
-      const errorJson = JSON.parse(errorText);
-      if (errorJson.error_description) {
-        errorMessage = `RingCentral: ${errorJson.error_description}`;
-      } else if (errorJson.message) {
-        errorMessage = `RingCentral: ${errorJson.message}`;
-      }
-    } catch (e) {
-      // Use default error message
-    }
-    throw new Error(errorMessage);
-  }
-
-  const data: RingCentralTokenResponse = await response.json();
-  
-  cachedToken = {
-    token: data.access_token,
-    expiresAt: Date.now() + (data.expires_in * 1000),
-  };
-
-  return data.access_token;
-}
-
 function formatPhoneNumber(phone: string | undefined): string {
   if (!phone) return "Unknown";
   const cleaned = phone.replace(/\D/g, "");
@@ -116,11 +45,30 @@ function formatPhoneNumber(phone: string | undefined): string {
 
 export async function GET(request: NextRequest) {
   try {
-    const accessToken = await getAccessToken();
+    const tokens = getStoredTokens();
+    if (!tokens) {
+      return NextResponse.json({
+        success: false,
+        error: "Not connected to RingCentral. Please connect first.",
+        needsAuth: true,
+        calls: [],
+      });
+    }
 
-    const callLogUrl = new URL("https://platform.ringcentral.com/restapi/v1.0/account/~/extension/~/call-log");
+    const accessToken = await getValidAccessToken();
+    if (!accessToken) {
+      return NextResponse.json({
+        success: false,
+        error: "RingCentral session expired. Please reconnect.",
+        needsAuth: true,
+        calls: [],
+      });
+    }
+
+    const baseUrl = process.env.RINGCENTRAL_BASE_URL || "https://platform.ringcentral.com";
+    const callLogUrl = new URL(`${baseUrl}/restapi/v1.0/account/~/extension/~/call-log`);
     callLogUrl.searchParams.set("direction", "Inbound");
-    callLogUrl.searchParams.set("perPage", "10");
+    callLogUrl.searchParams.set("perPage", "15");
     callLogUrl.searchParams.set("view", "Simple");
     
     const now = new Date();
@@ -136,7 +84,17 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("RingCentral call log error:", errorText);
+      console.error("RingCentral call log error:", response.status, errorText);
+      
+      if (response.status === 401) {
+        return NextResponse.json({
+          success: false,
+          error: "RingCentral session expired. Please reconnect.",
+          needsAuth: true,
+          calls: [],
+        });
+      }
+      
       throw new Error(`Failed to fetch call log: ${response.status}`);
     }
 
@@ -145,9 +103,9 @@ export async function GET(request: NextRequest) {
     const filteredCalls = data.records
       .filter(call => 
         call.direction === "Inbound" && 
-        (call.result === "Accepted" || call.result === "Ringing" || call.result === "In Progress")
+        (call.result === "Accepted" || call.result === "Missed" || call.result === "Voicemail")
       )
-      .slice(0, 5)
+      .slice(0, 10)
       .map(call => ({
         id: call.id,
         fromPhoneNumber: call.from?.phoneNumber || null,
