@@ -42,6 +42,14 @@ export function parseLocationQuery(query: string): { city: string; state?: strin
     }
   }
   
+  for (const [stateName, abbr] of Object.entries(STATE_TO_ABBREVIATION)) {
+    const stateRegex = new RegExp(`^(.+?)\\s+${stateName}$`, 'i');
+    const match = normalized.match(stateRegex);
+    if (match) {
+      return { city: match[1].trim(), state: abbr };
+    }
+  }
+  
   return { city: normalized };
 }
 
@@ -80,10 +88,14 @@ export async function lookupZipsForCity(city: string, state?: string): Promise<s
 export async function getZipsForLocation(query: string): Promise<{ zips: string[]; city: string; state?: string }> {
   const { city, state } = parseLocationQuery(query);
   
+  console.log('ZIP lookup - parsed query:', query, '-> city:', city, 'state:', state);
+  
   if (!state) {
+    console.log('ZIP lookup - no state found, cannot lookup');
     return { zips: [], city, state: undefined };
   }
   
   const zips = await lookupZipsForCity(city, state);
+  console.log('ZIP lookup - found zips:', zips);
   return { zips, city, state };
 }
