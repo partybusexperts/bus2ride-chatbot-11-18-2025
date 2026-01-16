@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getZipsForLocation } from '@/lib/zip-lookup';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -217,6 +218,39 @@ export async function POST(req: Request) {
           .eq('active', true);
         
         vehicles = aliasData || [];
+      }
+      
+      if (vehicles.length === 0) {
+        console.log('No direct city match, trying ZIP lookup for:', rawQuery);
+        const { zips, city: parsedCity, state } = await getZipsForLocation(rawQuery);
+        
+        if (zips.length > 0) {
+          console.log(`Found ${zips.length} ZIP codes for ${parsedCity}, ${state}:`, zips.slice(0, 5));
+          
+          const { data: zipData } = await supabase
+            .from('vehicle_zips')
+            .select('vehicle_id, vehicles_for_chatbot(*)')
+            .in('zip', zips);
+          
+          if (zipData && zipData.length > 0) {
+            const uniqueVehicles = new Map<string, VehicleRecord>();
+            
+            for (const row of zipData) {
+              const v = Array.isArray(row.vehicles_for_chatbot) 
+                ? row.vehicles_for_chatbot[0] 
+                : row.vehicles_for_chatbot;
+              
+              if (v && v.active !== false && !uniqueVehicles.has(v.id)) {
+                uniqueVehicles.set(v.id, v);
+              }
+            }
+            
+            vehicles = Array.from(uniqueVehicles.values());
+            console.log(`Found ${vehicles.length} vehicles via ZIP lookup for ${parsedCity}, ${state}`);
+          }
+        } else {
+          console.log('No ZIP codes found for:', rawQuery);
+        }
       }
     }
 
