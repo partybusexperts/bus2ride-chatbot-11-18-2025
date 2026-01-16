@@ -410,6 +410,64 @@ export default function CallPad() {
         return;
       }
       
+      // If city/ZIP isn't in the static list (no normalizedCity), use AI to find the metro
+      const isZipCode = chip.type === 'zip';
+      if (!chip.normalizedCity && !isZipCode) {
+        // Unknown city - use AI to determine metro
+        setCalculatingDistance(true);
+        fetch('/api/normalize-location', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ location: chip.value }),
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && data.metro) {
+              console.log(`[AI City Normalization] "${chip.value}" → "${data.metro}" (${data.cityName}, ${data.state})`);
+              // Re-apply chip with AI-determined metro
+              const enhancedChip = {
+                ...chip,
+                normalizedCity: data.metro,
+                isRemote: data.isRemote,
+                travelMinutes: data.driveMinutes,
+              };
+              applyChipToData(enhancedChip);
+            } else {
+              console.log(`[AI City Normalization] "${chip.value}" → No metro found, using as-is`);
+              // No metro found - apply as-is (will show "no service area" if city not in database)
+              proceedWithCityApplication(chip, false);
+            }
+          })
+          .catch(err => {
+            console.error('AI normalization error:', err);
+            proceedWithCityApplication(chip, false);
+          })
+          .finally(() => setCalculatingDistance(false));
+        return;
+      }
+      
+      proceedWithCityApplication(chip, isZipCode);
+      return;
+    }
+    
+    if (chip.type === 'stop') {
+      // Add stop directly to trip notes
+      setConfirmedData(prev => ({
+        ...prev,
+        tripNotes: prev.tripNotes
+          ? `${prev.tripNotes}\nStop: ${chip.value}`
+          : `Stop: ${chip.value}`,
+      }));
+      return;
+    }
+
+    const field = fieldMap[chip.type];
+    if (field) {
+      setConfirmedData(prev => ({ ...prev, [field]: chip.value }));
+    }
+  }, []);
+
+  const proceedWithCityApplication = useCallback((chip: DetectedChip, isZipCode: boolean) => {
       setHistoryCities(prev => {
         const newHistory = prev.map(c => ({ ...c, active: false }));
         const existing = newHistory.find(c => c.value.toLowerCase() === chip.value.toLowerCase());
