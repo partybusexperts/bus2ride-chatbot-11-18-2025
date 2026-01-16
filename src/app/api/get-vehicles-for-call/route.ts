@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getZipsForLocation } from '@/lib/zip-lookup';
+import { getZipsForLocation, buildCityZipIndex, searchCityIndex, isCacheBuilt } from '@/lib/zip-lookup';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -249,7 +249,48 @@ export async function POST(req: Request) {
             console.log(`Found ${vehicles.length} vehicles via ZIP lookup for ${parsedCity}, ${state}`);
           }
         } else {
-          console.log('No ZIP codes found for:', rawQuery);
+          console.log('No ZIP codes found via API, trying city index for:', rawQuery);
+          
+          if (!isCacheBuilt()) {
+            const { data: allZips } = await supabase
+              .from('vehicle_zips')
+              .select('zip');
+            
+            if (allZips && allZips.length > 0) {
+              const uniqueZips = [...new Set(allZips.map(z => z.zip))];
+              await buildCityZipIndex(uniqueZips);
+            }
+          }
+          
+          const indexZips = searchCityIndex(rawQuery);
+          
+          if (indexZips.length > 0) {
+            console.log(`Found ${indexZips.length} ZIP codes from city index for "${rawQuery}":`, indexZips.slice(0, 5));
+            
+            const { data: zipData } = await supabase
+              .from('vehicle_zips')
+              .select('vehicle_id, vehicles_for_chatbot(*)')
+              .in('zip', indexZips);
+            
+            if (zipData && zipData.length > 0) {
+              const uniqueVehicles = new Map<string, VehicleRecord>();
+              
+              for (const row of zipData) {
+                const v = Array.isArray(row.vehicles_for_chatbot) 
+                  ? row.vehicles_for_chatbot[0] 
+                  : row.vehicles_for_chatbot;
+                
+                if (v && v.active !== false && !uniqueVehicles.has(v.id)) {
+                  uniqueVehicles.set(v.id, v);
+                }
+              }
+              
+              vehicles = Array.from(uniqueVehicles.values());
+              console.log(`Found ${vehicles.length} vehicles via city index for "${rawQuery}"`);
+            }
+          } else {
+            console.log('No matches in city index for:', rawQuery);
+          }
         }
       }
     }
