@@ -2173,14 +2173,13 @@ export default function CallPad() {
                         animation: 'pulseAlert 1.5s ease-in-out infinite',
                         boxShadow: '0 0 10px rgba(245,158,11,0.5)',
                       }}>
-                        🚗 ~{distanceDisplay}{milesDisplay ? ` (${milesDisplay})` : ''}
+                        🚗 ~{distanceDisplay}{milesDisplay ? ` (${milesDisplay})` : ''} from {displayMetro}
                       </span>
                     )}
                     <span style={{ fontSize: '16px', color: '#93c5fd', fontWeight: 500 }}>→</span>
-                    <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: 500 }}>SHOWING:</span>
                     {hasServiceArea ? (
                       <>
-                        <span style={{ fontSize: '22px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
+                        <span style={{ fontSize: '14px', fontWeight: 600, color: '#fff', letterSpacing: '0.5px' }}>
                           {displayMetro.toUpperCase()}
                         </span>
                         <span style={{ fontSize: '11px', color: '#fcd34d', fontWeight: 500, marginLeft: '4px' }}>RATES</span>
@@ -2218,12 +2217,11 @@ export default function CallPad() {
                         animation: 'pulseAlert 1.5s ease-in-out infinite',
                         boxShadow: '0 0 10px rgba(245,158,11,0.5)',
                       }}>
-                        🚗 ~{travelDisplay}{milesDisplay ? ` (${milesDisplay})` : ''}
+                        🚗 ~{travelDisplay}{milesDisplay ? ` (${milesDisplay})` : ''} from {confirmedData.displayCityOrZip || confirmedData.cityOrZip}
                       </span>
                     )}
                     <span style={{ fontSize: '16px', color: '#93c5fd', fontWeight: 500 }}>→</span>
-                    <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: 500 }}>SHOWING:</span>
-                    <span style={{ fontSize: '22px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#fff', letterSpacing: '0.5px' }}>
                       {(confirmedData.displayCityOrZip || confirmedData.cityOrZip).toUpperCase()}
                     </span>
                     <span style={{ fontSize: '11px', color: '#fcd34d', fontWeight: 500, marginLeft: '4px' }}>RATES</span>
