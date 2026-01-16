@@ -891,7 +891,7 @@ export default function CallPad() {
     }
     
     // Try to find available standard tiers and calculate
-    const availableTiers = [3, 4, 5, 6, 7, 8].filter(h => {
+    const availableTiers = [3, 4, 5, 6, 7, 8, 9, 10].filter(h => {
       const key = `price_${h}hr`;
       return v[key] && Number(v[key]) > 0;
     });
