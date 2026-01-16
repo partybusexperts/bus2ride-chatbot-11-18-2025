@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
   try {
     const accessToken = await getAccessToken();
 
-    const callLogUrl = new URL("https://platform.ringcentral.com/restapi/v1.0/account/~/call-log");
+    const callLogUrl = new URL("https://platform.ringcentral.com/restapi/v1.0/account/~/extension/~/call-log");
     callLogUrl.searchParams.set("direction", "Inbound");
     callLogUrl.searchParams.set("perPage", "10");
     callLogUrl.searchParams.set("view", "Simple");
