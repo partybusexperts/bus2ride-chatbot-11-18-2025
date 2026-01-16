@@ -869,6 +869,8 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'grand prairie': 'Dallas', 'euless': 'Dallas', 'bedford': 'Dallas', 'hurst': 'Dallas',
   'colleyville': 'Dallas', 'southlake': 'Dallas', 'keller': 'Dallas', 'coppell': 'Dallas',
   'rockwall': 'Dallas', 'rowlett': 'Dallas', 'wylie': 'Dallas', 'sachse': 'Dallas',
+  'azle': 'Dallas', 'azle tx': 'Dallas', 'azle texas': 'Dallas',
+  'weatherford': 'Dallas', 'weatherford tx': 'Dallas', 'weatherford texas': 'Dallas',
   // Houston metro (including Galveston)
   'the woodlands': 'Houston', 'sugar land': 'Houston', 'pearland': 'Houston', 
   'league city': 'Houston', 'katy': 'Houston', 'baytown': 'Houston', 'conroe': 'Houston', 
@@ -1373,6 +1375,8 @@ const CITY_TRAVEL_TIMES: Record<string, number> = {
   'carrollton': 20, 'richardson': 15, 'lewisville': 25, 'grapevine': 25,
   'southlake': 30, 'keller': 35, 'flower mound': 30, 'allen': 30,
   'mesquite': 20, 'grand prairie': 20, 'rockwall': 30, 'rowlett': 25,
+  'azle': 25, 'azle tx': 25, 'azle texas': 25,
+  'weatherford': 35, 'weatherford tx': 35, 'weatherford texas': 35,
   // Houston suburbs
   'the woodlands': 35, 'sugar land': 30, 'katy': 35, 'pearland': 25,
   'league city': 35, 'baytown': 30, 'conroe': 45, 'spring': 25,
