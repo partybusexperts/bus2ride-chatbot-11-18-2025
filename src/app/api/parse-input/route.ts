@@ -1985,6 +1985,16 @@ function detectPattern(text: string): DetectedItem | null {
     };
   }
   
+  // CHECK VEHICLE TYPES FIRST - before event detection
+  // This ensures "party bus", "limo bus", etc. are detected as vehicles, not events
+  // Sort keywords by length (longest first) to match "limo bus" before "limo"
+  const sortedVehicleKeywords = Object.entries(VEHICLE_TYPE_KEYWORDS).sort((a, b) => b[0].length - a[0].length);
+  for (const [keyword, vehicleType] of sortedVehicleKeywords) {
+    if (lowerText === keyword || lowerText.includes(keyword)) {
+      return { type: 'vehicle_type', value: vehicleType, confidence: 0.95, original: trimmed };
+    }
+  }
+  
   // CHECK EVENT PHRASES BEFORE NAME DETECTION
   // This prevents "corporate event", "birthday party" etc. from being detected as names
   for (const phrase of EVENT_PHRASES) {
