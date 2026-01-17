@@ -3194,28 +3194,38 @@ export default function CallPad() {
                         const hasAM = [5, 6, 7, 8, 9].some(h => cv[`april_may_weekend_${h}hr`]);
                         const hasTr = !!cv.transfer_price;
                         
-                        let defType: 'standard' | 'prom' | 'before5pm' | 'aprilmay' | 'transfer' = 'standard';
-                        let defHours = 4;
+                        let defType: 'standard' | 'prom' | 'before5pm' | 'aprilmay' | 'transfer' = modalPriceType;
+                        let defHours = modalHours;
                         
-                        if (hasStd) {
-                          defType = 'standard';
-                          const hrs = [3, 4, 5, 6, 7, 8, 9, 10].filter(h => cv[`price_${h}hr`]);
-                          defHours = hrs[0] || 4;
-                        } else if (hasProm) {
-                          defType = 'prom';
-                          const hrs = [6, 7, 8, 9, 10].filter(h => cv[`prom_price_${h}hr`]);
-                          defHours = hrs[0] || 6;
-                        } else if (hasB5) {
-                          defType = 'before5pm';
-                          const hrs = [3, 4, 5, 6, 7].filter(h => cv[`before5pm_${h}hr`]);
-                          defHours = hrs[0] || 4;
-                        } else if (hasAM) {
-                          defType = 'aprilmay';
-                          const hrs = [5, 6, 7, 8, 9].filter(h => cv[`april_may_weekend_${h}hr`]);
-                          defHours = hrs[0] || 5;
-                        } else if (hasTr) {
-                          defType = 'transfer';
+                        const canUseCurrentType = (
+                          (defType === 'standard' && hasStd) ||
+                          (defType === 'prom' && hasProm) ||
+                          (defType === 'before5pm' && hasB5) ||
+                          (defType === 'aprilmay' && hasAM) ||
+                          (defType === 'transfer' && hasTr)
+                        );
+                        
+                        if (!canUseCurrentType) {
+                          if (hasStd) defType = 'standard';
+                          else if (hasProm) defType = 'prom';
+                          else if (hasB5) defType = 'before5pm';
+                          else if (hasAM) defType = 'aprilmay';
+                          else if (hasTr) defType = 'transfer';
+                        }
+                        
+                        const getAvailableHours = (type: string) => {
+                          if (type === 'standard') return [3, 4, 5, 6, 7, 8, 9, 10].filter(h => cv[`price_${h}hr`]);
+                          if (type === 'prom') return [6, 7, 8, 9, 10].filter(h => cv[`prom_price_${h}hr`]);
+                          if (type === 'before5pm') return [3, 4, 5, 6, 7].filter(h => cv[`before5pm_${h}hr`]);
+                          if (type === 'aprilmay') return [5, 6, 7, 8, 9].filter(h => cv[`april_may_weekend_${h}hr`]);
+                          return [];
+                        };
+                        
+                        const availableHours = getAvailableHours(defType);
+                        if (defType === 'transfer') {
                           defHours = 0;
+                        } else if (!availableHours.includes(defHours)) {
+                          defHours = availableHours[0] || 4;
                         }
                         
                         setSelectedVehicle(cv);
