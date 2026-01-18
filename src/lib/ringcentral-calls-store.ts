@@ -20,6 +20,29 @@ let calls: IncomingCall[] = [];
 let subscriptionId: string | null = null;
 let subscriptionExpiresAt: number | null = null;
 
+type CallEventListener = (call: IncomingCall) => void;
+const eventListeners: Map<string, CallEventListener> = new Map();
+
+export function subscribeToCallEvents(callback: CallEventListener): string {
+  const id = Math.random().toString(36).substring(2, 15);
+  eventListeners.set(id, callback);
+  return id;
+}
+
+export function unsubscribeFromCallEvents(id: string): void {
+  eventListeners.delete(id);
+}
+
+function notifyListeners(call: IncomingCall): void {
+  eventListeners.forEach((callback) => {
+    try {
+      callback(call);
+    } catch (e) {
+      console.error('Error notifying call event listener:', e);
+    }
+  });
+}
+
 export function formatPhoneNumber(phone: string | undefined | null): string {
   if (!phone) return "Unknown";
   const cleaned = phone.replace(/\D/g, "");
@@ -69,6 +92,8 @@ export function addOrUpdateCall(callData: {
   }
   
   cleanupOldCalls();
+  
+  notifyListeners(callEntry);
 }
 
 function cleanupOldCalls(): void {

@@ -260,6 +260,7 @@ export default function CallPad() {
   const [showCallPicker, setShowCallPicker] = useState(false);
   const [recentCalls, setRecentCalls] = useState<Array<{
     id: string;
+    sessionId?: string;
     fromPhoneNumber: string | null;
     fromPhoneNumberFormatted: string;
     fromName: string | null;
@@ -861,72 +862,78 @@ export default function CallPad() {
     }
   }, [confirmedData.hours]);
 
-  // Auto-poll active calls when call picker modal is open
+  // Real-time call updates via SSE when call picker modal is open
   useEffect(() => {
     if (!showCallPicker) return;
     
-    let cancelled = false;
+    let eventSource: EventSource | null = null;
+    let reconnectTimeout: NodeJS.Timeout | null = null;
+    let closed = false;
     
-    const fetchCalls = async () => {
-      if (cancelled) return;
-      try {
-        const [activeRes, recentRes] = await Promise.all([
-          fetch('/api/ringcentral/active-calls'),
-          fetch('/api/ringcentral/recent-calls'),
-        ]);
-        
-        if (cancelled) return;
-        
-        const activeData = await activeRes.json();
-        const recentData = await recentRes.json();
-        
-        if (cancelled) return;
-        
-        const activeCalls = activeData.success ? activeData.calls : [];
-        const historicalCalls = recentData.success ? recentData.calls : [];
-        
-        const combined = [...activeCalls];
-        for (const call of historicalCalls) {
-          if (!combined.some(c => c.sessionId === call.sessionId)) {
-            combined.push(call);
-          }
-        }
-        
-        combined.sort((a, b) => {
-          const statusOrder: Record<string, number> = {
-            'Proceeding': 0, 'Ringing': 0,
-            'Answered': 1, 'Accepted': 1,
-            'Disconnected': 2, 'Missed': 2, 'Voicemail': 2,
-          };
-          const aOrder = statusOrder[a.status] ?? 3;
-          const bOrder = statusOrder[b.status] ?? 3;
-          if (aOrder !== bOrder) return aOrder - bOrder;
-          return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
-        });
-        
-        setRecentCalls(combined.slice(0, 15));
-        
-        if (activeData.needsAuth || recentData.needsAuth) {
-          setCallsError('Not connected to RingCentral. Please connect first.');
-        } else if (combined.length === 0) {
-          setCallsError('No recent inbound calls found.');
-        } else {
-          setCallsError(null);
-        }
-        setLoadingCalls(false);
-      } catch (err) {
-        if (!cancelled) {
-          console.error('Error fetching calls:', err);
-        }
-      }
+    const sortCalls = (callList: typeof recentCalls) => {
+      return [...callList].sort((a, b) => {
+        const statusOrder: Record<string, number> = {
+          'Proceeding': 0, 'Ringing': 0,
+          'Answered': 1, 'Accepted': 1,
+          'Disconnected': 2, 'Missed': 2, 'Voicemail': 2,
+        };
+        const aOrder = statusOrder[a.status || ''] ?? 3;
+        const bOrder = statusOrder[b.status || ''] ?? 3;
+        if (aOrder !== bOrder) return aOrder - bOrder;
+        return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
+      });
     };
     
-    fetchCalls();
-    const interval = setInterval(fetchCalls, 3000);
+    const connect = () => {
+      if (closed) return;
+      
+      eventSource = new EventSource('/api/ringcentral/call-events');
+      
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          
+          if (data.type === 'auth_required') {
+            setCallsError('Not connected to RingCentral. Please connect first.');
+            setLoadingCalls(false);
+          } else if (data.type === 'init') {
+            setRecentCalls(sortCalls(data.calls || []));
+            setCallsError(data.calls?.length === 0 ? 'No recent inbound calls found.' : null);
+            setLoadingCalls(false);
+          } else if (data.type === 'call_update') {
+            setRecentCalls(prev => {
+              const call = data.call;
+              const existing = prev.findIndex(c => c.sessionId === call.sessionId);
+              let updated: typeof prev;
+              if (existing >= 0) {
+                updated = [...prev];
+                updated[existing] = { ...updated[existing], ...call };
+              } else {
+                updated = [call, ...prev].slice(0, 15);
+              }
+              return sortCalls(updated);
+            });
+            setCallsError(null);
+          }
+        } catch (e) {
+          console.error('SSE parse error:', e);
+        }
+      };
+      
+      eventSource.onerror = () => {
+        eventSource?.close();
+        if (!closed) {
+          reconnectTimeout = setTimeout(connect, 2000);
+        }
+      };
+    };
+    
+    connect();
     
     return () => {
-      cancelled = true;
-      clearInterval(interval);
+      closed = true;
+      eventSource?.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
     };
   }, [showCallPicker]);
 
@@ -3829,8 +3836,9 @@ export default function CallPad() {
             
             <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>Select the call to populate the phone field.</span>
-              <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: '#dcfce7', color: '#166534', fontWeight: 600 }}>
-                🔄 Auto-updating
+              <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: '#dcfce7', color: '#166534', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', animation: 'pulse 2s infinite' }}></span>
+                Live
               </span>
             </p>
 
