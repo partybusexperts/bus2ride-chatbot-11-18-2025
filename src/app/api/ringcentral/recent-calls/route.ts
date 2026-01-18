@@ -38,7 +38,7 @@ interface CachedCallLog {
 }
 
 let callLogCache: CachedCallLog | null = null;
-const CACHE_TTL_MS = 30000;
+const CACHE_TTL_MS = 10000;
 
 export async function GET(request: NextRequest) {
   try {

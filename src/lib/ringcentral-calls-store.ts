@@ -83,6 +83,21 @@ export function getRecentCalls(limit: number = 10): IncomingCall[] {
   cleanupOldCalls();
   return calls
     .filter(c => c.direction === 'Inbound')
+    .sort((a, b) => {
+      const statusOrder: Record<string, number> = {
+        'Proceeding': 0,
+        'Ringing': 0,
+        'Answered': 1,
+        'Accepted': 1,
+        'Disconnected': 2,
+        'Missed': 2,
+        'Voicemail': 2,
+      };
+      const aOrder = statusOrder[a.status] ?? 3;
+      const bOrder = statusOrder[b.status] ?? 3;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
+    })
     .slice(0, limit);
 }
 
