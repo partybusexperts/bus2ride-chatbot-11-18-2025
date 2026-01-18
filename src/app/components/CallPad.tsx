@@ -1867,28 +1867,11 @@ export default function CallPad() {
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                   <input style={{ ...getInputStyle(confirmedData.phone), flex: 1 }} placeholder="Phone number" value={confirmedData.phone} onChange={(e) => setConfirmedData(prev => ({ ...prev, phone: e.target.value }))} />
                   <button
-                    onClick={async () => {
+                    onClick={() => {
                       setShowCallPicker(true);
                       setLoadingCalls(true);
                       setCallsError(null);
-                      try {
-                        const res = await fetch('/api/ringcentral/recent-calls');
-                        const data = await res.json();
-                        if (data.success) {
-                          setRecentCalls(data.calls);
-                          if (data.calls.length === 0) {
-                            setCallsError('No recent inbound calls found in the last hour.');
-                          }
-                        } else if (data.needsAuth) {
-                          setCallsError('Not connected to RingCentral. Please connect first.');
-                        } else {
-                          setCallsError(data.error || 'Failed to fetch calls');
-                        }
-                      } catch (err) {
-                        setCallsError('Failed to connect to RingCentral');
-                      } finally {
-                        setLoadingCalls(false);
-                      }
+                      setRecentCalls([]);
                     }}
                     style={{
                       padding: '8px 12px',
@@ -3977,11 +3960,11 @@ export default function CallPad() {
               </div>
             )}
 
-            <div style={{ marginTop: '16px', display: 'flex', gap: '12px' }}>
+            <div style={{ marginTop: '16px' }}>
               <button
                 onClick={() => setShowCallPicker(false)}
                 style={{
-                  flex: 1,
+                  width: '100%',
                   padding: '12px',
                   borderRadius: '8px',
                   border: '1px solid #d1d5db',
@@ -3992,47 +3975,7 @@ export default function CallPad() {
                   cursor: 'pointer',
                 }}
               >
-                Cancel
-              </button>
-              <button
-                onClick={async () => {
-                  setLoadingCalls(true);
-                  setCallsError(null);
-                  try {
-                    const res = await fetch('/api/ringcentral/recent-calls');
-                    const data = await res.json();
-                    if (data.success) {
-                      setRecentCalls(data.calls);
-                      setCallsError(null);
-                      if (data.calls.length === 0) {
-                        setCallsError('No recent inbound calls found in the last hour.');
-                      }
-                    } else if (data.needsAuth) {
-                      setCallsError('Not connected to RingCentral. Please connect first.');
-                    } else {
-                      setCallsError(data.error || 'Failed to fetch calls');
-                    }
-                  } catch (err) {
-                    setCallsError('Failed to connect to RingCentral');
-                  } finally {
-                    setLoadingCalls(false);
-                  }
-                }}
-                disabled={loadingCalls}
-                style={{
-                  flex: 1,
-                  padding: '12px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: '#3b82f6',
-                  color: '#fff',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  cursor: loadingCalls ? 'not-allowed' : 'pointer',
-                  opacity: loadingCalls ? 0.7 : 1,
-                }}
-              >
-                🔄 Refresh
+                Close
               </button>
             </div>
           </div>
