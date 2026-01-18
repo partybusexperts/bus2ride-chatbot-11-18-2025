@@ -861,6 +861,75 @@ export default function CallPad() {
     }
   }, [confirmedData.hours]);
 
+  // Auto-poll active calls when call picker modal is open
+  useEffect(() => {
+    if (!showCallPicker) return;
+    
+    let cancelled = false;
+    
+    const fetchCalls = async () => {
+      if (cancelled) return;
+      try {
+        const [activeRes, recentRes] = await Promise.all([
+          fetch('/api/ringcentral/active-calls'),
+          fetch('/api/ringcentral/recent-calls'),
+        ]);
+        
+        if (cancelled) return;
+        
+        const activeData = await activeRes.json();
+        const recentData = await recentRes.json();
+        
+        if (cancelled) return;
+        
+        const activeCalls = activeData.success ? activeData.calls : [];
+        const historicalCalls = recentData.success ? recentData.calls : [];
+        
+        const combined = [...activeCalls];
+        for (const call of historicalCalls) {
+          if (!combined.some(c => c.sessionId === call.sessionId)) {
+            combined.push(call);
+          }
+        }
+        
+        combined.sort((a, b) => {
+          const statusOrder: Record<string, number> = {
+            'Proceeding': 0, 'Ringing': 0,
+            'Answered': 1, 'Accepted': 1,
+            'Disconnected': 2, 'Missed': 2, 'Voicemail': 2,
+          };
+          const aOrder = statusOrder[a.status] ?? 3;
+          const bOrder = statusOrder[b.status] ?? 3;
+          if (aOrder !== bOrder) return aOrder - bOrder;
+          return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
+        });
+        
+        setRecentCalls(combined.slice(0, 15));
+        
+        if (activeData.needsAuth || recentData.needsAuth) {
+          setCallsError('Not connected to RingCentral. Please connect first.');
+        } else if (combined.length === 0) {
+          setCallsError('No recent inbound calls found.');
+        } else {
+          setCallsError(null);
+        }
+        setLoadingCalls(false);
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Error fetching calls:', err);
+        }
+      }
+    };
+    
+    fetchCalls();
+    const interval = setInterval(fetchCalls, 3000);
+    
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [showCallPicker]);
+
   function toggleQuoted(vehicle: any) {
     const wasQuoted = quotedVehicles.some(v => v.id === vehicle.id);
     
@@ -3758,8 +3827,11 @@ export default function CallPad() {
               </button>
             </div>
             
-            <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '16px' }}>
-              Select the call to populate the phone field. Recent inbound calls from the last hour:
+            <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>Select the call to populate the phone field.</span>
+              <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: '#dcfce7', color: '#166534', fontWeight: 600 }}>
+                🔄 Auto-updating
+              </span>
             </p>
 
             {loadingCalls ? (
