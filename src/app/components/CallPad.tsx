@@ -883,6 +883,33 @@ export default function CallPad() {
         return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
       });
     };
+
+    const fetchFromAPI = async () => {
+      try {
+        const res = await fetch('/api/ringcentral/recent-calls');
+        const data = await res.json();
+        if (data.success && data.calls?.length > 0) {
+          setRecentCalls(prev => {
+            const merged = [...prev];
+            for (const call of data.calls) {
+              if (!merged.some(c => c.sessionId === call.sessionId)) {
+                merged.push(call);
+              }
+            }
+            return sortCalls(merged).slice(0, 15);
+          });
+          setCallsError(null);
+        } else if (data.needsAuth) {
+          setCallsError('Not connected to RingCentral. Please connect first.');
+        }
+        setLoadingCalls(false);
+      } catch (e) {
+        console.error('API fetch error:', e);
+        setLoadingCalls(false);
+      }
+    };
+
+    fetchFromAPI();
     
     const connect = () => {
       if (closed) return;
@@ -897,9 +924,18 @@ export default function CallPad() {
             setCallsError('Not connected to RingCentral. Please connect first.');
             setLoadingCalls(false);
           } else if (data.type === 'init') {
-            setRecentCalls(sortCalls(data.calls || []));
-            setCallsError(data.calls?.length === 0 ? 'No recent inbound calls found.' : null);
-            setLoadingCalls(false);
+            setRecentCalls(prev => {
+              const merged = [...prev];
+              for (const call of (data.calls || [])) {
+                if (!merged.some(c => c.sessionId === call.sessionId)) {
+                  merged.push(call);
+                }
+              }
+              return sortCalls(merged).slice(0, 15);
+            });
+            if (recentCalls.length === 0) {
+              setCallsError('No recent inbound calls in the last 15 minutes.');
+            }
           } else if (data.type === 'call_update') {
             setRecentCalls(prev => {
               const call = data.call;
@@ -3960,11 +3996,11 @@ export default function CallPad() {
               </div>
             )}
 
-            <div style={{ marginTop: '16px' }}>
+            <div style={{ marginTop: '16px', display: 'flex', gap: '12px' }}>
               <button
                 onClick={() => setShowCallPicker(false)}
                 style={{
-                  width: '100%',
+                  flex: 1,
                   padding: '12px',
                   borderRadius: '8px',
                   border: '1px solid #d1d5db',
@@ -3976,6 +4012,45 @@ export default function CallPad() {
                 }}
               >
                 Close
+              </button>
+              <button
+                onClick={async () => {
+                  setLoadingCalls(true);
+                  setCallsError(null);
+                  try {
+                    const res = await fetch('/api/ringcentral/recent-calls');
+                    const data = await res.json();
+                    if (data.success) {
+                      setRecentCalls(data.calls || []);
+                      if ((data.calls || []).length === 0) {
+                        setCallsError('No recent inbound calls in the last 15 minutes.');
+                      }
+                    } else if (data.needsAuth) {
+                      setCallsError('Not connected to RingCentral. Please connect first.');
+                    } else {
+                      setCallsError(data.error || 'Failed to fetch calls');
+                    }
+                  } catch (err) {
+                    setCallsError('Failed to connect to RingCentral');
+                  } finally {
+                    setLoadingCalls(false);
+                  }
+                }}
+                disabled={loadingCalls}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#3b82f6',
+                  color: '#fff',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: loadingCalls ? 'not-allowed' : 'pointer',
+                  opacity: loadingCalls ? 0.7 : 1,
+                }}
+              >
+                🔄 Refresh
               </button>
             </div>
           </div>

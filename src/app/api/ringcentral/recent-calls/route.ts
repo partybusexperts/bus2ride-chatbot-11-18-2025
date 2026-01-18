@@ -100,8 +100,8 @@ export async function GET(request: NextRequest) {
     callLogUrl.searchParams.set("perPage", "15");
     callLogUrl.searchParams.set("view", "Simple");
     
-    const oneHourAgo = new Date(now - 60 * 60 * 1000);
-    callLogUrl.searchParams.set("dateFrom", oneHourAgo.toISOString());
+    const fifteenMinutesAgo = new Date(now - 15 * 60 * 1000);
+    callLogUrl.searchParams.set("dateFrom", fifteenMinutesAgo.toISOString());
 
     const response = await fetch(callLogUrl.toString(), {
       headers: {
