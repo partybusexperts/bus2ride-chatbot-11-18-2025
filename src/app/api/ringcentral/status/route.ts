@@ -3,7 +3,7 @@ import { getStoredTokens, isTokenExpired } from "@/lib/ringcentral-tokens";
 
 export async function GET() {
   const tokens = getStoredTokens();
-  
+
   if (!tokens) {
     return NextResponse.json({
       connected: false,
@@ -12,10 +12,12 @@ export async function GET() {
   }
 
   const expired = isTokenExpired();
-  
+
   return NextResponse.json({
     connected: !expired,
-    message: expired ? "Session expired, needs reconnection" : "Connected to RingCentral",
+    message: expired
+      ? "Session expired, needs reconnection"
+      : "Connected to RingCentral",
     expiresAt: tokens.expiresAt,
   });
 }

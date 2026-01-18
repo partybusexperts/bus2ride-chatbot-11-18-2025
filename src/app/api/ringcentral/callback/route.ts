@@ -17,11 +17,16 @@ export async function GET(request: NextRequest) {
 
   const clientId = process.env.RINGCENTRAL_CLIENT_ID;
   const clientSecret = process.env.RINGCENTRAL_CLIENT_SECRET;
-  const redirectUri = process.env.RINGCENTRAL_REDIRECT_URI || "https://newchatbot.replit.app/api/ringcentral/callback";
-  const baseUrl = process.env.RINGCENTRAL_BASE_URL || "https://platform.ringcentral.com";
+  const redirectUri =
+    process.env.RINGCENTRAL_REDIRECT_URI ||
+    "https://newchatbot.replit.app/api/ringcentral/callback";
+  const baseUrl =
+    process.env.RINGCENTRAL_BASE_URL || "https://platform.ringcentral.com";
 
   if (!clientId || !clientSecret) {
-    return NextResponse.redirect(new URL("/?rc_error=missing_credentials", request.url));
+    return NextResponse.redirect(
+      new URL("/?rc_error=missing_credentials", request.url),
+    );
   }
 
   try {
@@ -34,7 +39,7 @@ export async function GET(request: NextRequest) {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        "Authorization": `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+        Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
       },
       body: params.toString(),
     });
@@ -42,15 +47,17 @@ export async function GET(request: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Token exchange failed:", errorText);
-      return NextResponse.redirect(new URL("/?rc_error=token_exchange_failed", request.url));
+      return NextResponse.redirect(
+        new URL("/?rc_error=token_exchange_failed", request.url),
+      );
     }
 
     const data = await response.json();
-    
+
     storeTokens(data.access_token, data.refresh_token, data.expires_in);
-    
+
     console.log("RingCentral OAuth successful, tokens stored");
-    
+
     return NextResponse.redirect(new URL("/?rc_connected=true", request.url));
   } catch (error) {
     console.error("OAuth callback error:", error);

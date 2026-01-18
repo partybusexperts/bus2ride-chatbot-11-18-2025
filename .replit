@@ -42,5 +42,5 @@ build = ["npm", "run", "build"]
 [userenv]
 
 [userenv.shared]
-RINGCENTRAL_REDIRECT_URI = "https://newchatbot.replit.app/api/ringcentral/callback/"
+RINGCENTRAL_REDIRECT_URI = "https://newchatbot.replit.app/api/ringcentral/callback"
 RINGCENTRAL_BASE_URL = "https://platform.ringcentral.com"
