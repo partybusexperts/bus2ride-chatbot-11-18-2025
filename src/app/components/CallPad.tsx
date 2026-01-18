@@ -266,8 +266,9 @@ export default function CallPad() {
     toPhoneNumber: string | null;
     toPhoneNumberFormatted: string;
     startTime: string;
-    result: string;
-    duration: number;
+    result?: string;
+    status?: string;
+    duration?: number;
   }>>([]);
   const [loadingCalls, setLoadingCalls] = useState(false);
   const [callsError, setCallsError] = useState<string | null>(null);
