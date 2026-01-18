@@ -3780,7 +3780,18 @@ export default function CallPad() {
                 </div>
                 <button
                   onClick={() => {
-                    window.open('/api/ringcentral/login', '_blank', 'width=600,height=700');
+                    const popup = window.open('/api/ringcentral/login', '_blank', 'width=600,height=700');
+                    const checkClosed = setInterval(async () => {
+                      if (popup?.closed) {
+                        clearInterval(checkClosed);
+                        try {
+                          await fetch('/api/ringcentral/subscribe', { method: 'POST' });
+                          console.log('RingCentral subscription initialized');
+                        } catch (e) {
+                          console.error('Failed to initialize subscription:', e);
+                        }
+                      }
+                    }, 500);
                   }}
                   style={{
                     padding: '12px 24px',
@@ -3863,11 +3874,11 @@ export default function CallPad() {
                           fontSize: '11px',
                           padding: '3px 8px',
                           borderRadius: '12px',
-                          background: call.result === 'Accepted' ? '#dcfce7' : call.result === 'Ringing' ? '#fef3c7' : '#e0e7ff',
-                          color: call.result === 'Accepted' ? '#166534' : call.result === 'Ringing' ? '#92400e' : '#3730a3',
+                          background: (call.status || call.result) === 'Accepted' || (call.status || call.result) === 'Answered' ? '#dcfce7' : (call.status || call.result) === 'Ringing' || (call.status || call.result) === 'Proceeding' ? '#fef3c7' : '#e0e7ff',
+                          color: (call.status || call.result) === 'Accepted' || (call.status || call.result) === 'Answered' ? '#166534' : (call.status || call.result) === 'Ringing' || (call.status || call.result) === 'Proceeding' ? '#92400e' : '#3730a3',
                           fontWeight: 600,
                         }}>
-                          {call.result}
+                          {call.status || call.result}
                         </span>
                       </div>
                       <div style={{ fontSize: '12px', color: '#6b7280', display: 'flex', justifyContent: 'space-between' }}>

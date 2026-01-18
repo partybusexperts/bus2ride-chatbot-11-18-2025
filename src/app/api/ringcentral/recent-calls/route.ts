@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getValidAccessToken, getStoredTokens } from "@/lib/ringcentral-tokens";
+import { getRecentCalls, getSubscriptionInfo, formatPhoneNumber } from "@/lib/ringcentral-calls-store";
 
 interface CallLogRecord {
   id: string;
@@ -31,18 +32,6 @@ interface CallLogResponse {
   };
 }
 
-function formatPhoneNumber(phone: string | undefined): string {
-  if (!phone) return "Unknown";
-  const cleaned = phone.replace(/\D/g, "");
-  if (cleaned.length === 10) {
-    return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
-  }
-  if (cleaned.length === 11 && cleaned.startsWith("1")) {
-    return `(${cleaned.slice(1, 4)}) ${cleaned.slice(4, 7)}-${cleaned.slice(7)}`;
-  }
-  return phone;
-}
-
 export async function GET(request: NextRequest) {
   try {
     const tokens = getStoredTokens();
@@ -62,6 +51,19 @@ export async function GET(request: NextRequest) {
         error: "RingCentral session expired. Please reconnect.",
         needsAuth: true,
         calls: [],
+      });
+    }
+
+    const subscriptionInfo = getSubscriptionInfo();
+    const realtimeCalls = getRecentCalls(10);
+    
+    if (subscriptionInfo.isActive && realtimeCalls.length > 0) {
+      return NextResponse.json({
+        success: true,
+        calls: realtimeCalls,
+        fetchedAt: new Date().toISOString(),
+        source: "realtime",
+        subscriptionActive: true,
       });
     }
 
@@ -108,20 +110,33 @@ export async function GET(request: NextRequest) {
       .slice(0, 10)
       .map(call => ({
         id: call.id,
+        sessionId: call.sessionId,
         fromPhoneNumber: call.from?.phoneNumber || null,
         fromPhoneNumberFormatted: formatPhoneNumber(call.from?.phoneNumber),
         fromName: call.from?.name || null,
         toPhoneNumber: call.to?.phoneNumber || null,
         toPhoneNumberFormatted: formatPhoneNumber(call.to?.phoneNumber),
         startTime: call.startTime,
-        result: call.result,
+        status: call.result,
+        direction: call.direction,
         duration: call.duration,
       }));
 
+    const combinedCalls = [...realtimeCalls];
+    for (const call of filteredCalls) {
+      if (!combinedCalls.some(c => c.sessionId === call.sessionId)) {
+        combinedCalls.push(call as any);
+      }
+    }
+
+    combinedCalls.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+
     return NextResponse.json({
       success: true,
-      calls: filteredCalls,
+      calls: combinedCalls.slice(0, 10),
       fetchedAt: new Date().toISOString(),
+      source: subscriptionInfo.isActive ? "combined" : "calllog",
+      subscriptionActive: subscriptionInfo.isActive,
     });
 
   } catch (error) {
