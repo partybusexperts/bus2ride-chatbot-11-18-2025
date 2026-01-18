@@ -32,6 +32,14 @@ interface CallLogResponse {
   };
 }
 
+interface CachedCallLog {
+  calls: any[];
+  fetchedAt: number;
+}
+
+let callLogCache: CachedCallLog | null = null;
+const CACHE_TTL_MS = 30000;
+
 export async function GET(request: NextRequest) {
   try {
     const tokens = getStoredTokens();
@@ -67,14 +75,32 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    const now = Date.now();
+    if (callLogCache && (now - callLogCache.fetchedAt) < CACHE_TTL_MS) {
+      const combinedCalls = [...realtimeCalls];
+      for (const call of callLogCache.calls) {
+        if (!combinedCalls.some(c => c.sessionId === call.sessionId)) {
+          combinedCalls.push(call);
+        }
+      }
+      combinedCalls.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+      
+      return NextResponse.json({
+        success: true,
+        calls: combinedCalls.slice(0, 10),
+        fetchedAt: new Date(callLogCache.fetchedAt).toISOString(),
+        source: "cached",
+        subscriptionActive: subscriptionInfo.isActive,
+      });
+    }
+
     const baseUrl = process.env.RINGCENTRAL_BASE_URL || "https://platform.ringcentral.com";
     const callLogUrl = new URL(`${baseUrl}/restapi/v1.0/account/~/extension/~/call-log`);
     callLogUrl.searchParams.set("direction", "Inbound");
     callLogUrl.searchParams.set("perPage", "15");
     callLogUrl.searchParams.set("view", "Simple");
     
-    const now = new Date();
-    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    const oneHourAgo = new Date(now - 60 * 60 * 1000);
     callLogUrl.searchParams.set("dateFrom", oneHourAgo.toISOString());
 
     const response = await fetch(callLogUrl.toString(), {
@@ -93,6 +119,42 @@ export async function GET(request: NextRequest) {
           success: false,
           error: "RingCentral session expired. Please reconnect.",
           needsAuth: true,
+          calls: [],
+        });
+      }
+      
+      if (response.status === 429) {
+        if (callLogCache) {
+          const combinedCalls = [...realtimeCalls];
+          for (const call of callLogCache.calls) {
+            if (!combinedCalls.some(c => c.sessionId === call.sessionId)) {
+              combinedCalls.push(call);
+            }
+          }
+          combinedCalls.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+          
+          return NextResponse.json({
+            success: true,
+            calls: combinedCalls.slice(0, 10),
+            fetchedAt: new Date(callLogCache.fetchedAt).toISOString(),
+            source: "cached_ratelimit",
+            subscriptionActive: subscriptionInfo.isActive,
+          });
+        }
+        
+        if (realtimeCalls.length > 0) {
+          return NextResponse.json({
+            success: true,
+            calls: realtimeCalls,
+            fetchedAt: new Date().toISOString(),
+            source: "realtime_ratelimit",
+            subscriptionActive: subscriptionInfo.isActive,
+          });
+        }
+        
+        return NextResponse.json({
+          success: false,
+          error: "Rate limited by RingCentral. Please try again in a few seconds.",
           calls: [],
         });
       }
@@ -122,6 +184,11 @@ export async function GET(request: NextRequest) {
         duration: call.duration,
       }));
 
+    callLogCache = {
+      calls: filteredCalls,
+      fetchedAt: now,
+    };
+
     const combinedCalls = [...realtimeCalls];
     for (const call of filteredCalls) {
       if (!combinedCalls.some(c => c.sessionId === call.sessionId)) {
@@ -141,6 +208,28 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error("RingCentral API error:", error);
+    
+    const realtimeCalls = getRecentCalls(10);
+    if (realtimeCalls.length > 0) {
+      return NextResponse.json({
+        success: true,
+        calls: realtimeCalls,
+        fetchedAt: new Date().toISOString(),
+        source: "realtime_fallback",
+        subscriptionActive: getSubscriptionInfo().isActive,
+      });
+    }
+    
+    if (callLogCache) {
+      return NextResponse.json({
+        success: true,
+        calls: callLogCache.calls.slice(0, 10),
+        fetchedAt: new Date(callLogCache.fetchedAt).toISOString(),
+        source: "cached_fallback",
+        subscriptionActive: getSubscriptionInfo().isActive,
+      });
+    }
+    
     return NextResponse.json(
       { 
         success: false, 
