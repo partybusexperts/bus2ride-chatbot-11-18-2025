@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   const clientId = process.env.RINGCENTRAL_CLIENT_ID;
-  const redirectUri = process.env.RINGCENTRAL_REDIRECT_URI || "https://www.bus2ride.com/api/ringcentral/callback";
+  const redirectUri = process.env.RINGCENTRAL_REDIRECT_URI || "https://newchatbot.replit.app/api/ringcentral/callback";
   const baseUrl = process.env.RINGCENTRAL_BASE_URL || "https://platform.ringcentral.com";
 
   if (!clientId) {
