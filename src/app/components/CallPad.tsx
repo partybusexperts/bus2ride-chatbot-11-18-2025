@@ -3998,22 +3998,6 @@ export default function CallPad() {
 
             <div style={{ marginTop: '16px', display: 'flex', gap: '12px' }}>
               <button
-                onClick={() => setShowCallPicker(false)}
-                style={{
-                  flex: 1,
-                  padding: '12px',
-                  borderRadius: '8px',
-                  border: '1px solid #d1d5db',
-                  background: '#fff',
-                  color: '#374151',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Close
-              </button>
-              <button
                 onClick={async () => {
                   setLoadingCalls(true);
                   setCallsError(null);
@@ -4051,6 +4035,22 @@ export default function CallPad() {
                 }}
               >
                 🔄 Refresh
+              </button>
+              <button
+                onClick={() => setShowCallPicker(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1px solid #d1d5db',
+                  background: '#fff',
+                  color: '#374151',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Close
               </button>
             </div>
           </div>
