@@ -1,18 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { storeTokens } from "@/lib/ringcentral-tokens";
 
+function getRedirectBaseUrl(request: NextRequest): string {
+  const replitDomain = process.env.REPLIT_DOMAINS?.split(',')[0];
+  if (replitDomain) {
+    return `https://${replitDomain}`;
+  }
+  const forwardedHost = request.headers.get('x-forwarded-host');
+  if (forwardedHost) {
+    const proto = request.headers.get('x-forwarded-proto') || 'https';
+    return `${proto}://${forwardedHost}`;
+  }
+  return 'https://newchatbot.replit.app';
+}
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const code = searchParams.get("code");
   const error = searchParams.get("error");
+  const appBaseUrl = getRedirectBaseUrl(request);
 
   if (error) {
     console.error("RingCentral OAuth error:", error);
-    return NextResponse.redirect(new URL("/?rc_error=" + error, request.url));
+    return NextResponse.redirect(new URL("/?rc_error=" + error, appBaseUrl));
   }
 
   if (!code) {
-    return NextResponse.redirect(new URL("/?rc_error=no_code", request.url));
+    return NextResponse.redirect(new URL("/?rc_error=no_code", appBaseUrl));
   }
 
   const clientId = process.env.RINGCENTRAL_CLIENT_ID;
@@ -20,12 +34,12 @@ export async function GET(request: NextRequest) {
   const redirectUri =
     process.env.RINGCENTRAL_REDIRECT_URI ||
     "https://newchatbot.replit.app/api/ringcentral/callback";
-  const baseUrl =
+  const rcApiBaseUrl =
     process.env.RINGCENTRAL_BASE_URL || "https://platform.ringcentral.com";
 
   if (!clientId || !clientSecret) {
     return NextResponse.redirect(
-      new URL("/?rc_error=missing_credentials", request.url),
+      new URL("/?rc_error=missing_credentials", appBaseUrl),
     );
   }
 
@@ -35,7 +49,7 @@ export async function GET(request: NextRequest) {
     params.append("code", code);
     params.append("redirect_uri", redirectUri);
 
-    const response = await fetch(`${baseUrl}/restapi/oauth/token`, {
+    const response = await fetch(`${rcApiBaseUrl}/restapi/oauth/token`, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -48,7 +62,7 @@ export async function GET(request: NextRequest) {
       const errorText = await response.text();
       console.error("Token exchange failed:", errorText);
       return NextResponse.redirect(
-        new URL("/?rc_error=token_exchange_failed", request.url),
+        new URL("/?rc_error=token_exchange_failed", appBaseUrl),
       );
     }
 
@@ -58,9 +72,9 @@ export async function GET(request: NextRequest) {
 
     console.log("RingCentral OAuth successful, tokens stored");
 
-    return NextResponse.redirect(new URL("/?rc_connected=true", request.url));
+    return NextResponse.redirect(new URL("/?rc_connected=true", appBaseUrl));
   } catch (error) {
     console.error("OAuth callback error:", error);
-    return NextResponse.redirect(new URL("/?rc_error=exception", request.url));
+    return NextResponse.redirect(new URL("/?rc_error=exception", appBaseUrl));
   }
 }
