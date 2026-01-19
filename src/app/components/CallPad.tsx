@@ -886,22 +886,41 @@ export default function CallPad() {
 
     const fetchFromAPI = async () => {
       try {
-        const res = await fetch('/api/ringcentral/recent-calls');
-        const data = await res.json();
-        if (data.success && data.calls?.length > 0) {
-          setRecentCalls(prev => {
-            const merged = [...prev];
-            for (const call of data.calls) {
-              if (!merged.some(c => c.sessionId === call.sessionId)) {
-                merged.push(call);
-              }
+        const [recentRes, activeRes] = await Promise.all([
+          fetch('/api/ringcentral/recent-calls'),
+          fetch('/api/ringcentral/active-sessions')
+        ]);
+        const recentData = await recentRes.json();
+        const activeData = await activeRes.json();
+        
+        const allCalls: typeof recentCalls = [];
+        
+        if (activeData.success && activeData.sessions?.length > 0) {
+          for (const session of activeData.sessions) {
+            if (!allCalls.some(c => c.sessionId === session.sessionId)) {
+              allCalls.push(session);
             }
-            return sortCalls(merged).slice(0, 15);
-          });
+          }
+        }
+        
+        if (recentData.success && recentData.calls?.length > 0) {
+          for (const call of recentData.calls) {
+            if (!allCalls.some(c => c.sessionId === call.sessionId)) {
+              allCalls.push(call);
+            }
+          }
           setCallsError(null);
-        } else if (data.needsAuth) {
+        } else if (recentData.needsAuth) {
           setCallsError('Not connected to RingCentral. Please connect first.');
         }
+        
+        if (allCalls.length > 0) {
+          setRecentCalls(sortCalls(allCalls).slice(0, 15));
+          setCallsError(null);
+        } else if (!recentData.needsAuth) {
+          setCallsError('No recent inbound calls in the last 15 minutes.');
+        }
+        
         setLoadingCalls(false);
       } catch (e) {
         console.error('API fetch error:', e);
@@ -910,6 +929,30 @@ export default function CallPad() {
     };
 
     fetchFromAPI();
+    
+    const pollInterval = setInterval(async () => {
+      try {
+        const activeRes = await fetch('/api/ringcentral/active-sessions');
+        const activeData = await activeRes.json();
+        if (activeData.success && activeData.sessions?.length > 0) {
+          setRecentCalls(prev => {
+            const merged = [...prev];
+            for (const session of activeData.sessions) {
+              const existingIdx = merged.findIndex(c => c.sessionId === session.sessionId);
+              if (existingIdx >= 0) {
+                merged[existingIdx] = { ...merged[existingIdx], ...session };
+              } else {
+                merged.unshift(session);
+              }
+            }
+            return sortCalls(merged).slice(0, 15);
+          });
+          setCallsError(null);
+        }
+      } catch (e) {
+        console.error('Poll error:', e);
+      }
+    }, 3000);
     
     const connect = () => {
       if (closed) return;
@@ -970,6 +1013,7 @@ export default function CallPad() {
       closed = true;
       eventSource?.close();
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      clearInterval(pollInterval);
     };
   }, [showCallPicker]);
 
