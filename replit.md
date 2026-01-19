@@ -19,7 +19,7 @@ The application features a modern, three-panel "Smart Call Pad" layout with dist
 - **Pricing Modal:** An interactive modal displays detailed pricing tiers, hour selections, and calculates quotes. It also suggests similar vehicles based on capacity, category, and price.
 - **AI Selling Points:** OpenAI generates 3 concise selling points for a quoted vehicle based on trip context.
 - **Zoho CRM Integration:** Seamless integration with Zoho CRM allows for creating new leads or updating existing ones with selective field updates, based on phone number or email lookup.
-- **RingCentral Integration:** Uses Telephony Session Notifications (real-time WebSocket subscription) for instant phone number display when calls come in. Falls back to Call Log API for historical data. Subscription is automatically created after OAuth connection.
+- **RingCentral Integration:** Uses Telephony Session Notifications via webhook subscription for instant phone number display when calls come in. The webhook only processes Proceeding/Ringing states (ignores Answered/Disconnected/Missed calls). SSE pushes ringing calls immediately to the browser. Ringing calls display with prominent green pulsing animation, phone icon, and "NOW" timestamp. Falls back to Call Log API for historical data. Subscription is automatically created after OAuth connection.
 
 ### Feature Specifications
 - **Real-time Results Dashboard:** A live dashboard updates with key trip details (location, event, date, passengers, hours, vehicle count, quoted price, deposit) as data is entered.
