@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     }
 
     const baseUrl = process.env.RINGCENTRAL_BASE_URL || "https://platform.ringcentral.com";
-    const url = `${baseUrl}/restapi/v1.0/account/~/telephony/sessions?direction=Inbound`;
+    const url = `${baseUrl}/restapi/v1.0/account/~/extension/~/telephony/sessions?direction=Inbound`;
 
     const response = await fetch(url, {
       headers: {
