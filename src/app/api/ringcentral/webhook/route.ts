@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { addOrUpdateCall } from "@/lib/ringcentral-calls-store";
+import { addOrUpdateCall, removeCall } from "@/lib/ringcentral-calls-store";
 
 interface TelephonySessionParty {
   id: string;
@@ -35,6 +35,9 @@ interface WebhookNotification {
   body?: TelephonySessionBody;
 }
 
+const RINGING_STATES = ['Proceeding', 'Setup', 'Ringing'];
+const ENDED_STATES = ['Answered', 'Disconnected', 'Missed', 'Voicemail', 'Gone', 'Parked'];
+
 export async function POST(request: NextRequest) {
   try {
     const validationToken = request.headers.get("Validation-Token");
@@ -49,8 +52,9 @@ export async function POST(request: NextRequest) {
     }
 
     const notification: WebhookNotification = await request.json();
+    const receivedAt = Date.now();
     
-    console.log("RingCentral webhook received:", JSON.stringify(notification, null, 2));
+    console.log(`[${new Date().toISOString()}] Webhook received in ${Date.now() - receivedAt}ms`);
 
     if (notification.body) {
       const body = notification.body;
@@ -61,23 +65,28 @@ export async function POST(request: NextRequest) {
           if (party.direction === "Inbound") {
             const status = party.status?.code || "Unknown";
             
-            addOrUpdateCall({
-              sessionId: sessionId,
-              telephonySessionId: body.telephonySessionId,
-              status: status,
-              direction: party.direction,
-              from: party.from,
-              to: party.to,
-              startTime: body.creationTime || notification.timestamp,
-            });
-            
-            console.log(`Inbound call from ${party.from?.phoneNumber || 'Unknown'} - Status: ${status}`);
+            if (RINGING_STATES.includes(status)) {
+              addOrUpdateCall({
+                sessionId: sessionId,
+                telephonySessionId: body.telephonySessionId,
+                status: 'Ringing',
+                direction: party.direction,
+                from: party.from,
+                to: party.to,
+                startTime: body.creationTime || notification.timestamp,
+              });
+              
+              console.log(`[RINGING] Inbound call from ${party.from?.phoneNumber || 'Unknown'} - Session: ${sessionId}`);
+            } else if (ENDED_STATES.includes(status)) {
+              removeCall(sessionId);
+              console.log(`[ENDED] Call ended: ${sessionId} - Status: ${status}`);
+            }
           }
         }
       }
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, processedAt: Date.now() });
 
   } catch (error) {
     console.error("Webhook processing error:", error);

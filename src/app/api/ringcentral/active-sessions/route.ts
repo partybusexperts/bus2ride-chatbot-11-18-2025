@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getValidAccessToken, getStoredTokens } from "@/lib/ringcentral-tokens";
 import { addOrUpdateCall, formatPhoneNumber } from "@/lib/ringcentral-calls-store";
 
+const RINGING_STATES = ['Proceeding', 'Setup', 'Ringing'];
+
 interface TelephonySession {
   id: string;
   creationTime: string;
@@ -87,29 +89,31 @@ export async function GET(request: NextRequest) {
         if (party.direction === "Inbound") {
           const status = party.status?.code || "Unknown";
           
-          addOrUpdateCall({
-            sessionId: session.id,
-            telephonySessionId: session.id,
-            status: status,
-            direction: party.direction,
-            from: party.from,
-            to: party.to,
-            startTime: session.creationTime,
-          });
-          
-          activeCalls.push({
-            sessionId: session.id,
-            fromPhoneNumber: party.from?.phoneNumber || null,
-            fromPhoneNumberFormatted: formatPhoneNumber(party.from?.phoneNumber),
-            fromName: party.from?.name || null,
-            toPhoneNumber: party.to?.phoneNumber || null,
-            toPhoneNumberFormatted: formatPhoneNumber(party.to?.phoneNumber),
-            status: status,
-            direction: party.direction,
-            startTime: session.creationTime,
-          });
-          
-          console.log(`Active session: ${session.id} from ${party.from?.phoneNumber || 'Unknown'} - Status: ${status}`);
+          if (RINGING_STATES.includes(status)) {
+            addOrUpdateCall({
+              sessionId: session.id,
+              telephonySessionId: session.id,
+              status: 'Ringing',
+              direction: party.direction,
+              from: party.from,
+              to: party.to,
+              startTime: session.creationTime,
+            });
+            
+            activeCalls.push({
+              sessionId: session.id,
+              fromPhoneNumber: party.from?.phoneNumber || null,
+              fromPhoneNumberFormatted: formatPhoneNumber(party.from?.phoneNumber),
+              fromName: party.from?.name || null,
+              toPhoneNumber: party.to?.phoneNumber || null,
+              toPhoneNumberFormatted: formatPhoneNumber(party.to?.phoneNumber),
+              status: 'Ringing',
+              direction: party.direction,
+              startTime: session.creationTime,
+            });
+            
+            console.log(`[RINGING] Active session: ${session.id} from ${party.from?.phoneNumber || 'Unknown'}`);
+          }
         }
       }
     }

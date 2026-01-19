@@ -980,19 +980,23 @@ export default function CallPad() {
               setCallsError('No recent inbound calls in the last 15 minutes.');
             }
           } else if (data.type === 'call_update') {
-            setRecentCalls(prev => {
-              const call = data.call;
-              const existing = prev.findIndex(c => c.sessionId === call.sessionId);
-              let updated: typeof prev;
-              if (existing >= 0) {
-                updated = [...prev];
-                updated[existing] = { ...updated[existing], ...call };
-              } else {
-                updated = [call, ...prev].slice(0, 15);
-              }
-              return sortCalls(updated);
-            });
-            setCallsError(null);
+            const call = data.call;
+            if (call.status === 'Removed') {
+              setRecentCalls(prev => prev.filter(c => c.sessionId !== call.sessionId));
+            } else if (call.status === 'Ringing') {
+              setRecentCalls(prev => {
+                const existing = prev.findIndex(c => c.sessionId === call.sessionId);
+                let updated: typeof prev;
+                if (existing >= 0) {
+                  updated = [...prev];
+                  updated[existing] = { ...updated[existing], ...call };
+                } else {
+                  updated = [call, ...prev].slice(0, 15);
+                }
+                return sortCalls(updated);
+              });
+              setCallsError(null);
+            }
           }
         } catch (e) {
           console.error('SSE parse error:', e);
@@ -3970,11 +3974,23 @@ export default function CallPad() {
                 No recent calls found.
               </div>
             ) : (
+              <>
+              <style>{`
+                @keyframes pulse-ring {
+                  0%, 100% { box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2); }
+                  50% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0.4); }
+                }
+                @keyframes blink {
+                  0%, 100% { opacity: 1; }
+                  50% { opacity: 0.3; }
+                }
+              `}</style>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {recentCalls.map((call) => {
                   const callTime = new Date(call.startTime);
                   const timeAgo = Math.round((Date.now() - callTime.getTime()) / 60000);
                   const timeDisplay = timeAgo < 1 ? 'Just now' : timeAgo === 1 ? '1 min ago' : `${timeAgo} min ago`;
+                  const isRinging = call.status === 'Ringing';
                   
                   return (
                     <button
@@ -3990,47 +4006,57 @@ export default function CallPad() {
                         width: '100%',
                         padding: '14px 16px',
                         borderRadius: '8px',
-                        border: '1px solid #e5e7eb',
-                        background: '#f9fafb',
+                        border: isRinging ? '2px solid #22c55e' : '1px solid #e5e7eb',
+                        background: isRinging ? '#dcfce7' : '#f9fafb',
                         cursor: 'pointer',
                         textAlign: 'left',
                         transition: 'all 0.15s ease',
+                        animation: isRinging ? 'pulse-ring 1.5s ease-in-out infinite' : 'none',
+                        boxShadow: isRinging ? '0 0 0 4px rgba(34, 197, 94, 0.2)' : 'none',
                       }}
                       onMouseOver={(e) => {
-                        e.currentTarget.style.background = '#dbeafe';
-                        e.currentTarget.style.borderColor = '#3b82f6';
+                        if (!isRinging) {
+                          e.currentTarget.style.background = '#dbeafe';
+                          e.currentTarget.style.borderColor = '#3b82f6';
+                        }
                       }}
                       onMouseOut={(e) => {
-                        e.currentTarget.style.background = '#f9fafb';
-                        e.currentTarget.style.borderColor = '#e5e7eb';
+                        if (!isRinging) {
+                          e.currentTarget.style.background = '#f9fafb';
+                          e.currentTarget.style.borderColor = '#e5e7eb';
+                        }
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                         <span style={{ 
-                          fontSize: '16px', 
+                          fontSize: isRinging ? '18px' : '16px', 
                           fontWeight: 700, 
-                          color: '#1e40af',
+                          color: isRinging ? '#166534' : '#1e40af',
                           fontFamily: 'monospace',
                         }}>
-                          {call.fromPhoneNumberFormatted}
+                          {isRinging && '📞 '}{call.fromPhoneNumberFormatted}
                         </span>
                         <span style={{
                           fontSize: '11px',
-                          padding: '3px 8px',
+                          padding: '4px 10px',
                           borderRadius: '12px',
-                          background: (call.status || call.result) === 'Accepted' || (call.status || call.result) === 'Answered' ? '#dcfce7' : (call.status || call.result) === 'Ringing' || (call.status || call.result) === 'Proceeding' ? '#fef3c7' : '#e0e7ff',
-                          color: (call.status || call.result) === 'Accepted' || (call.status || call.result) === 'Answered' ? '#166534' : (call.status || call.result) === 'Ringing' || (call.status || call.result) === 'Proceeding' ? '#92400e' : '#3730a3',
-                          fontWeight: 600,
+                          background: isRinging ? '#22c55e' : '#e0e7ff',
+                          color: isRinging ? '#fff' : '#3730a3',
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
                         }}>
+                          {isRinging && <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#fff', animation: 'blink 0.8s ease-in-out infinite' }}></span>}
                           {call.status || call.result}
                         </span>
                       </div>
-                      <div style={{ fontSize: '12px', color: '#6b7280', display: 'flex', justifyContent: 'space-between' }}>
+                      <div style={{ fontSize: '12px', color: isRinging ? '#166534' : '#6b7280', display: 'flex', justifyContent: 'space-between' }}>
                         <span>→ {call.toPhoneNumberFormatted}</span>
-                        <span>{timeDisplay}</span>
+                        <span>{isRinging ? 'NOW' : timeDisplay}</span>
                       </div>
                       {call.fromName && (
-                        <div style={{ fontSize: '12px', color: '#374151', marginTop: '4px', fontWeight: 500 }}>
+                        <div style={{ fontSize: '12px', color: isRinging ? '#166534' : '#374151', marginTop: '4px', fontWeight: 500 }}>
                           {call.fromName}
                         </div>
                       )}
@@ -4038,6 +4064,7 @@ export default function CallPad() {
                   );
                 })}
               </div>
+              </>
             )}
 
             <div style={{ marginTop: '16px', display: 'flex', gap: '12px' }}>

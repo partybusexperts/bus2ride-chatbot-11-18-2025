@@ -135,6 +135,27 @@ export function clearCalls(): void {
   calls = [];
 }
 
+export function removeCall(sessionId: string): void {
+  const index = calls.findIndex(c => c.sessionId === sessionId);
+  if (index >= 0) {
+    calls.splice(index, 1);
+    notifyListeners({ 
+      id: sessionId, 
+      sessionId, 
+      fromPhoneNumber: null,
+      fromPhoneNumberFormatted: '',
+      fromName: null,
+      toPhoneNumber: null,
+      toPhoneNumberFormatted: '',
+      status: 'Removed',
+      direction: 'Inbound',
+      startTime: new Date().toISOString(),
+      answeredAt: null,
+      endedAt: new Date().toISOString()
+    });
+  }
+}
+
 export function setSubscriptionInfo(id: string, expiresIn: number): void {
   subscriptionId = id;
   subscriptionExpiresAt = Date.now() + (expiresIn * 1000);
