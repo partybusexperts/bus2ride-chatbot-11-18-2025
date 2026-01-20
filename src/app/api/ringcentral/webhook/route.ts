@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { addOrUpdateCall, removeCall } from "@/lib/ringcentral-calls-store";
+import { supabase } from "@/lib/supabase";
 
 interface TelephonySessionParty {
   id: string;
@@ -66,20 +66,38 @@ export async function POST(request: NextRequest) {
             const status = party.status?.code || "Unknown";
             
             if (RINGING_STATES.includes(status)) {
-              addOrUpdateCall({
-                sessionId: sessionId,
-                telephonySessionId: body.telephonySessionId,
-                status: 'Ringing',
-                direction: party.direction,
-                from: party.from,
-                to: party.to,
-                startTime: body.creationTime || notification.timestamp,
-              });
+              const { error } = await supabase
+                .from('active_ringing_calls')
+                .upsert({
+                  id: sessionId,
+                  session_id: sessionId,
+                  telephony_session_id: body.telephonySessionId,
+                  status: 'Ringing',
+                  direction: party.direction,
+                  from_phone: party.from?.phoneNumber,
+                  from_name: party.from?.name,
+                  to_phone: party.to?.phoneNumber,
+                  to_name: party.to?.name,
+                  start_time: body.creationTime || notification.timestamp,
+                  updated_at: new Date().toISOString(),
+                }, { onConflict: 'id' });
               
-              console.log(`[RINGING] Inbound call from ${party.from?.phoneNumber || 'Unknown'} - Session: ${sessionId}`);
+              if (error) {
+                console.error('[RINGING] DB insert error:', error);
+              } else {
+                console.log(`[RINGING] Inbound call from ${party.from?.phoneNumber || 'Unknown'} - Session: ${sessionId}`);
+              }
             } else if (ENDED_STATES.includes(status)) {
-              removeCall(sessionId);
-              console.log(`[ENDED] Call ended: ${sessionId} - Status: ${status}`);
+              const { error } = await supabase
+                .from('active_ringing_calls')
+                .delete()
+                .eq('id', sessionId);
+              
+              if (error) {
+                console.error('[ENDED] DB delete error:', error);
+              } else {
+                console.log(`[ENDED] Call ended: ${sessionId} - Status: ${status}`);
+              }
             }
           }
         }
