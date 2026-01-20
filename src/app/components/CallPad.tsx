@@ -982,10 +982,10 @@ export default function CallPad() {
           } else if (data.type === 'call_update') {
             const call = data.call;
             if (call.status === 'Removed') {
-              setRecentCalls(prev => prev.filter(c => c.sessionId !== call.sessionId));
+              setRecentCalls(prev => prev.filter(c => c.sessionId !== call.sessionId && c.id !== call.id));
             } else if (call.status === 'Ringing') {
               setRecentCalls(prev => {
-                const existing = prev.findIndex(c => c.sessionId === call.sessionId);
+                const existing = prev.findIndex(c => c.sessionId === call.sessionId || c.id === call.id);
                 let updated: typeof prev;
                 if (existing >= 0) {
                   updated = [...prev];
@@ -997,6 +997,9 @@ export default function CallPad() {
               });
               setCallsError(null);
             }
+          } else if (data.type === 'call_removed') {
+            const removedId = data.id;
+            setRecentCalls(prev => prev.filter(c => c.id !== removedId && c.sessionId !== removedId));
           }
         } catch (e) {
           console.error('SSE parse error:', e);
