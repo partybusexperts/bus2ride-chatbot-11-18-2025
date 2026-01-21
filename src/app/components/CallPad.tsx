@@ -282,6 +282,12 @@ export default function CallPad() {
   } | null>(null);
 
   const AMBIGUOUS_CITIES: Record<string, string[]> = {
+    'peoria': ['IL', 'AZ'],
+    'glendale': ['AZ', 'CA'],
+    'mesa': ['AZ', 'CA'],
+    'chandler': ['AZ', 'TX'],
+    'gilbert': ['AZ', 'SC'],
+    'surprise': ['AZ', 'NE'],
     'westmont': ['IL', 'NJ', 'CA', 'PA'],
     'springfield': ['IL', 'MA', 'MO', 'OH', 'OR', 'NJ'],
     'clinton': ['IA', 'MD', 'MA', 'MI', 'MS', 'NJ', 'NY', 'NC', 'OK', 'SC', 'TN'],
@@ -297,6 +303,20 @@ export default function CallPad() {
     'manchester': ['CT', 'NH', 'NJ', 'TN'],
     'columbia': ['MD', 'MO', 'PA', 'SC', 'TN'],
     'lexington': ['KY', 'MA', 'NC', 'SC', 'VA'],
+    'aurora': ['CO', 'IL', 'IN', 'MO', 'NE', 'NY', 'OH'],
+    'arlington': ['TX', 'VA', 'MA'],
+    'cleveland': ['OH', 'TN', 'TX'],
+    'portland': ['OR', 'ME'],
+    'columbus': ['OH', 'GA', 'IN', 'MS', 'NE'],
+    'burlington': ['VT', 'NC', 'NJ', 'IA', 'KY'],
+    'troy': ['MI', 'NY', 'OH', 'AL'],
+    'lakewood': ['CO', 'CA', 'NJ', 'OH', 'WA'],
+    'hollywood': ['FL', 'CA'],
+    'ontario': ['CA', 'OR'],
+    'santa clara': ['CA', 'UT'],
+    'pasadena': ['CA', 'TX'],
+    'pomona': ['CA', 'NJ'],
+    'corona': ['CA', 'NY'],
   };
   
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
