@@ -334,6 +334,10 @@ export default function CallPad() {
     'minneapolis', 'st paul', 'milwaukee', 'indianapolis', 'columbus', 'cleveland',
     'pittsburgh', 'baltimore', 'charlotte', 'raleigh', 'nashville', 'memphis',
     'louisville', 'kansas city', 'st louis', 'new orleans', 'salt lake city',
+    'birmingham', 'tuscaloosa', 'huntsville', 'montgomery', 'mobile',
+    'little rock', 'oklahoma city', 'tulsa', 'omaha', 'des moines', 'wichita',
+    'albuquerque', 'el paso', 'boise', 'spokane', 'tacoma', 'honolulu',
+    'anchorage', 'jacksonville', 'richmond', 'virginia beach', 'norfolk',
   ];
 
   const extractCityFromText = (text: string): string | null => {

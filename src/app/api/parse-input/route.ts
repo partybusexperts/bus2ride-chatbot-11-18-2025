@@ -1173,6 +1173,13 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'the gulch': 'Nashville', 'midtown nashville': 'Nashville', 'green hills': 'Nashville',
   'west end nashville': 'Nashville', 'sylvan park': 'Nashville', 'germantown tn': 'Nashville',
   '12 south': 'Nashville', 'berry hill': 'Nashville', 'music row': 'Nashville',
+  // Birmingham metro
+  'tuscaloosa': 'Birmingham', 'tuscaloosa al': 'Birmingham', 'hoover': 'Birmingham',
+  'hoover al': 'Birmingham', 'vestavia hills': 'Birmingham', 'homewood': 'Birmingham',
+  'mountain brook': 'Birmingham', 'bessemer': 'Birmingham', 'alabaster': 'Birmingham',
+  'pelham': 'Birmingham', 'trussville': 'Birmingham', 'gardendale': 'Birmingham',
+  'helena': 'Birmingham', 'helena al': 'Birmingham', 'fultondale': 'Birmingham',
+  'hueytown': 'Birmingham', 'jasper al': 'Birmingham', 'cullman': 'Birmingham',
   // Charlotte metro
   'matthews': 'Charlotte', 'matthews nc': 'Charlotte', 'mint hill': 'Charlotte',
   'pineville': 'Charlotte', 'huntersville': 'Charlotte', 'cornelius': 'Charlotte',
