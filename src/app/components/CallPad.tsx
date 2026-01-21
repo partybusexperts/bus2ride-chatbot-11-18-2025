@@ -282,7 +282,7 @@ export default function CallPad() {
   } | null>(null);
 
   const AMBIGUOUS_CITIES: Record<string, string[]> = {
-    'peoria': ['IL', 'AZ'],
+    'peoria': ['IL', 'AZ', 'KS', 'TX', 'OK', 'CO'],
     'glendale': ['AZ', 'CA'],
     'mesa': ['AZ', 'CA'],
     'chandler': ['AZ', 'TX'],
@@ -330,6 +330,10 @@ export default function CallPad() {
     'chicago', 'dallas', 'houston', 'austin', 'san antonio', 'los angeles',
     'san diego', 'san francisco', 'seattle', 'portland', 'atlanta', 'miami',
     'orlando', 'tampa', 'boston', 'new york', 'philadelphia', 'detroit',
+    'napa', 'sacramento', 'fresno', 'oakland', 'san jose', 'santa rosa',
+    'minneapolis', 'st paul', 'milwaukee', 'indianapolis', 'columbus', 'cleveland',
+    'pittsburgh', 'baltimore', 'charlotte', 'raleigh', 'nashville', 'memphis',
+    'louisville', 'kansas city', 'st louis', 'new orleans', 'salt lake city',
   ];
 
   const extractCityFromText = (text: string): string | null => {
