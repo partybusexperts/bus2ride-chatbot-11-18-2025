@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
-
-const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-});
+import { METRO_COORDS, haversineDistance, getDirection, getZipCoordinates, calculateDrivingDistance } from "@/lib/geo-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,61 +9,52 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing zipCode or metroCity" }, { status: 400 });
     }
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: `You are a distance calculator. Given a location (ZIP code or city name) and a metro city, estimate the driving distance and time to the downtown/center of the metro city.
-
-Return ONLY a JSON object with these fields:
-- miles: number (approximate driving distance in miles)
-- minutes: number (approximate driving time in minutes under normal traffic)
-- description: string (brief description like "Northwest suburbs" or "Far south side")
-- cityName: string (the city/town name for this ZIP code, e.g. "Wheaton" for 60189, or null if input is already a city name)
-- state: string (2-letter state abbreviation, e.g. "IL" for Illinois)
-
-Be accurate based on your knowledge of US geography. If you don't know the ZIP code, make a reasonable estimate or return null values.`
-        },
-        {
-          role: "user",
-          content: `ZIP code: ${zipCode}\nMetro city: ${metroCity}\n\nCalculate driving distance and time from this ZIP to downtown ${metroCity}.`
-        }
-      ],
-      temperature: 0.1,
-      max_tokens: 150,
-    });
-
-    const content = response.choices[0]?.message?.content || "";
-    
-    try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const data = JSON.parse(jsonMatch[0]);
-        return NextResponse.json({
-          success: true,
-          zipCode,
-          metroCity,
-          miles: data.miles || null,
-          minutes: data.minutes || null,
-          description: data.description || null,
-          cityName: data.cityName || null,
-          state: data.state || null,
-        });
-      }
-    } catch (parseError) {
-      console.error("Failed to parse distance response:", content);
+    const metroCoords = METRO_COORDS[metroCity];
+    if (!metroCoords) {
+      return NextResponse.json({
+        success: false,
+        zipCode,
+        metroCity,
+        error: `Unknown metro city: ${metroCity}`,
+        miles: null,
+        minutes: null,
+        description: null,
+        cityName: null,
+        state: null,
+      });
     }
 
+    const zipData = await getZipCoordinates(zipCode);
+    if (!zipData) {
+      return NextResponse.json({
+        success: false,
+        zipCode,
+        metroCity,
+        error: `Could not find coordinates for ZIP: ${zipCode}`,
+        miles: null,
+        minutes: null,
+        description: null,
+        cityName: null,
+        state: null,
+      });
+    }
+
+    const straightLineDistance = haversineDistance(zipData.lat, zipData.lng, metroCoords.lat, metroCoords.lng);
+    const { miles: drivingMiles, minutes: drivingMinutes } = calculateDrivingDistance(straightLineDistance);
+    
+    const direction = getDirection(zipData.lat, zipData.lng, metroCoords.lat, metroCoords.lng);
+    const distanceDesc = drivingMiles <= 10 ? 'Close-in' : drivingMiles <= 25 ? '' : 'Far';
+    const description = `${distanceDesc} ${direction} suburbs`.trim().replace(/\s+/g, ' ');
+
     return NextResponse.json({
-      success: false,
+      success: true,
       zipCode,
       metroCity,
-      miles: null,
-      minutes: null,
-      description: null,
-      cityName: null,
-      state: null,
+      miles: drivingMiles,
+      minutes: drivingMinutes,
+      description,
+      cityName: zipData.city,
+      state: zipData.state,
     });
 
   } catch (error) {

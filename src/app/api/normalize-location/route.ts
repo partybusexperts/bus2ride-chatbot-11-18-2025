@@ -1,27 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { METRO_COORDS, haversineDistance, getZipCoordinates, calculateDrivingDistance, findNearestMetro } from "@/lib/geo-utils";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
-const MAJOR_METROS = [
-  'Phoenix', 'Chicago', 'Dallas', 'Houston', 'Austin', 'San Antonio',
-  'Los Angeles', 'San Francisco', 'San Diego', 'San Jose',
-  'Denver', 'Las Vegas', 'Seattle', 'Portland',
-  'Atlanta', 'Miami', 'Tampa', 'Orlando', 'Jacksonville',
-  'Philadelphia', 'New York', 'Boston', 'Washington',
-  'Detroit', 'Minneapolis', 'St Louis', 'Kansas City',
-  'Nashville', 'Charlotte', 'Indianapolis', 'Columbus',
-  'Cleveland', 'Cincinnati', 'Pittsburgh', 'Baltimore',
-  'New Orleans', 'Memphis', 'Louisville', 'Milwaukee',
-  'Salt Lake City', 'Raleigh', 'Richmond', 'Virginia Beach',
-  'Birmingham', 'Oklahoma City', 'Tucson', 'Albuquerque',
-  'Sacramento', 'Fresno', 'Long Beach', 'Omaha',
-  'Toronto', 'Montreal', 'Vancouver', 'Calgary', 'Windsor', 'Winnipeg',
-  'Napa', 'Santa Rosa', 'Spokane',
-];
+const MAJOR_METROS = Object.keys(METRO_COORDS);
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,27 +17,60 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing location" }, { status: 400 });
     }
 
+    const isZipCode = /^\d{5}(-\d{4})?$/.test(location.trim());
+    
+    if (isZipCode) {
+      const zipData = await getZipCoordinates(location.trim());
+      if (zipData) {
+        const nearest = findNearestMetro(zipData.lat, zipData.lng);
+        if (nearest) {
+          const metroCoords = METRO_COORDS[nearest.metro];
+          const straightLine = haversineDistance(zipData.lat, zipData.lng, metroCoords.lat, metroCoords.lng);
+          const { miles, minutes } = calculateDrivingDistance(straightLine);
+          
+          return NextResponse.json({
+            success: true,
+            location,
+            metro: nearest.metro,
+            cityName: zipData.city,
+            state: zipData.state,
+            isRemote: minutes >= 60,
+            driveMinutes: minutes,
+            driveMiles: miles,
+          });
+        }
+        
+        return NextResponse.json({
+          success: true,
+          location,
+          metro: null,
+          cityName: zipData.city,
+          state: zipData.state,
+          isRemote: true,
+          driveMinutes: null,
+          driveMiles: null,
+        });
+      }
+    }
+
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: `You are a US geography expert. Given a city name, town, suburb, or ZIP code, determine which major metropolitan area it belongs to for vehicle rental service.
+          content: `You are a US geography expert. Given a city name, town, or suburb, identify which major metropolitan area it belongs to.
 
 Available service areas (major metros): ${MAJOR_METROS.join(', ')}
 
 Return ONLY a JSON object with these fields:
-- metro: string (the major metro area from the list above, or null if not within 90 minutes of any)
-- cityName: string (the actual city/town name for this location)
+- metro: string (the major metro area from the list above, or null if not near any)
+- cityName: string (the actual city/town name)
 - state: string (2-letter state abbreviation)
-- isRemote: boolean (true if location is 60+ minutes from the metro center)
-- driveMinutes: number (estimated drive time to metro center)
-- driveMiles: number (estimated distance in miles)
+- lat: number (approximate latitude of the city center)
+- lng: number (approximate longitude of the city center)
 
 Rules:
-- Only return a metro if the location is within approximately 90 minutes drive
 - If location could be ambiguous (same name in multiple states), use context or default to most populous
-- For ZIP codes, identify the city/town it belongs to
 - Be accurate based on your knowledge of US/Canada geography`
         },
         {
@@ -69,15 +88,29 @@ Rules:
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const data = JSON.parse(jsonMatch[0]);
+        
+        let driveMinutes: number | null = null;
+        let driveMiles: number | null = null;
+        let isRemote = false;
+        
+        if (data.metro && METRO_COORDS[data.metro] && data.lat && data.lng) {
+          const metroCoords = METRO_COORDS[data.metro];
+          const straightLine = haversineDistance(data.lat, data.lng, metroCoords.lat, metroCoords.lng);
+          const driving = calculateDrivingDistance(straightLine);
+          driveMinutes = driving.minutes;
+          driveMiles = driving.miles;
+          isRemote = driveMinutes >= 60;
+        }
+        
         return NextResponse.json({
           success: true,
           location,
           metro: data.metro || null,
           cityName: data.cityName || null,
           state: data.state || null,
-          isRemote: data.isRemote || false,
-          driveMinutes: data.driveMinutes || null,
-          driveMiles: data.driveMiles || null,
+          isRemote,
+          driveMinutes,
+          driveMiles,
         });
       }
     } catch (parseError) {
