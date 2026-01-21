@@ -38,7 +38,7 @@ function notifyListeners(call: IncomingCall): void {
     try {
       callback(call);
     } catch (e) {
-      console.error('Error notifying call event listener:', e);
+      console.error("Error notifying call event listener:", e);
     }
   });
 }
@@ -65,8 +65,8 @@ export function addOrUpdateCall(callData: {
   startTime?: string;
 }): void {
   const sessionId = callData.telephonySessionId || callData.sessionId;
-  const existingIndex = calls.findIndex(c => c.sessionId === sessionId);
-  
+  const existingIndex = calls.findIndex((c) => c.sessionId === sessionId);
+
   const callEntry: IncomingCall = {
     id: sessionId,
     sessionId: sessionId,
@@ -78,8 +78,14 @@ export function addOrUpdateCall(callData: {
     status: callData.status,
     direction: callData.direction,
     startTime: callData.startTime || new Date().toISOString(),
-    answeredAt: callData.status === 'Answered' ? new Date().toISOString() : (existingIndex >= 0 ? calls[existingIndex].answeredAt : null),
-    endedAt: callData.status === 'Disconnected' ? new Date().toISOString() : null,
+    answeredAt:
+      callData.status === "Answered"
+        ? new Date().toISOString()
+        : existingIndex >= 0
+          ? calls[existingIndex].answeredAt
+          : null,
+    endedAt:
+      callData.status === "Disconnected" ? new Date().toISOString() : null,
   };
 
   if (existingIndex >= 0) {
@@ -90,15 +96,15 @@ export function addOrUpdateCall(callData: {
       calls = calls.slice(0, MAX_CALLS);
     }
   }
-  
+
   cleanupOldCalls();
-  
+
   notifyListeners(callEntry);
 }
 
 function cleanupOldCalls(): void {
   const now = Date.now();
-  calls = calls.filter(call => {
+  calls = calls.filter((call) => {
     const callTime = new Date(call.startTime).getTime();
     return now - callTime < CALL_EXPIRY_MS;
   });
@@ -107,16 +113,16 @@ function cleanupOldCalls(): void {
 export function getRecentCalls(limit: number = 10): IncomingCall[] {
   cleanupOldCalls();
   return calls
-    .filter(c => c.direction === 'Inbound')
+    .filter((c) => c.direction === "Inbound")
     .sort((a, b) => {
       const statusOrder: Record<string, number> = {
-        'Proceeding': 0,
-        'Ringing': 0,
-        'Answered': 1,
-        'Accepted': 1,
-        'Disconnected': 2,
-        'Missed': 2,
-        'Voicemail': 2,
+        Proceeding: 0,
+        Ringing: 0,
+        Answered: 1,
+        Accepted: 1,
+        Disconnected: 2,
+        Missed: 2,
+        Voicemail: 2,
       };
       const aOrder = statusOrder[a.status] ?? 3;
       const bOrder = statusOrder[b.status] ?? 3;
@@ -136,34 +142,39 @@ export function clearCalls(): void {
 }
 
 export function removeCall(sessionId: string): void {
-  const index = calls.findIndex(c => c.sessionId === sessionId);
+  const index = calls.findIndex((c) => c.sessionId === sessionId);
   if (index >= 0) {
     calls.splice(index, 1);
-    notifyListeners({ 
-      id: sessionId, 
-      sessionId, 
+    notifyListeners({
+      id: sessionId,
+      sessionId,
       fromPhoneNumber: null,
-      fromPhoneNumberFormatted: '',
+      fromPhoneNumberFormatted: "",
       fromName: null,
       toPhoneNumber: null,
-      toPhoneNumberFormatted: '',
-      status: 'Removed',
-      direction: 'Inbound',
+      toPhoneNumberFormatted: "",
+      status: "Removed",
+      direction: "Inbound",
       startTime: new Date().toISOString(),
       answeredAt: null,
-      endedAt: new Date().toISOString()
+      endedAt: new Date().toISOString(),
     });
   }
 }
 
 export function setSubscriptionInfo(id: string, expiresIn: number): void {
   subscriptionId = id;
-  subscriptionExpiresAt = Date.now() + (expiresIn * 1000);
+  subscriptionExpiresAt = Date.now() + expiresIn * 1000;
 }
 
-export function getSubscriptionInfo(): { id: string | null; expiresAt: number | null; isActive: boolean } {
-  const isActive = subscriptionId !== null && 
-    subscriptionExpiresAt !== null && 
+export function getSubscriptionInfo(): {
+  id: string | null;
+  expiresAt: number | null;
+  isActive: boolean;
+} {
+  const isActive =
+    subscriptionId !== null &&
+    subscriptionExpiresAt !== null &&
     subscriptionExpiresAt > Date.now();
   return { id: subscriptionId, expiresAt: subscriptionExpiresAt, isActive };
 }
