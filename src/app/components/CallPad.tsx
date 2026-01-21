@@ -443,7 +443,7 @@ export default function CallPad() {
         searchCity: isZipCode ? searchCity : '',
         searchedCity: isZipCode ? `ZIP ${chip.value}` : (wasNormalized ? chip.value : ''),
         travelMinutes: chip.travelMinutes || 0,
-        pickupAddress: isZipCode ? '' : chip.value
+        pickupAddress: isZipCode ? chip.value : chip.value
       }));
       
       // Calculate distance using AI for ZIP codes and cities that normalize to a different metro
@@ -463,6 +463,12 @@ export default function CallPad() {
             if (data.success && (data.miles || data.minutes)) {
               setCalculatedDistance({ miles: data.miles, minutes: data.minutes, description: data.description, cityName: data.cityName, state: data.state });
               console.log(`[Distance Calculated] ${locationToSearch}${data.cityName ? ` (${data.cityName}, ${data.state})` : ''} → ${metroToSearch}: ${data.miles} miles, ${data.minutes} min`);
+              if (isZipCode && data.cityName && data.state) {
+                setConfirmedData(prev => ({
+                  ...prev,
+                  pickupAddress: `${data.cityName}, ${data.state} ${locationToSearch}`
+                }));
+              }
             }
           })
           .catch(err => console.error('Distance calculation error:', err))
