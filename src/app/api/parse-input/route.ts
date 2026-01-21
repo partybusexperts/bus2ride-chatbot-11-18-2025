@@ -607,7 +607,7 @@ const WORD_PASSENGERS_REGEX = /^(one|two|three|four|five|six|seven|eight|nine|te
 const EVENT_KEYWORDS = [
   'wedding', 'prom', 'birthday', 'bachelor', 'bachelorette', 'graduation',
   'concert', 'party', 'quinceanera', 'anniversary', 'corporate', 'airport',
-  'funeral', 'church', 'bar mitzvah', 'bat mitzvah', 'homecoming', 'formal',
+  'funeral', 'bar mitzvah', 'bat mitzvah', 'homecoming', 'formal',
   'reception', 'ceremony', 'gala', 'banquet', 'retreat', 'conference',
   'meeting', 'seminar', 'symposium', 'convention', 'expo', 'showcase',
   'festival', 'carnival', 'fair', 'parade', 'rally', 'fundraiser',
@@ -690,7 +690,8 @@ const CITY_KEYWORDS = [
   'peoria', 'surprise', 'goodyear', 'avondale', 'tucson', 'las vegas', 'denver',
   'chicago', 'dallas', 'houston', 'austin', 'san antonio', 'los angeles',
   'san diego', 'san francisco', 'seattle', 'portland', 'atlanta', 'miami',
-  'orlando', 'tampa', 'boston', 'new york', 'philadelphia', 'detroit',
+  'orlando', 'tampa', 'boston', 'new york', 'philadelphia', 'detroit', 'napa',
+  'birmingham', 'tuscaloosa', 'huntsville', 'montgomery', 'mobile',
   'minneapolis', 'st louis', 'kansas city', 'nashville', 'memphis', 'charlotte',
   'westmont', 'springfield', 'clinton', 'franklin', 'madison', 'madison wi',
   'madison wisconsin', 'georgetown', 'greenville', 'bristol', 'auburn', 'oxford', 
@@ -912,7 +913,7 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'cupertino': 'San Jose', 'mountain view': 'San Jose', 'palo alto': 'San Jose',
   'menlo park': 'San Jose', 'los gatos': 'San Jose', 'campbell': 'San Jose',
   // Napa/Wine Country (separate from SF)
-  'napa valley': 'Napa', 'yountville': 'Napa', 'st helena': 'Napa', 'calistoga': 'Napa',
+  'napa': 'Napa', 'napa valley': 'Napa', 'yountville': 'Napa', 'st helena': 'Napa', 'calistoga': 'Napa',
   // Santa Rosa/Sonoma (could be separate or grouped)
   'santa rosa': 'Santa Rosa', 'sonoma': 'Santa Rosa', 'petaluma': 'Santa Rosa', 'rohnert park': 'Santa Rosa',
   // Chicago metro (extended)
@@ -2002,22 +2003,37 @@ function detectPattern(text: string): DetectedItem | null {
     }
   }
   
+  // DETECT TRIP NOTES EARLY - sentences with instructional language
+  // These are notes about what to do, not event types
+  const tripNotePatterns = [
+    /\b(pick\s*up|pickup|pu)\b.*\b(and|then)\b.*\b(take|bring|drop|go)\b/i,
+    /\b(take|bring)\b.*\b(to|from)\b.*\b(church|airport|hotel|venue|home|house|office|station)\b/i,
+    /\b(groom|bride|groomsman|bridesmaid|best man|maid of honor)\b.*\b(and|then)\b/i,
+    /\b(meet|wait|pick)\b.*\b(at|for|in)\b.*\b(then|and)\b/i,
+    /^\d{1,2}(:\d{2})?\s*(am|pm|a|p)?\s*(pick|pu|take|meet|go)/i,
+  ];
+  const isTripNote = tripNotePatterns.some(pattern => pattern.test(lowerText));
+  if (isTripNote && trimmed.length > 15) {
+    return { type: 'unknown', value: trimmed, confidence: 0.8, original: trimmed };
+  }
+  
   // CHECK EVENT PHRASES BEFORE NAME DETECTION
   // This prevents "corporate event", "birthday party" etc. from being detected as names
+  // But only for SHORT inputs that look like event labels, not longer trip notes
+  const isShortEnoughForEvent = trimmed.length < 40;
   for (const phrase of EVENT_PHRASES) {
-    if (lowerText === phrase || lowerText.includes(phrase)) {
-      // Capitalize first letter of each word for display
+    if (isShortEnoughForEvent && (lowerText === phrase || lowerText.includes(phrase))) {
       const formatted = trimmed.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
       return { type: 'event_type', value: formatted, confidence: 0.95, original: trimmed };
     }
   }
   
   // Check if ANY word in input is an event keyword (catches "corporate event" via "corporate")
+  // But only for short inputs - longer sentences are likely trip notes
   const words = lowerText.split(/\s+/);
   const hasEventWord = words.some(word => EVENT_KEYWORDS.includes(word));
   const containsEventModifier = /\b(event|party|outing|trip|celebration|gathering|tour|night|game|meeting|dinner|gala)\b/i.test(lowerText);
-  if (hasEventWord && containsEventModifier) {
-    // Input contains an event keyword + event modifier = definitely an event, not a name
+  if (hasEventWord && containsEventModifier && isShortEnoughForEvent) {
     const formatted = trimmed.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
     return { type: 'event_type', value: formatted, confidence: 0.92, original: trimmed };
   }
