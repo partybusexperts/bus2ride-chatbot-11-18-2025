@@ -115,7 +115,7 @@ export function calculateDrivingDistance(straightLineDistance: number): { miles:
   return { miles: drivingMiles, minutes: drivingMinutes };
 }
 
-export function findNearestMetro(lat: number, lng: number): { metro: string; distance: number } | null {
+export function findNearestMetro(lat: number, lng: number, maxDrivingMiles: number = 75): { metro: string; distance: number; drivingMiles: number } | null {
   let nearestMetro: string | null = null;
   let nearestDistance = Infinity;
   
@@ -127,8 +127,11 @@ export function findNearestMetro(lat: number, lng: number): { metro: string; dis
     }
   }
   
-  if (nearestMetro && nearestDistance <= 100) {
-    return { metro: nearestMetro, distance: nearestDistance };
+  if (nearestMetro) {
+    const { miles: drivingMiles } = calculateDrivingDistance(nearestDistance);
+    if (drivingMiles <= maxDrivingMiles) {
+      return { metro: nearestMetro, distance: nearestDistance, drivingMiles };
+    }
   }
   
   return null;
