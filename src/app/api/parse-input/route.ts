@@ -1176,7 +1176,7 @@ const CITY_NORMALIZATION: Record<string, string> = {
   '12 south': 'Nashville', 'berry hill': 'Nashville', 'music row': 'Nashville',
   // Birmingham metro
   'tuscaloosa': 'Birmingham', 'tuscaloosa al': 'Birmingham', 'hoover': 'Birmingham',
-  'hoover al': 'Birmingham', 'vestavia hills': 'Birmingham', 'homewood': 'Birmingham',
+  'hoover al': 'Birmingham', 'vestavia hills': 'Birmingham', 'homewood al': 'Birmingham',
   'mountain brook': 'Birmingham', 'bessemer': 'Birmingham', 'alabaster': 'Birmingham',
   'pelham': 'Birmingham', 'trussville': 'Birmingham', 'gardendale': 'Birmingham',
   'helena': 'Birmingham', 'helena al': 'Birmingham', 'fultondale': 'Birmingham',
