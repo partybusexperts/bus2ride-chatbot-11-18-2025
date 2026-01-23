@@ -4012,7 +4012,7 @@ export default function CallPad() {
                   const callTime = new Date(call.startTime);
                   const timeAgo = Math.round((Date.now() - callTime.getTime()) / 60000);
                   const timeDisplay = timeAgo < 1 ? 'Just now' : timeAgo === 1 ? '1 min ago' : `${timeAgo} min ago`;
-                  const isRinging = ['Ringing', 'Proceeding', 'Setup'].includes(call.status);
+                  const isRinging = ['Ringing', 'Proceeding', 'Setup'].includes(call.status || '');
                   
                   return (
                     <button
