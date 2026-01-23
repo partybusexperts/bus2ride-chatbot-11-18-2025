@@ -1,0 +1,95 @@
+We currently show live calls using Supabase table active_ringing_calls + an SSE endpoint that polls the DB every 1 second (src/app/api/call-events/route.ts). This is slow/unreliable and causes schema cache errors (PGRST205) because PostgREST sometimes can’t see the table. We want to remove the database from the live ringing flow entirely and make the UI update instantly when a call starts ringing.
+
+Goal
+
+As soon as RingCentral sends a webhook for an inbound call in a ringing state, the UI should immediately show it in the “Select Caller” modal (the component that renders the 📞 Select Caller title). No DB required.
+
+Requirements
+
+Do NOT use Supabase for live ringing calls (no reads/writes to active_ringing_calls). We may keep DB for history later, but live ringing must not depend on DB.
+
+Implement a true real-time flow:
+
+RingCentral webhook handler receives events
+
+It broadcasts events to connected browsers instantly
+
+Use Server-Sent Events (SSE) as the realtime transport (EventSource in browser).
+
+Create an in-memory event bus on the server:
+
+A set of connected SSE writers/clients
+
+A function broadcastCallEvent(payload) that pushes to all clients
+
+Replace/Rewrite src/app/api/call-events/route.ts so it becomes a true SSE stream that:
+
+registers the client in the bus
+
+sends a connected event immediately
+
+sends a : ping keep-alive every 15s
+
+cleans up on disconnect
+
+DOES NOT poll Supabase
+
+Update the RingCentral webhook route (src/app/api/ringcentral/webhook/route.ts) so that when a webhook arrives:
+
+handle Validation-Token handshake (echo header back)
+
+verify the webhook validation token if configured
+
+parse inbound party information and status
+
+if status is “ringing-like” (Proceeding or Setup or Ringing), broadcast:
+
+{ "type": "incoming_call", "call": { ... } }
+
+
+if status indicates call ended/disconnected, broadcast:
+
+{ "type": "call_removed", "id": "<call-id>" }
+
+
+The broadcasted call object must match what the UI expects in recentCalls:
+
+id (string unique, e.g. ${telephonySessionId}:${partyId})
+
+fromPhoneNumber
+
+fromPhoneNumberFormatted
+
+fromName
+
+toPhoneNumber
+
+toPhoneNumberFormatted
+
+status (use RingCentral status code)
+
+startTime
+
+Update the UI:
+
+When showCallPicker becomes true, open EventSource('/api/call-events')
+
+On message:
+
+if type === 'incoming_call', upsert into recentCalls state (put on top, de-dupe by id)
+
+if type === 'call_removed', remove from recentCalls
+
+Close EventSource when modal closes/unmounts
+
+Fix ringing highlight logic:
+currently it checks call.status === 'Ringing'. Change to:
+['Ringing','Proceeding','Setup'].includes(call.status)
+
+Remove or disable the old DB polling logic in call-events route and remove any Supabase usage in the live SSE pipeline.
+
+Make sure the SSE route path works with Next.js App Router:
+
+/api/call-events should respond (no more 404)
+
+Keep code TypeScript-safe and production friendly for Replit.
