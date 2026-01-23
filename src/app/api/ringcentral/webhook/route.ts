@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { callEventBus, formatPhoneNumber } from "@/lib/call-event-bus";
 
 interface TelephonySessionParty {
   id: string;
@@ -54,50 +54,38 @@ export async function POST(request: NextRequest) {
     const notification: WebhookNotification = await request.json();
     const receivedAt = Date.now();
     
-    console.log(`[${new Date().toISOString()}] Webhook received in ${Date.now() - receivedAt}ms`);
+    console.log(`[${new Date().toISOString()}] Webhook received`);
 
     if (notification.body) {
       const body = notification.body;
-      const sessionId = body.telephonySessionId || body.sessionId || "";
+      const telephonySessionId = body.telephonySessionId || body.sessionId || "";
       
       if (body.parties && body.parties.length > 0) {
         for (const party of body.parties) {
           if (party.direction === "Inbound") {
             const status = party.status?.code || "Unknown";
+            const callId = `${telephonySessionId}:${party.id}`;
             
             if (RINGING_STATES.includes(status)) {
-              const { error } = await supabase
-                .from('active_ringing_calls')
-                .upsert({
-                  id: sessionId,
-                  session_id: sessionId,
-                  telephony_session_id: body.telephonySessionId,
-                  status: 'Ringing',
-                  direction: party.direction,
-                  from_phone: party.from?.phoneNumber,
-                  from_name: party.from?.name,
-                  to_phone: party.to?.phoneNumber,
-                  to_name: party.to?.name,
-                  start_time: body.creationTime || notification.timestamp,
-                  updated_at: new Date().toISOString(),
-                }, { onConflict: 'id' });
+              const fromPhone = party.from?.phoneNumber || '';
+              const toPhone = party.to?.phoneNumber || '';
               
-              if (error) {
-                console.error('[RINGING] DB insert error:', error);
-              } else {
-                console.log(`[RINGING] Inbound call from ${party.from?.phoneNumber || 'Unknown'} - Session: ${sessionId}`);
-              }
+              console.log(`[RINGING] Inbound call from ${fromPhone || 'Unknown'} - Session: ${telephonySessionId}`);
+              
+              callEventBus.broadcastIncomingCall({
+                id: callId,
+                fromPhoneNumber: fromPhone,
+                fromPhoneNumberFormatted: formatPhoneNumber(fromPhone) || 'Unknown',
+                fromName: party.from?.name || '',
+                toPhoneNumber: toPhone,
+                toPhoneNumberFormatted: formatPhoneNumber(toPhone) || 'Unknown',
+                status: status,
+                startTime: body.creationTime || notification.timestamp,
+              });
+              
             } else if (ENDED_STATES.includes(status)) {
-              const { error } = await supabase
-                .from('active_ringing_calls')
-                .delete()
-                .eq('id', sessionId);
-              
-              if (error) {
-                console.error('[ENDED] DB delete error:', error);
-              } else {
-                console.log(`[ENDED] Call ended: ${sessionId} - Status: ${status}`);
-              }
+              console.log(`[ENDED] Call ended: ${callId} - Status: ${status}`);
+              callEventBus.broadcastCallRemoved(callId);
             }
           }
         }
@@ -116,5 +104,6 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     status: "Webhook endpoint active",
     timestamp: new Date().toISOString(),
+    connectedClients: callEventBus.getClientCount(),
   });
 }

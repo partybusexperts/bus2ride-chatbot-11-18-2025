@@ -991,49 +991,34 @@ export default function CallPad() {
     const connect = () => {
       if (closed) return;
       
-      eventSource = new EventSource('/api/ringcentral/call-events');
+      eventSource = new EventSource('/api/call-events');
       
       eventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
           
-          if (data.type === 'auth_required') {
-            setCallsError('Not connected to RingCentral. Please connect first.');
+          if (data.type === 'connected') {
+            console.log('[SSE] Connected to call events stream');
             setLoadingCalls(false);
-          } else if (data.type === 'init') {
-            setRecentCalls(prev => {
-              const merged = [...prev];
-              for (const call of (data.calls || [])) {
-                if (!merged.some(c => c.sessionId === call.sessionId)) {
-                  merged.push(call);
-                }
-              }
-              return sortCalls(merged).slice(0, 15);
-            });
-            if (recentCalls.length === 0) {
-              setCallsError('No recent inbound calls in the last 15 minutes.');
-            }
-          } else if (data.type === 'call_update') {
+          } else if (data.type === 'incoming_call') {
             const call = data.call;
-            if (call.status === 'Removed') {
-              setRecentCalls(prev => prev.filter(c => c.sessionId !== call.sessionId && c.id !== call.id));
-            } else if (call.status === 'Ringing') {
-              setRecentCalls(prev => {
-                const existing = prev.findIndex(c => c.sessionId === call.sessionId || c.id === call.id);
-                let updated: typeof prev;
-                if (existing >= 0) {
-                  updated = [...prev];
-                  updated[existing] = { ...updated[existing], ...call };
-                } else {
-                  updated = [call, ...prev].slice(0, 15);
-                }
-                return sortCalls(updated);
-              });
-              setCallsError(null);
-            }
+            console.log('[SSE] Incoming call:', call.fromPhoneNumberFormatted);
+            setRecentCalls(prev => {
+              const existing = prev.findIndex(c => c.id === call.id);
+              let updated: typeof prev;
+              if (existing >= 0) {
+                updated = [...prev];
+                updated[existing] = { ...updated[existing], ...call };
+              } else {
+                updated = [call, ...prev].slice(0, 15);
+              }
+              return sortCalls(updated);
+            });
+            setCallsError(null);
           } else if (data.type === 'call_removed') {
             const removedId = data.id;
-            setRecentCalls(prev => prev.filter(c => c.id !== removedId && c.sessionId !== removedId));
+            console.log('[SSE] Call removed:', removedId);
+            setRecentCalls(prev => prev.filter(c => c.id !== removedId));
           }
         } catch (e) {
           console.error('SSE parse error:', e);
@@ -4027,7 +4012,7 @@ export default function CallPad() {
                   const callTime = new Date(call.startTime);
                   const timeAgo = Math.round((Date.now() - callTime.getTime()) / 60000);
                   const timeDisplay = timeAgo < 1 ? 'Just now' : timeAgo === 1 ? '1 min ago' : `${timeAgo} min ago`;
-                  const isRinging = call.status === 'Ringing';
+                  const isRinging = ['Ringing', 'Proceeding', 'Setup'].includes(call.status);
                   
                   return (
                     <button
