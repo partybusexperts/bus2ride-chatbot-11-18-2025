@@ -43,9 +43,12 @@ function generateEmailHtml(data: QuoteRequest): string {
   const firstName = data.customerName?.split(' ')[0] || 'there';
   const agentFirstName = data.agentName?.split(' ')[0] || 'Your Agent';
 
-  const vehicleBlocks = data.vehicles.map(v => `
+  const vehicleBlocks = data.vehicles.map((v, index) => {
+    const vehicleDeposit = Math.round(v.price * 0.5);
+    const optionLabel = data.vehicles.length > 1 ? `Option ${index + 1}: ` : '';
+    return `
     <div style="background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%); padding: 25px; border-radius: 12px; margin: 20px 0; border-left: 4px solid #ffd700;">
-      <h3 style="color: #ffd700; margin: 0 0 15px 0; font-size: 20px;">🚗 Your Ride: ${v.name}</h3>
+      <h3 style="color: #ffd700; margin: 0 0 15px 0; font-size: 20px;">🚗 ${optionLabel}${v.name}</h3>
       <div style="color: #e0e0e0; line-height: 1.8; font-size: 15px;">
         <p style="margin: 8px 0;">✨ Luxury wrap-around leather seating for a VIP feel</p>
         <p style="margin: 8px 0;">🎶 Surround sound system (Bluetooth/AUX for your playlist)</p>
@@ -57,9 +60,11 @@ function generateEmailHtml(data: QuoteRequest): string {
         <p style="margin: 0 0 5px 0; font-size: 14px; font-weight: 600;">💰 ${v.hours}-HOUR QUOTE</p>
         <p style="margin: 0; font-size: 24px; font-weight: bold;">🤑 ${formatCurrency(v.price)}</p>
         <p style="margin: 5px 0 0 0; font-size: 12px;">(includes tax & fuel—no surprises! ✨)</p>
+        <p style="margin: 10px 0 0 0; font-size: 13px; font-weight: 600;">50% deposit to reserve: ${formatCurrency(vehicleDeposit)}</p>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   const minHours = Math.min(...data.vehicles.map(v => v.hours));
 
@@ -82,21 +87,21 @@ function generateEmailHtml(data: QuoteRequest): string {
         ${data.tripDate ? `<br><br>🚨 <strong>Availability for ${data.tripDate} is limited.</strong> It's a popular date so I wanted to send you the details right away!` : ''}
       </p>
       
+      ${data.vehicles.length > 1 ? `
+      <p style="color: #333; line-height: 1.7; font-size: 15px; background: #e8f4fd; padding: 12px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+        <strong>Here are ${data.vehicles.length} vehicle options for you to choose from:</strong>
+      </p>
+      ` : ''}
+      
       ${vehicleBlocks}
       
       <p style="color: #666; font-size: 14px; margin: 20px 0;">
         ⏳ Our rental minimum starts at ${minHours} hours
       </p>
       
-      ${data.vehicles.length > 1 ? `
-      <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
-        <p style="margin: 0; font-weight: 600; color: #333;">📊 Total for all vehicles: <span style="color: #28a745; font-size: 18px;">${formatCurrency(totalPrice)}</span></p>
-      </div>
-      ` : ''}
-      
       <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 25px; border-radius: 12px; text-align: center; margin: 25px 0;">
-        <p style="color: #fff; margin: 0 0 5px 0; font-size: 16px; font-weight: 600;">🔒 Lock In Your Date</p>
-        <p style="color: #fff; margin: 0 0 15px 0; font-size: 14px;">50% deposit: <strong>${formatCurrency(deposit)}</strong></p>
+        <p style="color: #fff; margin: 0 0 5px 0; font-size: 16px; font-weight: 600;">🔒 Ready to Lock In Your Date?</p>
+        <p style="color: #fff; margin: 0 0 15px 0; font-size: 14px;">${data.vehicles.length > 1 ? 'Let us know which option works best for you!' : `50% deposit: <strong>${formatCurrency(deposit)}</strong>`}</p>
         <a href="tel:7204145465" style="display: inline-block; background: #fff; color: #28a745; padding: 14px 35px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 16px;">📞 Call 720-414-5465</a>
       </div>
       
