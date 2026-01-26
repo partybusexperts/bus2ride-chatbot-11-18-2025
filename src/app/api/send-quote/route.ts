@@ -39,18 +39,29 @@ function formatCurrency(amount: number): string {
 
 function generateEmailHtml(data: QuoteRequest): string {
   const totalPrice = data.vehicles.reduce((sum, v) => sum + v.price, 0);
-  const deposit = Math.round(totalPrice * 0.25);
+  const deposit = Math.round(totalPrice * 0.5);
+  const firstName = data.customerName?.split(' ')[0] || 'there';
+  const agentFirstName = data.agentName?.split(' ')[0] || 'Your Agent';
 
-  const vehicleRows = data.vehicles.map(v => `
-    <tr>
-      <td style="padding: 12px; border-bottom: 1px solid #e0e0e0;">
-        <strong>${v.name}</strong><br>
-        <span style="color: #666; font-size: 14px;">${v.capacity} passengers</span>
-      </td>
-      <td style="padding: 12px; border-bottom: 1px solid #e0e0e0; text-align: center;">${v.hours} hrs</td>
-      <td style="padding: 12px; border-bottom: 1px solid #e0e0e0; text-align: right; font-weight: bold;">${formatCurrency(v.price)}</td>
-    </tr>
+  const vehicleBlocks = data.vehicles.map(v => `
+    <div style="background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%); padding: 25px; border-radius: 12px; margin: 20px 0; border-left: 4px solid #ffd700;">
+      <h3 style="color: #ffd700; margin: 0 0 15px 0; font-size: 20px;">🚗 Your Ride: ${v.name}</h3>
+      <div style="color: #e0e0e0; line-height: 1.8; font-size: 15px;">
+        <p style="margin: 8px 0;">✨ Luxury wrap-around leather seating for a VIP feel</p>
+        <p style="margin: 8px 0;">🎶 Surround sound system (Bluetooth/AUX for your playlist)</p>
+        <p style="margin: 8px 0;">💡 LED/Laser light show to set the mood</p>
+        <p style="margin: 8px 0;">🍸 Wet bar stocked with ice & bottled water</p>
+        <p style="margin: 8px 0;">🛑 Unlimited stops—we go where the party goes!</p>
+      </div>
+      <div style="background: #ffd700; color: #1a1a2e; padding: 15px; border-radius: 8px; margin-top: 20px; text-align: center;">
+        <p style="margin: 0 0 5px 0; font-size: 14px; font-weight: 600;">💰 ${v.hours}-HOUR QUOTE</p>
+        <p style="margin: 0; font-size: 24px; font-weight: bold;">🤑 ${formatCurrency(v.price)}</p>
+        <p style="margin: 5px 0 0 0; font-size: 12px;">(includes tax & fuel—no surprises! ✨)</p>
+      </div>
+    </div>
   `).join('');
+
+  const minHours = Math.min(...data.vehicles.map(v => v.hours));
 
   return `
 <!DOCTYPE html>
@@ -59,70 +70,57 @@ function generateEmailHtml(data: QuoteRequest): string {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f0f0;">
   <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-      <h1 style="color: #fff; margin: 0; font-size: 28px;">Your Vehicle Quote</h1>
-      <p style="color: #a0a0a0; margin: 10px 0 0 0;">Limo Bus Reservations</p>
-    </div>
     
-    <div style="background: #fff; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-      ${data.customerName ? `<p style="font-size: 18px; margin-bottom: 20px;">Hi <strong>${data.customerName}</strong>,</p>` : ''}
+    <div style="background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
       
-      <p style="color: #333; line-height: 1.6;">Thank you for your interest! Below is your personalized quote for your upcoming trip.</p>
+      <p style="font-size: 18px; color: #333; margin: 0 0 20px 0;">Hi ${firstName},</p>
       
-      ${(data.tripDate || data.eventType || data.pickupLocation) ? `
-      <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">Trip Details</h3>
-        ${data.tripDate ? `<p style="margin: 5px 0; color: #555;"><strong>Date:</strong> ${data.tripDate}${data.tripTime ? ` at ${data.tripTime}` : ''}</p>` : ''}
-        ${data.eventType ? `<p style="margin: 5px 0; color: #555;"><strong>Event:</strong> ${data.eventType}</p>` : ''}
-        ${data.passengers ? `<p style="margin: 5px 0; color: #555;"><strong>Passengers:</strong> ${data.passengers}</p>` : ''}
-        ${data.pickupLocation ? `<p style="margin: 5px 0; color: #555;"><strong>Pickup:</strong> ${data.pickupLocation}</p>` : ''}
-        ${data.dropoffLocation ? `<p style="margin: 5px 0; color: #555;"><strong>Dropoff:</strong> ${data.dropoffLocation}</p>` : ''}
+      <p style="color: #333; line-height: 1.7; font-size: 15px;">
+        Thanks for reaching out! 🎉
+        ${data.tripDate ? `<br><br>🚨 <strong>Availability for ${data.tripDate} is limited.</strong> It's a popular date so I wanted to send you the details right away!` : ''}
+      </p>
+      
+      ${vehicleBlocks}
+      
+      <p style="color: #666; font-size: 14px; margin: 20px 0;">
+        ⏳ Our rental minimum starts at ${minHours} hours
+      </p>
+      
+      ${data.vehicles.length > 1 ? `
+      <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 0; font-weight: 600; color: #333;">📊 Total for all vehicles: <span style="color: #28a745; font-size: 18px;">${formatCurrency(totalPrice)}</span></p>
       </div>
       ` : ''}
       
-      <h3 style="color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px;">Quoted Vehicles</h3>
-      
-      <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-        <thead>
-          <tr style="background: #f8f9fa;">
-            <th style="padding: 12px; text-align: left; font-weight: 600;">Vehicle</th>
-            <th style="padding: 12px; text-align: center; font-weight: 600;">Duration</th>
-            <th style="padding: 12px; text-align: right; font-weight: 600;">Price</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${vehicleRows}
-        </tbody>
-        <tfoot>
-          <tr style="background: #f8f9fa;">
-            <td colspan="2" style="padding: 12px; font-weight: bold;">Total</td>
-            <td style="padding: 12px; text-align: right; font-weight: bold; font-size: 18px; color: #007bff;">${formatCurrency(totalPrice)}</td>
-          </tr>
-          <tr>
-            <td colspan="2" style="padding: 12px; color: #666;">Deposit to Reserve (25%)</td>
-            <td style="padding: 12px; text-align: right; font-weight: bold; color: #28a745;">${formatCurrency(deposit)}</td>
-          </tr>
-        </tfoot>
-      </table>
-      
-      <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 20px; border-radius: 8px; text-align: center; margin: 30px 0;">
-        <p style="color: #fff; margin: 0 0 10px 0; font-size: 16px;">Ready to book?</p>
-        <a href="tel:8666050218" style="display: inline-block; background: #fff; color: #28a745; padding: 12px 30px; border-radius: 25px; text-decoration: none; font-weight: bold; font-size: 16px;">Call 866-605-0218</a>
+      <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 25px; border-radius: 12px; text-align: center; margin: 25px 0;">
+        <p style="color: #fff; margin: 0 0 5px 0; font-size: 16px; font-weight: 600;">🔒 Lock In Your Date</p>
+        <p style="color: #fff; margin: 0 0 15px 0; font-size: 14px;">50% deposit: <strong>${formatCurrency(deposit)}</strong></p>
+        <a href="tel:8666050218" style="display: inline-block; background: #fff; color: #28a745; padding: 14px 35px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 16px;">📞 Call 866-605-0218</a>
       </div>
       
-      <p style="color: #666; font-size: 14px; line-height: 1.6;">
-        This quote is valid for 7 days. Prices may vary based on availability and date changes. 
-        Gratuity for your driver is not included.
+      <p style="color: #333; line-height: 1.7; font-size: 15px;">
+        We're filling up fast for your date, so let me know ASAP if you'd like to lock this in! 💸
       </p>
       
-      ${data.agentName ? `<p style="color: #333; margin-top: 20px;">Best regards,<br><strong>${data.agentName}</strong><br>Limo Bus Reservations</p>` : ''}
+      <p style="color: #333; line-height: 1.7; font-size: 15px;">
+        If you have any questions or need to adjust the details, I'm here to help! Let's make sure your event goes off without a hitch! 🎉
+      </p>
+      
+      <p style="color: #333; margin-top: 30px; font-size: 15px;">
+        Thanks,<br><br>
+        <strong style="font-size: 16px;">${agentFirstName}</strong><br>
+        <span style="color: #666;">Limo Bus Reservations</span>
+      </p>
+      
     </div>
     
     <div style="text-align: center; padding: 20px; color: #999; font-size: 12px;">
-      <p>Limo Bus Reservations | 866-605-0218 | info@limobusreservations.com</p>
+      <p style="margin: 0;">Limo Bus Reservations | 866-605-0218</p>
+      <p style="margin: 5px 0 0 0;">info@limobusreservations.com</p>
     </div>
+    
   </div>
 </body>
 </html>

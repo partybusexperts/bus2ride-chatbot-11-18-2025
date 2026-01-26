@@ -2233,52 +2233,62 @@ export default function CallPad() {
                 padding: '12px 16px',
                 borderRadius: '8px',
                 border: 'none',
-                cursor: quotedVehicles.length > 0 && confirmedData.email ? 'pointer' : 'not-allowed',
+                cursor: quotedVehicles.length > 0 && confirmedData.email && confirmedData.agentName ? 'pointer' : 'not-allowed',
                 fontWeight: 600,
                 fontSize: '14px',
-                background: quotedVehicles.length > 0 && confirmedData.email ? '#3b82f6' : '#9ca3af',
+                background: quotedVehicles.length > 0 && confirmedData.email && confirmedData.agentName ? '#3b82f6' : '#9ca3af',
                 color: '#fff',
-                opacity: quotedVehicles.length > 0 && confirmedData.email ? 1 : 0.7,
+                opacity: quotedVehicles.length > 0 && confirmedData.email && confirmedData.agentName ? 1 : 0.7,
               }}
               onClick={async () => {
-                if (quotedVehicles.length > 0 && confirmedData.email) {
-                  setSaveMessage('Sending quote...');
-                  try {
-                    const response = await fetch('/api/send-quote', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        customerEmail: confirmedData.email,
-                        customerName: confirmedData.callerName,
-                        customerPhone: confirmedData.phone,
-                        tripDate: confirmedData.date,
-                        tripTime: confirmedData.pickupTime,
-                        pickupLocation: confirmedData.pickupAddress || confirmedData.cityOrZip,
-                        dropoffLocation: confirmedData.dropoffAddress || confirmedData.destination,
-                        eventType: confirmedData.eventType,
-                        passengers: confirmedData.passengers ? parseInt(confirmedData.passengers) : undefined,
-                        vehicles: quotedVehicles.map(v => ({
-                          name: v.name,
-                          capacity: parseInt(v.capacity || '0') || 0,
-                          price: v.price,
-                          hours: v.hours || parseInt(confirmedData.hours) || 4,
-                        })),
-                        agentName: confirmedData.agentName,
-                      }),
-                    });
-                    const result = await response.json();
-                    if (result.success) {
-                      setSaveMessage(`Quote sent to ${confirmedData.email}`);
-                    } else {
-                      setSaveMessage(`Error: ${result.error || 'Failed to send'}`);
-                    }
-                  } catch (error) {
-                    setSaveMessage('Error: Failed to send quote');
-                  }
-                } else if (quotedVehicles.length === 0) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                const isValidEmail = confirmedData.email && emailRegex.test(confirmedData.email);
+                
+                if (!confirmedData.agentName) {
+                  alert('Please select an agent first.');
+                  return;
+                }
+                if (quotedVehicles.length === 0) {
                   alert('Please quote at least one vehicle first.');
-                } else {
-                  alert('Please add customer email address.');
+                  return;
+                }
+                if (!isValidEmail) {
+                  alert('Please enter a valid customer email address.');
+                  return;
+                }
+                
+                setSaveMessage('Sending quote...');
+                try {
+                  const response = await fetch('/api/send-quote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      customerEmail: confirmedData.email,
+                      customerName: confirmedData.callerName,
+                      customerPhone: confirmedData.phone,
+                      tripDate: confirmedData.date,
+                      tripTime: confirmedData.pickupTime,
+                      pickupLocation: confirmedData.pickupAddress || confirmedData.cityOrZip,
+                      dropoffLocation: confirmedData.dropoffAddress || confirmedData.destination,
+                      eventType: confirmedData.eventType,
+                      passengers: confirmedData.passengers ? parseInt(confirmedData.passengers) : undefined,
+                      vehicles: quotedVehicles.map(v => ({
+                        name: v.name,
+                        capacity: parseInt(v.capacity || '0') || 0,
+                        price: v.price,
+                        hours: v.hours || parseInt(confirmedData.hours) || 4,
+                      })),
+                      agentName: confirmedData.agentName,
+                    }),
+                  });
+                  const result = await response.json();
+                  if (result.success) {
+                    setSaveMessage(`✅ Quote sent to ${confirmedData.email}`);
+                  } else {
+                    setSaveMessage(`Error: ${result.error || 'Failed to send'}`);
+                  }
+                } catch (error) {
+                  setSaveMessage('Error: Failed to send quote');
                 }
               }}
             >
