@@ -97,7 +97,7 @@ function generateEmailHtml(data: QuoteRequest): string {
       <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 25px; border-radius: 12px; text-align: center; margin: 25px 0;">
         <p style="color: #fff; margin: 0 0 5px 0; font-size: 16px; font-weight: 600;">🔒 Lock In Your Date</p>
         <p style="color: #fff; margin: 0 0 15px 0; font-size: 14px;">50% deposit: <strong>${formatCurrency(deposit)}</strong></p>
-        <a href="tel:8666050218" style="display: inline-block; background: #fff; color: #28a745; padding: 14px 35px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 16px;">📞 Call 866-605-0218</a>
+        <a href="tel:7204145465" style="display: inline-block; background: #fff; color: #28a745; padding: 14px 35px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 16px;">📞 Call 720-414-5465</a>
       </div>
       
       <p style="color: #333; line-height: 1.7; font-size: 15px;">
@@ -117,7 +117,7 @@ function generateEmailHtml(data: QuoteRequest): string {
     </div>
     
     <div style="text-align: center; padding: 20px; color: #999; font-size: 12px;">
-      <p style="margin: 0;">Limo Bus Reservations | 866-605-0218</p>
+      <p style="margin: 0;">Limo Bus Reservations | 720-414-5465</p>
       <p style="margin: 5px 0 0 0;">info@limobusreservations.com</p>
     </div>
     
