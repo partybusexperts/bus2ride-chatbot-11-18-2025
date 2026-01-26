@@ -2240,9 +2240,41 @@ export default function CallPad() {
                 color: '#fff',
                 opacity: quotedVehicles.length > 0 && confirmedData.email ? 1 : 0.7,
               }}
-              onClick={() => {
+              onClick={async () => {
                 if (quotedVehicles.length > 0 && confirmedData.email) {
-                  alert('Send Quote feature coming soon! Will integrate with Zoho to email quote to customer.');
+                  setSaveMessage('Sending quote...');
+                  try {
+                    const response = await fetch('/api/send-quote', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        customerEmail: confirmedData.email,
+                        customerName: confirmedData.callerName,
+                        customerPhone: confirmedData.phone,
+                        tripDate: confirmedData.date,
+                        tripTime: confirmedData.pickupTime,
+                        pickupLocation: confirmedData.pickupAddress || confirmedData.cityOrZip,
+                        dropoffLocation: confirmedData.dropoffAddress || confirmedData.destination,
+                        eventType: confirmedData.eventType,
+                        passengers: confirmedData.passengers ? parseInt(confirmedData.passengers) : undefined,
+                        vehicles: quotedVehicles.map(v => ({
+                          name: v.name,
+                          capacity: parseInt(v.capacity || '0') || 0,
+                          price: v.price,
+                          hours: v.hours || parseInt(confirmedData.hours) || 4,
+                        })),
+                        agentName: confirmedData.agentName,
+                      }),
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                      setSaveMessage(`Quote sent to ${confirmedData.email}`);
+                    } else {
+                      setSaveMessage(`Error: ${result.error || 'Failed to send'}`);
+                    }
+                  } catch (error) {
+                    setSaveMessage('Error: Failed to send quote');
+                  }
                 } else if (quotedVehicles.length === 0) {
                   alert('Please quote at least one vehicle first.');
                 } else {
