@@ -43,9 +43,22 @@ function generateEmailHtml(data: QuoteRequest): string {
   const firstName = data.customerName?.split(' ')[0] || 'there';
   const agentFirstName = data.agentName?.split(' ')[0] || 'Your Agent';
 
+  let isWithin7Days = false;
+  if (data.tripDate) {
+    const eventDate = new Date(data.tripDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffTime = eventDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    isWithin7Days = diffDays <= 7 && diffDays >= 0;
+  }
+
   const vehicleBlocks = data.vehicles.map((v, index) => {
     const vehicleDeposit = Math.round(v.price * 0.5);
     const optionLabel = data.vehicles.length > 1 ? `Option ${index + 1}: ` : '';
+    const paymentText = isWithin7Days 
+      ? `Full payment due: ${formatCurrency(v.price)}`
+      : `50% deposit to reserve: ${formatCurrency(vehicleDeposit)}`;
     return `
     <div style="background: linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%); padding: 25px; border-radius: 12px; margin: 20px 0; border-left: 4px solid #ffd700;">
       <h3 style="color: #ffd700; margin: 0 0 15px 0; font-size: 20px;">🚗 ${optionLabel}${v.name}</h3>
@@ -60,7 +73,7 @@ function generateEmailHtml(data: QuoteRequest): string {
         <p style="margin: 0 0 5px 0; font-size: 14px; font-weight: 600;">💰 ${v.hours}-HOUR QUOTE</p>
         <p style="margin: 0; font-size: 24px; font-weight: bold;">🤑 ${formatCurrency(v.price)}</p>
         <p style="margin: 5px 0 0 0; font-size: 12px;">(includes tax & fuel—no surprises! ✨)</p>
-        <p style="margin: 10px 0 0 0; font-size: 13px; font-weight: 600;">50% deposit to reserve: ${formatCurrency(vehicleDeposit)}</p>
+        <p style="margin: 10px 0 0 0; font-size: 13px; font-weight: 600;">${paymentText}</p>
       </div>
     </div>
   `;
@@ -99,14 +112,32 @@ function generateEmailHtml(data: QuoteRequest): string {
         ⏳ Our rental minimum starts at ${minHours} hours
       </p>
       
+      ${data.tripDate ? `
+      <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #6366f1;">
+        <p style="margin: 0; color: #333; font-size: 15px;">📅 <strong>Event Date:</strong> ${data.tripDate}${data.tripTime ? ` at ${data.tripTime}` : ''}</p>
+      </div>
+      ` : ''}
+      
       <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 25px; border-radius: 12px; text-align: center; margin: 25px 0;">
         <p style="color: #fff; margin: 0 0 5px 0; font-size: 16px; font-weight: 600;">🔒 Ready to Lock In Your Date?</p>
-        <p style="color: #fff; margin: 0 0 15px 0; font-size: 14px;">${data.vehicles.length > 1 ? 'Let us know which option works best for you!' : `50% deposit: <strong>${formatCurrency(deposit)}</strong>`}</p>
+        <p style="color: #fff; margin: 0 0 15px 0; font-size: 14px;">${data.vehicles.length > 1 
+          ? 'Let us know which option works best for you!' 
+          : (isWithin7Days ? `Full payment due: <strong>${formatCurrency(totalPrice)}</strong>` : `50% deposit: <strong>${formatCurrency(deposit)}</strong>`)}</p>
         <a href="tel:7204145465" style="display: inline-block; background: #fff; color: #28a745; padding: 14px 35px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 16px;">📞 Call 720-414-5465</a>
       </div>
       
+      ${isWithin7Days ? `
+      <p style="color: #dc2626; line-height: 1.7; font-size: 14px; background: #fef2f2; padding: 12px; border-radius: 8px; border-left: 4px solid #dc2626;">
+        ⚡ <strong>Note:</strong> Since your event is within 7 days, full payment is required to confirm your reservation.
+      </p>
+      ` : ''}
+      
       <p style="color: #333; line-height: 1.7; font-size: 15px;">
         We're filling up fast for your date, so let me know ASAP if you'd like to lock this in! 💸
+      </p>
+      
+      <p style="color: #333; line-height: 1.7; font-size: 15px;">
+        📝 Once you're ready to book, I'll send over the paperwork for you to sign and we'll get everything confirmed!
       </p>
       
       <p style="color: #333; line-height: 1.7; font-size: 15px;">
