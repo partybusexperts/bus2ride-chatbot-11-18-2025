@@ -141,10 +141,11 @@ const ZIP_TO_METRO: Record<string, string> = {
   // Seattle WA (980-981, 983-984, 985-986)
   '980': 'Seattle', '981': 'Seattle', '983': 'Seattle', '984': 'Seattle',
   '985': 'Seattle', '986': 'Seattle',
-  // Spokane WA (990-994, 988-989, 992, 994)
+  // Spokane WA (988-994)
   '988': 'Spokane', '989': 'Spokane', '990': 'Spokane', '991': 'Spokane',
-  '992': 'Spokane', '993': 'Spokane', '994': 'Spokane', '995': 'Spokane', '996': 'Spokane',
-  '997': 'Spokane', '998': 'Spokane', '999': 'Spokane',
+  '992': 'Spokane', '993': 'Spokane', '994': 'Spokane',
+  // Anchorage AK (995-999)
+  '995': 'Anchorage', '996': 'Anchorage', '997': 'Anchorage', '998': 'Anchorage', '999': 'Anchorage',
   // Washington DC and Northern Virginia (200-205, 209, 220-224)
   // Use "Washington" to match database format "Washington, DC"
   '200': 'Washington', '201': 'Washington', '202': 'Washington',

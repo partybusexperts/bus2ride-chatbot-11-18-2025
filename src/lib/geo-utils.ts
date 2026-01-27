@@ -57,6 +57,7 @@ export const METRO_COORDS: Record<string, { lat: number; lng: number }> = {
   'Napa': { lat: 38.2975, lng: -122.2869 },
   'Santa Rosa': { lat: 38.4404, lng: -122.7141 },
   'Spokane': { lat: 47.6588, lng: -117.4260 },
+  'Anchorage': { lat: 61.2181, lng: -149.9003 },
   'Grand Rapids': { lat: 42.9634, lng: -85.6681 },
   'Providence': { lat: 41.8240, lng: -71.4128 },
   'Santa Fe': { lat: 35.6870, lng: -105.9378 },
