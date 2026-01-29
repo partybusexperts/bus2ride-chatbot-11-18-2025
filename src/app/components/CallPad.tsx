@@ -55,7 +55,8 @@ const AGENTS = [
   { id: 'agent3', name: 'Camille' },
   { id: 'agent4', name: 'Shiela' },
   { id: 'agent5', name: 'Henrietta' },
-  { id: 'agent6', name: 'Other' },
+  { id: 'agent6', name: 'Mallows' },
+  { id: 'agent7', name: 'Other' },
 ];
 
 const TYPE_LABELS: Record<DetectedType, string> = {
