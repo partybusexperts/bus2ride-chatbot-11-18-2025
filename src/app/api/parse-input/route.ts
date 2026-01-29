@@ -900,8 +900,11 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'ontario ca': 'Los Angeles', 'rancho cucamonga': 'Los Angeles', 'pomona': 'Los Angeles', 
   'fullerton': 'Los Angeles', 'pasadena ca': 'Los Angeles', 'burbank': 'Los Angeles', 
   'torrance': 'Los Angeles', 'costa mesa': 'Los Angeles', 'newport beach': 'Los Angeles',
-  'laguna beach': 'Los Angeles', 'san clemente': 'Los Angeles', 'carlsbad': 'Los Angeles',
-  'oceanside': 'Los Angeles', 'escondido': 'Los Angeles', 'temecula': 'Los Angeles',
+  'laguna beach': 'Los Angeles', 'san clemente': 'San Diego',
+  // San Diego North County & Temecula Valley
+  'carlsbad': 'San Diego', 'oceanside': 'San Diego', 'escondido': 'San Diego', 
+  'temecula': 'San Diego', 'murrieta': 'San Diego', 'temecula ca': 'San Diego',
+  'murrieta ca': 'San Diego', 'wine country ca': 'San Diego',
   'riverside': 'Los Angeles', 'riverside ca': 'Los Angeles', 'corona': 'Los Angeles',
   'fontana': 'Los Angeles', 'moreno valley': 'Los Angeles', 'san bernardino': 'Los Angeles',
   // San Francisco Bay Area (excluding San Jose and Napa which have own rates)
@@ -1407,7 +1410,9 @@ const CITY_TRAVEL_TIMES: Record<string, number> = {
   'glendale ca': 15, 'pasadena ca': 20, 'burbank': 15, 'torrance': 25,
   'huntington beach': 45, 'costa mesa': 45, 'newport beach': 50,
   'ontario ca': 45, 'rancho cucamonga': 50, 'riverside': 60, 'riverside ca': 60,
-  'temecula': 90, 'palm desert': 120, 'san bernardino': 65,
+  'palm desert': 120, 'san bernardino': 65,
+  // San Diego suburbs (temecula/murrieta now map to SD)
+  'temecula': 55, 'murrieta': 50, 'oceanside': 35, 'carlsbad': 30, 'escondido': 30,
   // San Francisco suburbs
   'oakland': 20, 'fremont': 40, 'berkeley': 20, 'hayward': 35,
   'concord': 35, 'walnut creek': 30, 'pleasanton': 45, 'livermore': 50,
