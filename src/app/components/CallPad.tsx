@@ -244,6 +244,7 @@ export default function CallPad() {
   
   const [sortBy, setSortBy] = useState<'price_low' | 'price_high' | 'capacity_high' | 'capacity_low'>('price_low');
   const [rateHours, setRateHours] = useState<number>(4); // Default to 4 hours
+  const [ratePriceType, setRatePriceType] = useState<'standard' | 'prom' | 'before5pm'>('standard');
   const [vehicleFilters, setVehicleFilters] = useState({
     partyBus: true,
     limo: true,
@@ -1063,15 +1064,27 @@ export default function CallPad() {
     return totalQuotedPrice - depositAmount;
   }, [totalQuotedPrice, depositAmount]);
 
-  const getVehiclePrice = useCallback((v: any, hours: number): number => {
-    // Try exact hour match first (standard pricing)
-    const exactKey = `price_${hours}hr`;
+  const getVehiclePrice = useCallback((v: any, hours: number, priceType: 'standard' | 'prom' | 'before5pm' = 'standard'): number => {
+    // Determine the pricing key prefix based on price type
+    const getKey = (h: number) => {
+      if (priceType === 'prom') return `prom_price_${h}hr`;
+      if (priceType === 'before5pm') return `before5pm_${h}hr`;
+      return `price_${h}hr`;
+    };
+    
+    // Try exact hour match first
+    const exactKey = getKey(hours);
     if (v[exactKey]) {
       const numPrice = Number(v[exactKey]);
       if (!isNaN(numPrice) && numPrice > 0) return numPrice;
     }
     
-    // Try to find available standard tiers and calculate
+    // For special pricing types, don't extrapolate - return 0 if exact hour not found
+    if (priceType !== 'standard') {
+      return 0;
+    }
+    
+    // Try to find available standard tiers and calculate (only for standard pricing)
     const availableTiers = [3, 4, 5, 6, 7, 8, 9, 10].filter(h => {
       const key = `price_${h}hr`;
       return v[key] && Number(v[key]) > 0;
@@ -1152,12 +1165,13 @@ export default function CallPad() {
       
       return true;
     }).map(v => {
-      const displayPrice = getVehiclePrice(v, rateHours);
+      const displayPrice = getVehiclePrice(v, rateHours, ratePriceType);
       return {
         ...v,
         displayPrice,
         priceDisplay: displayPrice > 0 ? `$${displayPrice.toLocaleString()}` : 'Call for price',
         displayHours: rateHours,
+        displayPriceType: ratePriceType,
       };
     });
     
@@ -1181,24 +1195,54 @@ export default function CallPad() {
     });
     
     return filtered;
-  }, [vehicles, vehicleFilters, sortBy, rateHours, getVehiclePrice]);
+  }, [vehicles, vehicleFilters, sortBy, rateHours, ratePriceType, getVehiclePrice]);
 
   const hasTransferVehicles = useMemo(() => {
     return vehicles.some(v => v.is_transfer === true || v.is_transfer === 'true' || (v.transfer_price != null && Number(v.transfer_price) > 0));
   }, [vehicles]);
 
-  // All available hour options - show 3-10 which covers all pricing tiers
-  // (standard 3-10, prom 6-10, before5pm 3-7)
-  const availableHourOptions = useMemo(() => {
-    const baseHours = [3, 4, 5, 6, 7, 8, 9, 10];
+  // All available hour options - now includes special pricing (prom, before5pm) when available
+  const availableRateOptions = useMemo(() => {
+    type RateOption = { hours: number; type: 'standard' | 'prom' | 'before5pm'; label: string };
+    const options: RateOption[] = [];
     
-    // Add the current rateHours if not already in the list (for custom values)
-    if (rateHours >= 1 && rateHours <= 24 && !baseHours.includes(rateHours)) {
-      return [...baseHours, rateHours].sort((a, b) => a - b);
+    // Standard rates 3-10
+    const standardHours = [3, 4, 5, 6, 7, 8, 9, 10];
+    standardHours.forEach(h => {
+      options.push({ hours: h, type: 'standard', label: `${h} Hour Rate` });
+    });
+    
+    // Check if any vehicles have prom pricing
+    const hasPromPricing = vehicles.some(v => 
+      [6, 7, 8, 9, 10].some(h => v[`prom_price_${h}hr`] && Number(v[`prom_price_${h}hr`]) > 0)
+    );
+    if (hasPromPricing) {
+      [6, 7, 8, 9, 10].forEach(h => {
+        if (vehicles.some(v => v[`prom_price_${h}hr`] && Number(v[`prom_price_${h}hr`]) > 0)) {
+          options.push({ hours: h, type: 'prom', label: `${h} Hour PROM` });
+        }
+      });
     }
     
-    return baseHours;
-  }, [rateHours]);
+    // Check if any vehicles have before5pm pricing
+    const hasBefore5pmPricing = vehicles.some(v => 
+      [3, 4, 5, 6, 7].some(h => v[`before5pm_${h}hr`] && Number(v[`before5pm_${h}hr`]) > 0)
+    );
+    if (hasBefore5pmPricing) {
+      [3, 4, 5, 6, 7].forEach(h => {
+        if (vehicles.some(v => v[`before5pm_${h}hr`] && Number(v[`before5pm_${h}hr`]) > 0)) {
+          options.push({ hours: h, type: 'before5pm', label: `${h} Hour Before 5PM` });
+        }
+      });
+    }
+    
+    return options;
+  }, [vehicles]);
+  
+  // Legacy - for backwards compatibility
+  const availableHourOptions = useMemo(() => {
+    return availableRateOptions.filter(o => o.type === 'standard').map(o => o.hours);
+  }, [availableRateOptions]);
 
   const getAIRecommendation = useCallback(async (vehicle: any) => {
     setLoadingRecommendation(true);
@@ -2516,16 +2560,32 @@ export default function CallPad() {
             
             <select
               style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #475569', background: '#334155', color: '#fff', fontSize: '12px' }}
-              value={rateHours}
+              value={`${ratePriceType}_${rateHours}`}
               onChange={(e) => {
-                const newHours = parseInt(e.target.value);
+                const [type, hours] = e.target.value.split('_');
+                const newHours = parseInt(hours);
                 setRateHours(newHours);
+                setRatePriceType(type as 'standard' | 'prom' | 'before5pm');
                 setConfirmedData(prev => ({ ...prev, hours: String(newHours) }));
               }}
             >
-              {/* Dynamically show all available hour options from vehicles */}
-              {availableHourOptions.map(h => (
-                <option key={h} value={h}>{h} Hour Rate</option>
+              {/* Standard rates first */}
+              {availableRateOptions.filter(o => o.type === 'standard').map(o => (
+                <option key={`${o.type}_${o.hours}`} value={`${o.type}_${o.hours}`}>{o.label}</option>
+              ))}
+              {/* Separator and prom rates if available */}
+              {availableRateOptions.some(o => o.type === 'prom') && (
+                <option disabled style={{ fontWeight: 'bold' }}>── PROM RATES ──</option>
+              )}
+              {availableRateOptions.filter(o => o.type === 'prom').map(o => (
+                <option key={`${o.type}_${o.hours}`} value={`${o.type}_${o.hours}`}>{o.label}</option>
+              ))}
+              {/* Separator and before 5pm rates if available */}
+              {availableRateOptions.some(o => o.type === 'before5pm') && (
+                <option disabled style={{ fontWeight: 'bold' }}>── BEFORE 5PM ──</option>
+              )}
+              {availableRateOptions.filter(o => o.type === 'before5pm').map(o => (
+                <option key={`${o.type}_${o.hours}`} value={`${o.type}_${o.hours}`}>{o.label}</option>
               ))}
             </select>
             
