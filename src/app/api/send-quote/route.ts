@@ -37,6 +37,60 @@ function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 }
 
+function generatePlainText(data: QuoteRequest): string {
+  const totalPrice = data.vehicles.reduce((sum, v) => sum + v.price, 0);
+  const firstName = data.customerName?.split(' ')[0] || 'there';
+  const agentFirstName = data.agentName?.split(' ')[0] || 'Your Agent';
+  
+  let isWithin7Days = false;
+  if (data.tripDate) {
+    const eventDate = new Date(data.tripDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffTime = eventDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    isWithin7Days = diffDays <= 7 && diffDays >= 0;
+  }
+  
+  let text = `Hi ${firstName}!\n\n`;
+  text += `Thanks so much for reaching out to Limo Bus Reservations! Here's your personalized quote:\n\n`;
+  
+  if (data.tripDate || data.eventType) {
+    text += `EVENT DETAILS:\n`;
+    if (data.tripDate) text += `Date: ${data.tripDate}\n`;
+    if (data.eventType) text += `Event: ${data.eventType}\n`;
+    if (data.pickupLocation) text += `Pickup: ${data.pickupLocation}\n`;
+    text += `\n`;
+  }
+  
+  data.vehicles.forEach((v, index) => {
+    const vehicleDeposit = Math.round(v.price * 0.5);
+    const optionLabel = data.vehicles.length > 1 ? `Option ${index + 1}: ` : '';
+    const paymentText = isWithin7Days 
+      ? `Full payment due: ${formatCurrency(v.price)}`
+      : `50% deposit to reserve: ${formatCurrency(vehicleDeposit)}`;
+    
+    text += `${optionLabel}${v.name}\n`;
+    text += `- Luxury wrap-around leather seating\n`;
+    text += `- Surround sound system (Bluetooth/AUX)\n`;
+    text += `- LED/Laser light show\n`;
+    text += `- Wet bar with ice & bottled water\n`;
+    text += `- Unlimited stops\n`;
+    text += `${v.hours}-Hour Quote: ${formatCurrency(v.price)}\n`;
+    text += `${paymentText}\n\n`;
+  });
+  
+  text += `NEXT STEPS:\n`;
+  text += isWithin7Days
+    ? `Since your event is within 7 days, full payment is required to confirm. We'll send over the contract and arrange everything once payment is received.\n\n`
+    : `Just a 50% deposit locks in your ride. We'll send over the contract and get everything arranged once you're ready!\n\n`;
+  
+  text += `Ready to book? Just reply to this email or call us at 720-414-5465!\n\n`;
+  text += `Best,\n${agentFirstName}\nLimo Bus Reservations\n720-414-5465\ninfo@limobusreservations.com\n`;
+  
+  return text;
+}
+
 function generateEmailHtml(data: QuoteRequest): string {
   const totalPrice = data.vehicles.reduce((sum, v) => sum + v.price, 0);
   const deposit = Math.round(totalPrice * 0.5);
@@ -176,12 +230,26 @@ export async function POST(request: NextRequest) {
     }
 
     const totalPrice = data.vehicles.reduce((sum, v) => sum + v.price, 0);
+    const customerFirstName = data.customerName?.split(' ')[0] || '';
+    
+    // Generate unique message ID for tracking
+    const messageId = `<quote-${Date.now()}-${Math.random().toString(36).substr(2, 9)}@limobusreservations.com>`;
 
     const mailOptions = {
       from: `"Limo Bus Reservations" <${process.env.ZOHO_MAIL_USER}>`,
       to: data.customerEmail,
-      subject: `Your Vehicle Quote - ${formatCurrency(totalPrice)}`,
+      replyTo: process.env.ZOHO_MAIL_USER,
+      subject: customerFirstName 
+        ? `${customerFirstName}, Your Limo Quote is Ready!`
+        : `Your Limo Bus Quote - Limo Bus Reservations`,
+      text: generatePlainText(data),
       html: generateEmailHtml(data),
+      headers: {
+        'Message-ID': messageId,
+        'X-Priority': '3',
+        'X-Mailer': 'Limo Bus Reservations Booking System',
+        'Precedence': 'bulk',
+      },
     };
 
     await transporter.sendMail(mailOptions);
