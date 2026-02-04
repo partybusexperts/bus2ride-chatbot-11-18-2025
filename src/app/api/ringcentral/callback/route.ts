@@ -1,32 +1,54 @@
 import { NextRequest, NextResponse } from "next/server";
 import { storeTokens } from "@/lib/ringcentral-tokens";
 
-function getRedirectBaseUrl(request: NextRequest): string {
-  const replitDomain = process.env.REPLIT_DOMAINS?.split(',')[0];
-  if (replitDomain) {
-    return `https://${replitDomain}`;
-  }
-  const forwardedHost = request.headers.get('x-forwarded-host');
-  if (forwardedHost) {
-    const proto = request.headers.get('x-forwarded-proto') || 'https';
-    return `${proto}://${forwardedHost}`;
-  }
-  return 'https://newchatbot.replit.app';
+function errorPage(message: string): NextResponse {
+  return new NextResponse(
+    `<!DOCTYPE html>
+    <html>
+      <head>
+        <title>Error</title>
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            color: white;
+          }
+          .icon { font-size: 64px; margin-bottom: 16px; }
+          h1 { margin: 0 0 8px; font-size: 24px; }
+          p { margin: 0; opacity: 0.9; font-size: 14px; }
+        </style>
+      </head>
+      <body>
+        <div class="icon">✕</div>
+        <h1>Connection Failed</h1>
+        <p>${message}</p>
+        <script>
+          setTimeout(() => window.close(), 3000);
+        </script>
+      </body>
+    </html>`,
+    { headers: { 'Content-Type': 'text/html' } }
+  );
 }
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const code = searchParams.get("code");
   const error = searchParams.get("error");
-  const appBaseUrl = getRedirectBaseUrl(request);
 
   if (error) {
     console.error("RingCentral OAuth error:", error);
-    return NextResponse.redirect(new URL("/?rc_error=" + error, appBaseUrl));
+    return errorPage("OAuth error: " + error);
   }
 
   if (!code) {
-    return NextResponse.redirect(new URL("/?rc_error=no_code", appBaseUrl));
+    return errorPage("No authorization code received");
   }
 
   const clientId = process.env.RINGCENTRAL_CLIENT_ID;
@@ -38,9 +60,7 @@ export async function GET(request: NextRequest) {
     process.env.RINGCENTRAL_BASE_URL || "https://platform.ringcentral.com";
 
   if (!clientId || !clientSecret) {
-    return NextResponse.redirect(
-      new URL("/?rc_error=missing_credentials", appBaseUrl),
-    );
+    return errorPage("Missing RingCentral credentials");
   }
 
   try {
@@ -61,9 +81,7 @@ export async function GET(request: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Token exchange failed:", errorText);
-      return NextResponse.redirect(
-        new URL("/?rc_error=token_exchange_failed", appBaseUrl),
-      );
+      return errorPage("Token exchange failed. Please try again.");
     }
 
     const data = await response.json();
@@ -72,9 +90,44 @@ export async function GET(request: NextRequest) {
 
     console.log("RingCentral OAuth successful, tokens stored");
 
-    return NextResponse.redirect(new URL("/?rc_connected=true", appBaseUrl));
+    // Return HTML that closes the popup window instead of redirecting
+    return new NextResponse(
+      `<!DOCTYPE html>
+      <html>
+        <head>
+          <title>Connected!</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              height: 100vh;
+              margin: 0;
+              background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+              color: white;
+            }
+            .checkmark { font-size: 64px; margin-bottom: 16px; }
+            h1 { margin: 0 0 8px; font-size: 24px; }
+            p { margin: 0; opacity: 0.9; }
+          </style>
+        </head>
+        <body>
+          <div class="checkmark">✓</div>
+          <h1>Connected to RingCentral!</h1>
+          <p>This window will close automatically...</p>
+          <script>
+            setTimeout(() => window.close(), 1500);
+          </script>
+        </body>
+      </html>`,
+      {
+        headers: { 'Content-Type': 'text/html' },
+      }
+    );
   } catch (error) {
     console.error("OAuth callback error:", error);
-    return NextResponse.redirect(new URL("/?rc_error=exception", appBaseUrl));
+    return errorPage("An unexpected error occurred. Please try again.");
   }
 }
