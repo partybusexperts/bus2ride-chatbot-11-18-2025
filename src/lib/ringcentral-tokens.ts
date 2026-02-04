@@ -1,12 +1,46 @@
+import fs from 'fs';
+import path from 'path';
+
 interface StoredTokens {
   accessToken: string;
   refreshToken: string;
   expiresAt: number;
 }
 
-let tokens: StoredTokens | null = null;
+const TOKEN_FILE = path.join(process.cwd(), '.ringcentral-tokens.json');
+
+function loadTokensFromFile(): StoredTokens | null {
+  try {
+    if (fs.existsSync(TOKEN_FILE)) {
+      const data = fs.readFileSync(TOKEN_FILE, 'utf-8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Error loading tokens from file:', error);
+  }
+  return null;
+}
+
+function saveTokensToFile(tokens: StoredTokens | null): void {
+  try {
+    if (tokens) {
+      fs.writeFileSync(TOKEN_FILE, JSON.stringify(tokens, null, 2));
+    } else {
+      if (fs.existsSync(TOKEN_FILE)) {
+        fs.unlinkSync(TOKEN_FILE);
+      }
+    }
+  } catch (error) {
+    console.error('Error saving tokens to file:', error);
+  }
+}
+
+let tokens: StoredTokens | null = loadTokensFromFile();
 
 export function getStoredTokens(): StoredTokens | null {
+  if (!tokens) {
+    tokens = loadTokensFromFile();
+  }
   return tokens;
 }
 
@@ -16,19 +50,24 @@ export function storeTokens(accessToken: string, refreshToken: string, expiresIn
     refreshToken,
     expiresAt: Date.now() + (expiresIn * 1000),
   };
+  saveTokensToFile(tokens);
+  console.log('RingCentral tokens stored, expires at:', new Date(tokens.expiresAt).toISOString());
 }
 
 export function clearTokens(): void {
   tokens = null;
+  saveTokensToFile(null);
 }
 
 export function isTokenExpired(): boolean {
-  if (!tokens) return true;
-  return tokens.expiresAt < Date.now() + 60000;
+  const storedTokens = getStoredTokens();
+  if (!storedTokens) return true;
+  return storedTokens.expiresAt < Date.now() + 60000;
 }
 
 export async function refreshAccessToken(): Promise<string | null> {
-  if (!tokens?.refreshToken) return null;
+  const storedTokens = getStoredTokens();
+  if (!storedTokens?.refreshToken) return null;
 
   const clientId = process.env.RINGCENTRAL_CLIENT_ID;
   const clientSecret = process.env.RINGCENTRAL_CLIENT_SECRET;
@@ -39,7 +78,7 @@ export async function refreshAccessToken(): Promise<string | null> {
   try {
     const params = new URLSearchParams();
     params.append("grant_type", "refresh_token");
-    params.append("refresh_token", tokens.refreshToken);
+    params.append("refresh_token", storedTokens.refreshToken);
 
     const response = await fetch(`${baseUrl}/restapi/oauth/token`, {
       method: "POST",
@@ -58,6 +97,7 @@ export async function refreshAccessToken(): Promise<string | null> {
 
     const data = await response.json();
     storeTokens(data.access_token, data.refresh_token, data.expires_in);
+    console.log('RingCentral tokens refreshed successfully');
     return data.access_token;
   } catch (error) {
     console.error("Token refresh error:", error);
@@ -67,11 +107,13 @@ export async function refreshAccessToken(): Promise<string | null> {
 }
 
 export async function getValidAccessToken(): Promise<string | null> {
-  if (!tokens) return null;
+  const storedTokens = getStoredTokens();
+  if (!storedTokens) return null;
   
   if (isTokenExpired()) {
+    console.log('Token expired, refreshing...');
     return await refreshAccessToken();
   }
   
-  return tokens.accessToken;
+  return storedTokens.accessToken;
 }
