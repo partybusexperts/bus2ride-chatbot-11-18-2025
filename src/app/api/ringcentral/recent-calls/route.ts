@@ -43,6 +43,7 @@ const CACHE_TTL_MS = 10000;
 export async function GET(request: NextRequest) {
   try {
     const tokens = getStoredTokens();
+    console.log('recent-calls: tokens present?', !!tokens, tokens ? `expires: ${new Date(tokens.expiresAt).toISOString()}` : 'no tokens');
     if (!tokens) {
       return NextResponse.json({
         success: false,
