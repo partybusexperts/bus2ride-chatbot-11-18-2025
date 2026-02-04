@@ -106,6 +106,15 @@ const ZIP_TO_METRO: Record<string, string> = {
   '106': 'New York', '107': 'New York', '108': 'New York', '109': 'New York',
   '110': 'New York', '111': 'New York', '112': 'New York', '113': 'New York', '114': 'New York',
   '115': 'New York', '116': 'New York', '117': 'New York', '118': 'New York', '119': 'New York',
+  // Rochester NY (145-146)
+  '145': 'Rochester', '146': 'Rochester',
+  // Buffalo NY (140-144)
+  '140': 'Buffalo', '141': 'Buffalo', '142': 'Buffalo', '143': 'Buffalo', '144': 'Buffalo',
+  // Syracuse NY (130-132)
+  '130': 'Syracuse', '131': 'Syracuse', '132': 'Syracuse',
+  // Albany NY (120-124, 128-129)
+  '120': 'Albany', '121': 'Albany', '122': 'Albany', '123': 'Albany', '124': 'Albany',
+  '128': 'Albany', '129': 'Albany',
   // Cleveland OH (440-442, 444)
   '440': 'Cleveland', '441': 'Cleveland', '442': 'Cleveland', '444': 'Cleveland',
   // Columbus OH (430-432)
@@ -1101,6 +1110,40 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'jersey city': 'New York', 'newark': 'New York', 'hoboken': 'New York',
   'stamford': 'New York', 'greenwich': 'New York', 'long island': 'New York',
   'garden city': 'New York', 'great neck': 'New York', 'huntington': 'New York',
+  // Rochester NY metro
+  'rochester': 'Rochester', 'rochester ny': 'Rochester', 'rochester new york': 'Rochester',
+  'greece': 'Rochester', 'greece ny': 'Rochester', 'gates': 'Rochester', 'henrietta': 'Rochester',
+  'pittsford': 'Rochester', 'webster ny': 'Rochester', 'victor ny': 'Rochester', 'fairport': 'Rochester',
+  'penfield': 'Rochester', 'brighton ny': 'Rochester', 'irondequoit': 'Rochester', 'chili ny': 'Rochester',
+  'perinton': 'Rochester', 'mendon': 'Rochester', 'rush ny': 'Rochester', 'spencerport': 'Rochester',
+  'brockport': 'Rochester', 'hilton ny': 'Rochester', 'hamlin': 'Rochester', 'churchville': 'Rochester',
+  'scottsville': 'Rochester', 'honeoye falls': 'Rochester', 'canandaigua': 'Rochester',
+  'farmington ny': 'Rochester', 'macedon': 'Rochester', 'palmyra ny': 'Rochester', 'newark ny': 'Rochester',
+  'geneva ny': 'Rochester', 'batavia ny': 'Rochester', 'geneseo': 'Rochester', 'avon ny': 'Rochester',
+  // Buffalo NY metro
+  'buffalo': 'Buffalo', 'buffalo ny': 'Buffalo', 'buffalo new york': 'Buffalo',
+  'niagara falls': 'Buffalo', 'niagara falls ny': 'Buffalo', 'amherst ny': 'Buffalo',
+  'cheektowaga': 'Buffalo', 'tonawanda': 'Buffalo', 'west seneca': 'Buffalo', 'hamburg ny': 'Buffalo',
+  'orchard park': 'Buffalo', 'williamsville': 'Buffalo', 'clarence': 'Buffalo', 'lancaster ny': 'Buffalo',
+  'depew': 'Buffalo', 'lackawanna': 'Buffalo', 'kenmore': 'Buffalo', 'grand island': 'Buffalo',
+  'lewiston ny': 'Buffalo', 'lockport ny': 'Buffalo', 'north tonawanda': 'Buffalo', 'east aurora': 'Buffalo',
+  'dunkirk': 'Buffalo', 'fredonia': 'Buffalo', 'jamestown ny': 'Buffalo',
+  // Syracuse NY metro
+  'syracuse': 'Syracuse', 'syracuse ny': 'Syracuse', 'syracuse new york': 'Syracuse',
+  'cicero ny': 'Syracuse', 'clay ny': 'Syracuse', 'dewitt': 'Syracuse', 'manlius': 'Syracuse',
+  'fayetteville ny': 'Syracuse', 'liverpool ny': 'Syracuse', 'salina ny': 'Syracuse',
+  'camillus': 'Syracuse', 'geddes': 'Syracuse', 'solvay': 'Syracuse', 'baldwinsville': 'Syracuse',
+  'auburn ny': 'Syracuse', 'cortland ny': 'Syracuse', 'fulton ny': 'Syracuse', 'oswego ny': 'Syracuse',
+  'oneida ny': 'Syracuse', 'rome ny': 'Syracuse', 'utica': 'Syracuse', 'utica ny': 'Syracuse',
+  // Albany NY metro
+  'albany': 'Albany', 'albany ny': 'Albany', 'albany new york': 'Albany',
+  'schenectady': 'Albany', 'schenectady ny': 'Albany', 'troy ny': 'Albany', 'troy new york': 'Albany',
+  'saratoga springs ny': 'Albany', 'saratoga ny': 'Albany', 'clifton park': 'Albany', 'colonie': 'Albany',
+  'guilderland': 'Albany', 'latham': 'Albany', 'delmar': 'Albany', 'bethlehem ny': 'Albany',
+  'cohoes': 'Albany', 'watervliet': 'Albany', 'rensselaer': 'Albany', 'east greenbush': 'Albany',
+  'niskayuna': 'Albany', 'rotterdam': 'Albany', 'glenville': 'Albany', 'malta ny': 'Albany',
+  'ballston spa': 'Albany', 'glens falls': 'Albany', 'kingston ny': 'Albany', 'poughkeepsie': 'Albany',
+  'newburgh ny': 'Albany', 'middletown ny': 'Albany',
   // Washington DC metro
   'arlington va': 'Washington', 'alexandria': 'Washington',
   'bethesda': 'Washington', 'silver spring': 'Washington', 'rockville': 'Washington',
@@ -1435,6 +1478,23 @@ const CITY_TRAVEL_TIMES: Record<string, number> = {
   'sedona': 120, 'flagstaff': 150, 'prescott': 100,
   'lake tahoe': 200, 'south lake tahoe': 200, 'mammoth lakes': 300,
   'key west': 180, 'traverse city': 250,
+  // Rochester NY suburbs
+  'greece': 10, 'greece ny': 10, 'gates': 10, 'henrietta': 15,
+  'pittsford': 15, 'webster ny': 20, 'victor ny': 25, 'fairport': 15,
+  'penfield': 15, 'brighton ny': 10, 'irondequoit': 10, 'chili ny': 15,
+  'spencerport': 20, 'brockport': 25, 'canandaigua': 30, 'geneseo': 35,
+  // Buffalo NY suburbs
+  'niagara falls': 25, 'niagara falls ny': 25, 'amherst ny': 15,
+  'cheektowaga': 10, 'tonawanda': 15, 'west seneca': 15, 'orchard park': 20,
+  'williamsville': 15, 'clarence': 20, 'lancaster ny': 20, 'lockport ny': 30,
+  // Syracuse NY suburbs
+  'cicero ny': 15, 'clay ny': 15, 'dewitt': 10, 'manlius': 15,
+  'fayetteville ny': 15, 'liverpool ny': 10, 'baldwinsville': 20,
+  'auburn ny': 30, 'cortland ny': 35, 'utica': 55, 'utica ny': 55,
+  // Albany NY suburbs
+  'schenectady': 20, 'schenectady ny': 20, 'troy ny': 15, 'saratoga springs ny': 35,
+  'clifton park': 20, 'colonie': 10, 'guilderland': 15, 'latham': 15,
+  'glens falls': 55, 'kingston ny': 55, 'poughkeepsie': 85, 'newburgh ny': 75,
 };
 
 // Remote locations that are 1+ hour from the nearest major metro - agent should be warned
