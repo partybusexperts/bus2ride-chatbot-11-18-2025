@@ -3100,23 +3100,6 @@ export default function CallPad() {
                   )}
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedVehicle(null)}
-                style={{
-                  background: '#f3f4f6',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: '36px',
-                  height: '36px',
-                  cursor: 'pointer',
-                  fontSize: '20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                &#10005;
-              </button>
             </div>
 
             {/* CUSTOM INSTRUCTIONS - ALWAYS FIRST AND PROMINENT */}
