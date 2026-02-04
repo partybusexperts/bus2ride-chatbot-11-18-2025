@@ -3524,7 +3524,7 @@ export default function CallPad() {
       })()}
 
       {photoModalVehicle && (() => {
-        const photos = [photoModalVehicle.image, photoModalVehicle.image_2, photoModalVehicle.image_3, photoModalVehicle.image_4].filter(Boolean);
+        const photos = [photoModalVehicle.image, photoModalVehicle.image_2, photoModalVehicle.image_3, photoModalVehicle.image_4].filter((img): img is string => Boolean(img) && img.trim() !== '' && img.startsWith('http'));
         const currentIndex = Math.min(photoModalIndex, photos.length - 1);
         const pricingTiers = [
           { label: 'Standard', hours: [3, 4, 5, 6, 7, 8, 9, 10], prefix: 'price_' },
@@ -3626,7 +3626,7 @@ export default function CallPad() {
                   src={photos[currentIndex]} 
                   alt={photoModalVehicle.name}
                   style={{ width: '100%', height: '450px', objectFit: 'cover', borderRadius: '12px' }}
-                  onError={(e) => { (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23334155" width="100" height="100"/></svg>'; }}
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                 />
                 {photos.length > 1 && (
                   <>
