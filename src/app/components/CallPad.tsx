@@ -2802,9 +2802,29 @@ export default function CallPad() {
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: '15px', fontWeight: 700, color: '#34d399', marginBottom: '6px' }}>
+                    <div style={{ fontSize: '15px', fontWeight: 700, color: '#34d399', marginBottom: '4px' }}>
                       {v.priceDisplay}
                     </div>
+                    {(() => {
+                      const capacity = parseInt(v.capacity) || 0;
+                      const price = getVehiclePrice(v, rateHours, ratePriceType);
+                      const perPerson = capacity > 0 && price > 0 ? Math.ceil(price / capacity) : 0;
+                      return perPerson > 0 ? (
+                        <div style={{ 
+                          fontSize: '12px', 
+                          fontWeight: 700, 
+                          color: '#fff', 
+                          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
+                          padding: '4px 8px', 
+                          borderRadius: '6px', 
+                          marginBottom: '6px',
+                          display: 'inline-block',
+                          boxShadow: '0 0 8px rgba(16,185,129,0.4)',
+                        }}>
+                          ${perPerson}/person
+                        </div>
+                      ) : null;
+                    })()}
                     {v.custom_instructions && (
                       <div style={{ 
                         fontSize: '10px', 
