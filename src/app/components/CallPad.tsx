@@ -2953,8 +2953,9 @@ export default function CallPad() {
           selectedVehicle.image,
           selectedVehicle.image_2,
           selectedVehicle.image_3,
+          selectedVehicle.image_4,
           ...(selectedVehicle.gallery_all ? selectedVehicle.gallery_all.split(',').map((u: string) => u.trim()) : [])
-        ].filter(Boolean);
+        ].filter((img): img is string => Boolean(img) && img.trim() !== '' && img.startsWith('http'));
         
         const hasStandardPricing = [3, 4, 5, 6, 7, 8, 9, 10].some(h => selectedVehicle[`price_${h}hr`]);
         const hasPromPricing = [6, 7, 8, 9, 10].some(h => selectedVehicle[`prom_price_${h}hr`]);
@@ -3144,6 +3145,7 @@ export default function CallPad() {
                         setPhotoModalVehicle(selectedVehicle);
                         setPhotoModalIndex(idx);
                       }}
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                     />
                   ))}
                 </div>
