@@ -3055,7 +3055,7 @@ export default function CallPad() {
                 boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
               }}
             >
-              ✕ Close
+              Close
             </button>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
               <div>
