@@ -3371,6 +3371,24 @@ export default function CallPad() {
                       ${Math.round(modalPrice / modalHours).toLocaleString()}/hour
                     </div>
                   )}
+                  {(() => {
+                    const capacity = parseInt(selectedVehicle.capacity) || 0;
+                    const perPerson = capacity > 0 && modalPrice > 0 ? Math.ceil(modalPrice / capacity) : 0;
+                    return perPerson > 0 ? (
+                      <div style={{ 
+                        marginTop: '8px', 
+                        padding: '8px 12px', 
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
+                        borderRadius: '8px',
+                        display: 'inline-block',
+                        boxShadow: '0 2px 8px rgba(16,185,129,0.4)',
+                      }}>
+                        <span style={{ fontSize: '20px', fontWeight: 800, color: '#fff' }}>${perPerson}</span>
+                        <span style={{ fontSize: '14px', fontWeight: 600, color: '#d1fae5', marginLeft: '4px' }}>/person</span>
+                        <div style={{ fontSize: '11px', color: '#a7f3d0', marginTop: '2px' }}>({capacity} passengers)</div>
+                      </div>
+                    ) : null;
+                  })()}
                 </div>
                 
                 <div style={{ background: '#fef3c7', padding: '16px', borderRadius: '10px', border: '2px solid #f59e0b' }}>
