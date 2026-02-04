@@ -55,7 +55,7 @@ const AGENTS = [
   { id: 'agent3', name: 'Camille' },
   { id: 'agent4', name: 'Shiela' },
   { id: 'agent5', name: 'Henrietta' },
-  { id: 'agent6', name: 'Mallows' },
+  { id: 'agent6', name: 'Raphael' },
   { id: 'agent7', name: 'Other' },
 ];
 
