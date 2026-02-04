@@ -111,14 +111,34 @@ export async function GET(request: NextRequest) {
             .checkmark { font-size: 64px; margin-bottom: 16px; }
             h1 { margin: 0 0 8px; font-size: 24px; }
             p { margin: 0; opacity: 0.9; }
+            .close-btn {
+              margin-top: 20px;
+              padding: 12px 24px;
+              background: white;
+              color: #059669;
+              border: none;
+              border-radius: 8px;
+              font-size: 14px;
+              font-weight: 600;
+              cursor: pointer;
+            }
+            .close-btn:hover { background: #f0fdf4; }
           </style>
         </head>
         <body>
           <div class="checkmark">✓</div>
           <h1>Connected to RingCentral!</h1>
           <p>This window will close automatically...</p>
+          <button class="close-btn" onclick="window.close()">Close This Window</button>
           <script>
-            setTimeout(() => window.close(), 1500);
+            // Notify parent window if it exists
+            if (window.opener) {
+              window.opener.postMessage({ type: 'ringcentral_connected' }, '*');
+            }
+            // Try to close automatically
+            setTimeout(() => {
+              window.close();
+            }, 1500);
           </script>
         </body>
       </html>`,

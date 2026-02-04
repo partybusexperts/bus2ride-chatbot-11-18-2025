@@ -860,6 +860,29 @@ export default function CallPad() {
     }
   }, []);
 
+  // Listen for RingCentral popup auth completion
+  useEffect(() => {
+    const handleMessage = async (event: MessageEvent) => {
+      if (event.data?.type === 'ringcentral_connected') {
+        console.log('RingCentral connected via popup');
+        try {
+          await fetch('/api/ringcentral/subscribe', { method: 'POST' });
+          console.log('RingCentral subscription initialized');
+          setCallsError(null);
+          const res = await fetch('/api/ringcentral/recent-calls');
+          if (res.ok) {
+            const data = await res.json();
+            setRecentCalls(data.calls || []);
+          }
+        } catch (e) {
+          console.error('Failed to initialize subscription:', e);
+        }
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
   useEffect(() => {
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
@@ -4041,13 +4064,29 @@ export default function CallPad() {
                 </div>
                 <button
                   onClick={() => {
-                    const popup = window.open('/api/ringcentral/login', '_blank', 'width=600,height=700');
+                    // Center the popup on screen
+                    const width = 500;
+                    const height = 600;
+                    const left = (window.screen.width - width) / 2;
+                    const top = (window.screen.height - height) / 2;
+                    const popup = window.open(
+                      '/api/ringcentral/login', 
+                      'ringcentral_auth',
+                      `width=${width},height=${height},left=${left},top=${top},popup=yes,scrollbars=yes`
+                    );
                     const checkClosed = setInterval(async () => {
                       if (popup?.closed) {
                         clearInterval(checkClosed);
                         try {
                           await fetch('/api/ringcentral/subscribe', { method: 'POST' });
                           console.log('RingCentral subscription initialized');
+                          // Refresh calls after connecting
+                          setCallsError(null);
+                          const res = await fetch('/api/ringcentral/recent-calls');
+                          if (res.ok) {
+                            const data = await res.json();
+                            setRecentCalls(data.calls || []);
+                          }
                         } catch (e) {
                           console.error('Failed to initialize subscription:', e);
                         }
