@@ -3666,6 +3666,19 @@ export default function CallPad() {
             </div>
             
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
+              {/* Per-Person Price - Most prominent */}
+              {(() => {
+                const modalCurrentPrice = photoModalVehicle[`price_${rateHours}hr`] || photoModalVehicle.price || 0;
+                const capacity = parseInt(photoModalVehicle.capacity) || 0;
+                const perPersonPrice = capacity > 0 && modalCurrentPrice > 0 ? Math.ceil(modalCurrentPrice / capacity) : 0;
+                return perPersonPrice > 0 ? (
+                  <div style={{ flex: 1, minWidth: '150px', background: 'linear-gradient(135deg, rgba(16,185,129,0.3) 0%, rgba(5,150,105,0.3) 100%)', borderRadius: '10px', padding: '12px', border: '2px solid #10b981', boxShadow: '0 0 15px rgba(16,185,129,0.3)' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#6ee7b7', textTransform: 'uppercase' }}>Per Person</div>
+                    <div style={{ fontSize: '24px', fontWeight: 800, color: '#fff' }}>${perPersonPrice.toLocaleString()}</div>
+                    <div style={{ fontSize: '11px', color: '#a7f3d0' }}>{capacity} passengers @ ${modalCurrentPrice.toLocaleString()}</div>
+                  </div>
+                ) : null;
+              })()}
               <div style={{ flex: 1, minWidth: '150px', background: depositPercent === 100 ? 'rgba(220,38,38,0.2)' : 'rgba(234,179,8,0.2)', borderRadius: '10px', padding: '12px', border: `1px solid ${depositPercent === 100 ? '#dc2626' : '#eab308'}` }}>
                 <div style={{ fontSize: '11px', fontWeight: 600, color: depositPercent === 100 ? '#fca5a5' : '#fde047', textTransform: 'uppercase' }}>Deposit Required</div>
                 <div style={{ fontSize: '20px', fontWeight: 700, color: '#fff' }}>{depositPercent}%</div>
