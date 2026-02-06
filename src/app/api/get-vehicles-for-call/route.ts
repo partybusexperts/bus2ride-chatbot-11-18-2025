@@ -67,11 +67,13 @@ function normalizeCityQuery(value: string): string {
 
 const CITY_ALIASES: Record<string, string[]> = {
   'phoenix': ['mesa', 'tempe', 'scottsdale', 'glendale', 'chandler', 'gilbert', 'peoria', 'surprise', 'goodyear', 'avondale', 'buckeye', 'cave creek', 'carefree', 'paradise valley', 'fountain hills', 'queen creek', 'apache junction', 'sun city', 'sun lakes', 'anthem'],
-  'los angeles': ['la', 'hollywood', 'beverly hills', 'santa monica', 'pasadena', 'glendale', 'burbank', 'long beach', 'torrance', 'inglewood', 'culver city', 'west hollywood', 'malibu', 'venice', 'marina del rey', 'downtown la', 'dtla'],
+  'los angeles': ['la', 'hollywood', 'beverly hills', 'santa monica', 'pasadena', 'glendale', 'burbank', 'torrance', 'inglewood', 'culver city', 'west hollywood', 'malibu', 'venice', 'marina del rey', 'downtown la', 'dtla'],
+  'long beach': ['signal hill', 'lakewood', 'seal beach', 'los alamitos', 'cypress', 'hawaiian gardens'],
   'new york': ['nyc', 'manhattan', 'brooklyn', 'queens', 'bronx', 'staten island', 'harlem', 'soho', 'tribeca', 'chelsea', 'midtown'],
   'las vegas': ['vegas', 'henderson', 'north las vegas', 'summerlin', 'the strip', 'downtown vegas', 'boulder city', 'paradise'],
   'san diego': ['la jolla', 'del mar', 'coronado', 'chula vista', 'oceanside', 'carlsbad', 'encinitas', 'escondido', 'national city'],
-  'san francisco': ['sf', 'oakland', 'berkeley', 'san jose', 'palo alto', 'mountain view', 'sunnyvale', 'fremont', 'hayward', 'daly city', 'south sf'],
+  'san francisco': ['sf', 'oakland', 'berkeley', 'hayward', 'daly city', 'south sf', 'san mateo', 'richmond', 'walnut creek', 'concord'],
+  'san jose': ['palo alto', 'mountain view', 'sunnyvale', 'fremont', 'santa clara', 'milpitas', 'cupertino', 'campbell', 'los gatos', 'saratoga', 'gilroy', 'morgan hill'],
   'miami': ['miami beach', 'south beach', 'fort lauderdale', 'boca raton', 'west palm beach', 'coral gables', 'hialeah', 'hollywood fl', 'pompano beach'],
   'chicago': ['evanston', 'oak park', 'naperville', 'schaumburg', 'aurora', 'joliet', 'elgin', 'waukegan', 'cicero'],
   'dallas': ['fort worth', 'arlington', 'plano', 'irving', 'garland', 'frisco', 'mckinney', 'denton', 'richardson', 'carrollton', 'lewisville'],

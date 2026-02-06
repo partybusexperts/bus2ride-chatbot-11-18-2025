@@ -933,7 +933,7 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'new braunfels': 'San Antonio', 'boerne': 'San Antonio', 'schertz': 'San Antonio',
   'cibolo': 'San Antonio', 'live oak': 'San Antonio', 'universal city': 'San Antonio',
   // Los Angeles metro
-  'long beach': 'Los Angeles', 'anaheim': 'Los Angeles', 'santa ana': 'Los Angeles',
+  'anaheim': 'Los Angeles', 'santa ana': 'Los Angeles',
   'irvine': 'Los Angeles', 'glendale ca': 'Los Angeles', 'huntington beach': 'Los Angeles',
   'santa clarita': 'Los Angeles', 'garden grove': 'Los Angeles',
   'ontario ca': 'Los Angeles', 'rancho cucamonga': 'Los Angeles', 'pomona': 'Los Angeles', 
@@ -947,14 +947,18 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'riverside': 'Los Angeles', 'riverside ca': 'Los Angeles', 'corona': 'Los Angeles',
   'fontana': 'Los Angeles', 'moreno valley': 'Los Angeles', 'san bernardino': 'Los Angeles',
   // San Francisco Bay Area (excluding San Jose and Napa which have own rates)
-  'oakland': 'San Francisco', 'fremont': 'San Francisco',
-  'hayward': 'San Francisco', 'concord': 'San Francisco', 'berkeley': 'San Francisco',
+  'oakland': 'San Francisco', 'berkeley': 'San Francisco',
+  'hayward': 'San Francisco', 'concord': 'San Francisco',
   'daly city': 'San Francisco', 'walnut creek': 'San Francisco', 'pleasanton': 'San Francisco',
   'livermore': 'San Francisco', 'san mateo': 'San Francisco', 'redwood city': 'San Francisco',
+  'richmond ca': 'San Francisco', 'san rafael': 'San Francisco',
   // San Jose metro (separate from SF)
   'sunnyvale': 'San Jose', 'santa clara': 'San Jose', 'milpitas': 'San Jose',
   'cupertino': 'San Jose', 'mountain view': 'San Jose', 'palo alto': 'San Jose',
   'menlo park': 'San Jose', 'los gatos': 'San Jose', 'campbell': 'San Jose',
+  'fremont': 'San Jose', 'saratoga': 'San Jose', 'gilroy': 'San Jose', 'morgan hill': 'San Jose',
+  // Long Beach metro (separate from LA)
+  'long beach': 'Long Beach', 'signal hill': 'Long Beach',
   // Napa/Wine Country (separate from SF)
   'napa': 'Napa', 'napa valley': 'Napa', 'yountville': 'Napa', 'st helena': 'Napa', 'calistoga': 'Napa',
   // Santa Rosa/Sonoma (could be separate or grouped)
