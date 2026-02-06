@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { getZipCoordinates, findNearestMetro } from "@/lib/geo-utils";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -77,22 +78,23 @@ const ZIP_TO_METRO: Record<string, string> = {
   '327': 'Orlando', '328': 'Orlando', '329': 'Orlando',
   // Tampa FL (335-337, 346)
   '335': 'Tampa', '336': 'Tampa', '337': 'Tampa', '346': 'Tampa', '338': 'Tampa',
-  // Atlanta GA (300-303, 306, 311-313)
+  // Atlanta GA (300-303, 305-306, 308-313)
   '300': 'Atlanta', '301': 'Atlanta', '302': 'Atlanta', '303': 'Atlanta',
-  '306': 'Atlanta', '311': 'Atlanta', '312': 'Atlanta', '313': 'Atlanta',
+  '305': 'Atlanta', '306': 'Atlanta', '308': 'Atlanta', '309': 'Atlanta', '310': 'Atlanta',
+  '311': 'Atlanta', '312': 'Atlanta', '313': 'Atlanta',
   // Chicago IL (606-608, 600-605)
   '600': 'Chicago', '601': 'Chicago', '602': 'Chicago', '603': 'Chicago',
   '604': 'Chicago', '605': 'Chicago', '606': 'Chicago', '607': 'Chicago', '608': 'Chicago',
-  // Indianapolis IN (460-462, 466)
-  '460': 'Indianapolis', '461': 'Indianapolis', '462': 'Indianapolis', '466': 'Indianapolis',
+  // Indianapolis IN (460-462, 466-468)
+  '460': 'Indianapolis', '461': 'Indianapolis', '462': 'Indianapolis', '466': 'Indianapolis', '467': 'Indianapolis', '468': 'Indianapolis',
   // Boston MA (010-024, 021-022)
   '010': 'Boston', '011': 'Boston', '012': 'Boston', '013': 'Boston', '014': 'Boston',
   '015': 'Boston', '016': 'Boston', '017': 'Boston', '018': 'Boston', '019': 'Boston',
   '020': 'Boston', '021': 'Boston', '022': 'Boston', '023': 'Boston', '024': 'Boston',
-  // Detroit MI (480-484)
-  '480': 'Detroit', '481': 'Detroit', '482': 'Detroit', '483': 'Detroit', '484': 'Detroit',
-  // Minneapolis MN (550-551, 553-555)
-  '550': 'Minneapolis', '551': 'Minneapolis', '553': 'Minneapolis', '554': 'Minneapolis', '555': 'Minneapolis',
+  // Detroit MI (480-485)
+  '480': 'Detroit', '481': 'Detroit', '482': 'Detroit', '483': 'Detroit', '484': 'Detroit', '485': 'Detroit',
+  // Minneapolis MN (550-556)
+  '550': 'Minneapolis', '551': 'Minneapolis', '552': 'Minneapolis', '553': 'Minneapolis', '554': 'Minneapolis', '555': 'Minneapolis', '556': 'Minneapolis',
   // Kansas City MO/KS (640-641, 660-662, 664-666)
   '640': 'Kansas City', '641': 'Kansas City', '660': 'Kansas City', '661': 'Kansas City',
   '662': 'Kansas City', '664': 'Kansas City', '665': 'Kansas City', '666': 'Kansas City',
@@ -115,12 +117,12 @@ const ZIP_TO_METRO: Record<string, string> = {
   // Albany NY (120-124, 128-129)
   '120': 'Albany', '121': 'Albany', '122': 'Albany', '123': 'Albany', '124': 'Albany',
   '128': 'Albany', '129': 'Albany',
-  // Cleveland OH (440-442, 444)
-  '440': 'Cleveland', '441': 'Cleveland', '442': 'Cleveland', '444': 'Cleveland',
-  // Columbus OH (430-432)
-  '430': 'Columbus', '431': 'Columbus', '432': 'Columbus',
-  // Cincinnati OH (450-452)
-  '450': 'Cincinnati', '451': 'Cincinnati', '452': 'Cincinnati',
+  // Cleveland OH (440-444)
+  '440': 'Cleveland', '441': 'Cleveland', '442': 'Cleveland', '443': 'Cleveland', '444': 'Cleveland',
+  // Columbus OH (430-433)
+  '430': 'Columbus', '431': 'Columbus', '432': 'Columbus', '433': 'Columbus',
+  // Cincinnati OH (450-455)
+  '450': 'Cincinnati', '451': 'Cincinnati', '452': 'Cincinnati', '453': 'Cincinnati', '454': 'Cincinnati', '455': 'Cincinnati',
   // Lexington KY (403-406)
   '403': 'Lexington', '404': 'Lexington', '405': 'Lexington', '406': 'Lexington',
   // Louisville KY (400-402)
@@ -128,10 +130,10 @@ const ZIP_TO_METRO: Record<string, string> = {
   // Philadelphia PA (190-191, 193-196)
   '190': 'Philadelphia', '191': 'Philadelphia', '193': 'Philadelphia',
   '194': 'Philadelphia', '195': 'Philadelphia', '196': 'Philadelphia',
-  // Pittsburgh PA (150-152)
-  '150': 'Pittsburgh', '151': 'Pittsburgh', '152': 'Pittsburgh',
-  // Nashville TN (370-372)
-  '370': 'Nashville', '371': 'Nashville', '372': 'Nashville',
+  // Pittsburgh PA (150-154)
+  '150': 'Pittsburgh', '151': 'Pittsburgh', '152': 'Pittsburgh', '153': 'Pittsburgh', '154': 'Pittsburgh',
+  // Nashville TN (370-374)
+  '370': 'Nashville', '371': 'Nashville', '372': 'Nashville', '373': 'Nashville', '374': 'Nashville',
   // Austin TX (787, 786, 789, 785)
   '786': 'Austin', '787': 'Austin', '789': 'Austin', '785': 'Austin', '788': 'Austin',
   // Dallas TX (750-753, 755-759, 760-761, 762-763, 764-766, 768-769, 730-731)
@@ -145,10 +147,11 @@ const ZIP_TO_METRO: Record<string, string> = {
   '774': 'Houston', '775': 'Houston', '776': 'Houston', '777': 'Houston', '778': 'Houston',
   // San Antonio TX (780-782, 784)
   '780': 'San Antonio', '781': 'San Antonio', '782': 'San Antonio', '784': 'San Antonio', '783': 'San Antonio',
-  // Salt Lake City UT (840-841, 843, 846-847)
-  '840': 'Salt Lake City', '841': 'Salt Lake City', '843': 'Salt Lake City', '846': 'Salt Lake City', '847': 'Salt Lake City',
-  // Seattle WA (980-981, 983-984, 985-986)
-  '980': 'Seattle', '981': 'Seattle', '983': 'Seattle', '984': 'Seattle',
+  // Salt Lake City UT (840-847)
+  '840': 'Salt Lake City', '841': 'Salt Lake City', '842': 'Salt Lake City', '843': 'Salt Lake City',
+  '844': 'Salt Lake City', '845': 'Salt Lake City', '846': 'Salt Lake City', '847': 'Salt Lake City',
+  // Seattle WA (980-986)
+  '980': 'Seattle', '981': 'Seattle', '982': 'Seattle', '983': 'Seattle', '984': 'Seattle',
   '985': 'Seattle', '986': 'Seattle',
   // Spokane WA (988-994)
   '988': 'Spokane', '989': 'Spokane', '990': 'Spokane', '991': 'Spokane',
@@ -320,7 +323,7 @@ const CITY_DISPLAY_NAMES: Record<string, string> = {
 
 // Get metro area from ZIP/postal code (US or Canada)
 // Returns { searchCity, displayCity } where searchCity is for API and displayCity is for UI
-function getMetroFromZip(zip: string): { searchCity: string; displayCity: string } | null {
+function getMetroFromZipSync(zip: string): { searchCity: string; displayCity: string } | null {
   const cleanZip = zip.toUpperCase().replace(/\s+/g, '');
   // Canadian postal codes: first 3 chars (e.g., M1B, L4K, N8A, R2C)
   const canadianPrefix = cleanZip.substring(0, 3);
@@ -340,6 +343,33 @@ function getMetroFromZip(zip: string): { searchCity: string; displayCity: string
       displayCity: CITY_DISPLAY_NAMES[searchCity] || searchCity 
     };
   }
+  return null;
+}
+
+async function getMetroFromZip(zip: string): Promise<{ searchCity: string; displayCity: string } | null> {
+  const syncResult = getMetroFromZipSync(zip);
+  if (syncResult) return syncResult;
+
+  // Fallback: use coordinate lookup for unmapped ZIP prefixes
+  const isUsZip = /^\d{5}(-\d{4})?$/.test(zip.trim());
+  if (isUsZip) {
+    try {
+      const zipData = await getZipCoordinates(zip.trim());
+      if (zipData) {
+        const nearest = findNearestMetro(zipData.lat, zipData.lng, 120);
+        if (nearest) {
+          console.log(`[ZIP Fallback] ${zip} (${zipData.city}, ${zipData.state}) → ${nearest.metro} (${nearest.drivingMiles} mi)`);
+          return {
+            searchCity: nearest.metro,
+            displayCity: CITY_DISPLAY_NAMES[nearest.metro] || nearest.metro,
+          };
+        }
+      }
+    } catch (e) {
+      console.error('ZIP fallback lookup error:', e);
+    }
+  }
+
   return null;
 }
 // Accept "5pm", "5p", "5 pm", "5:30pm", "5:30 p", etc.
@@ -1675,7 +1705,7 @@ function detectPattern(text: string): DetectedItem | null {
 
   // US ZIP codes (5 digits, optionally with -4 extension)
   if (ZIP_REGEX.test(trimmed)) {
-    const metro = getMetroFromZip(trimmed);
+    const metro = getMetroFromZipSync(trimmed);
     return { 
       type: 'zip', 
       value: trimmed, 
@@ -1690,7 +1720,7 @@ function detectPattern(text: string): DetectedItem | null {
   
   // Canadian postal codes (e.g., M1B, L4K, N8A 1B2)
   if (CANADIAN_POSTAL_REGEX.test(trimmed)) {
-    const metro = getMetroFromZip(trimmed);
+    const metro = getMetroFromZipSync(trimmed);
     return { 
       type: 'zip', 
       value: trimmed.toUpperCase().substring(0, 3), 
@@ -2524,6 +2554,19 @@ export async function POST(request: NextRequest) {
         allItems.push(patternResult);
       } else {
         unknownSegments.push(segment);
+      }
+    }
+
+    // Fallback: for ZIP chips without a normalizedCity, try async coordinate-based lookup
+    for (const item of allItems) {
+      if (item.type === 'zip' && !item.normalizedCity) {
+        const fallback = await getMetroFromZip(item.value);
+        if (fallback) {
+          item.normalizedCity = fallback.searchCity;
+          if (fallback.displayCity !== fallback.searchCity) {
+            item.displayCity = fallback.displayCity;
+          }
+        }
       }
     }
 
