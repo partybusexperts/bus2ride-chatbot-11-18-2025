@@ -1508,6 +1508,182 @@ const CITY_TRAVEL_TIMES: Record<string, number> = {
   'ann arbor': 45, 'troy': 25, 'sterling heights': 25, 'dearborn': 15,
   'livonia': 25, 'warren': 20, 'farmington hills': 25, 'royal oak': 15,
   'southfield': 20, 'novi': 30, 'rochester hills': 30,
+  // Seattle suburbs
+  'bellevue': 15, 'tacoma': 35, 'everett': 30, 'kent': 20, 'renton': 15,
+  'federal way': 25, 'kirkland': 15, 'redmond': 20, 'olympia': 60,
+  'bothell': 20, 'lynnwood': 20, 'burien': 15, 'tukwila': 12,
+  'issaquah': 20, 'sammamish': 25, 'woodinville': 25, 'auburn wa': 25,
+  'puyallup': 35, 'lakewood wa': 40, 'shoreline': 10, 'edmonds': 20,
+  'mountlake terrace': 15, 'kenmore': 15, 'mercer island': 10,
+  'bainbridge island': 35, 'mukilteo': 25, 'marysville': 35,
+  'gold bar': 50, 'snohomish': 35, 'covington': 25,
+  // Portland suburbs
+  'beaverton': 15, 'hillsboro': 25, 'gresham': 20, 'lake oswego': 15,
+  'tigard': 15, 'tualatin': 20, 'oregon city': 25, 'west linn': 20,
+  'milwaukie': 10, 'clackamas': 15, 'wilsonville': 25, 'sherwood': 25,
+  'happy valley': 20, 'troutdale': 20, 'camas': 30, 'vancouver wa': 15,
+  // Las Vegas suburbs
+  'henderson': 15, 'north las vegas': 15, 'summerlin': 20,
+  'boulder city': 30, 'pahrump': 60, 'mesquite nv': 80,
+  // San Diego suburbs
+  'la jolla': 15, 'del mar': 20, 'coronado': 10, 'chula vista': 15,
+  'national city': 10, 'el cajon': 20, 'santee': 25, 'poway': 25,
+  'encinitas': 25, 'san marcos ca': 30, 'vista ca': 30,
+  // New York suburbs
+  'manhattan': 0, 'brooklyn': 15, 'queens': 20, 'bronx': 20,
+  'staten island': 30, 'yonkers': 20, 'white plains': 30,
+  'new rochelle': 25, 'mount vernon ny': 20, 'hoboken': 10,
+  'jersey city': 10, 'newark': 15, 'garden city ny': 30,
+  'great neck': 25, 'port washington': 30, 'stamford': 40, 'greenwich': 45,
+  // Boston suburbs
+  'cambridge': 10, 'brookline': 10, 'newton': 15, 'somerville': 10,
+  'quincy': 15, 'waltham': 20, 'medford': 15, 'worcester': 50,
+  'framingham': 25, 'braintree': 20, 'weymouth': 20, 'brockton': 30,
+  'plymouth': 45, 'salem ma': 25, 'lexington ma': 20, 'concord ma': 25,
+  // Philadelphia suburbs
+  'camden': 10, 'cherry hill': 15, 'king of prussia': 25,
+  'media': 20, 'norristown': 25, 'upper darby': 10, 'wilmington': 35,
+  'west chester pa': 35, 'doylestown': 40, 'conshohocken': 20,
+  'ardmore': 15, 'bryn mawr': 20, 'lansdale': 30,
+  // Nashville suburbs
+  'franklin tn': 25, 'murfreesboro': 35, 'brentwood tn': 20,
+  'hendersonville tn': 20, 'smyrna tn': 25, 'gallatin': 30,
+  'lebanon tn': 30, 'mt juliet': 20, 'spring hill tn': 35,
+  'clarksville': 50, 'dickson': 40, 'columbia tn': 45,
+  // Orlando suburbs
+  'kissimmee': 25, 'lake buena vista': 20, 'winter park': 10,
+  'sanford': 25, 'altamonte springs': 15, 'celebration': 25,
+  'daytona beach': 55, 'clermont': 30, 'apopka': 20, 'ocoee': 15,
+  'winter garden': 20, 'st cloud fl': 30,
+  // Tampa suburbs
+  'st petersburg': 25, 'clearwater': 25, 'brandon': 15,
+  'lakeland': 35, 'sarasota': 55, 'bradenton': 45,
+  'st pete beach': 30, 'plant city': 25, 'wesley chapel': 25,
+  'new port richey': 35, 'dunedin': 25, 'largo': 20,
+  // New Orleans suburbs
+  'metairie': 10, 'kenner': 15, 'slidell': 35, 'gretna': 10,
+  'harvey': 10, 'marrero': 15, 'chalmette': 15, 'covington la': 45,
+  'mandeville': 40, 'laplace': 25, 'houma': 55,
+  // San Antonio suburbs
+  'new braunfels': 30, 'boerne': 30, 'schertz': 20, 'cibolo': 25,
+  'helotes': 20, 'alamo heights': 10, 'live oak': 15,
+  'converse': 15, 'universal city': 15, 'seguin': 35,
+  // Austin suburbs
+  'round rock': 20, 'cedar park': 25, 'georgetown': 30,
+  'pflugerville': 15, 'san marcos': 35, 'kyle': 25,
+  'leander': 30, 'dripping springs': 30, 'bee cave': 20,
+  'lakeway': 25, 'bastrop': 35, 'buda': 20,
+  // Washington DC suburbs
+  'arlington va': 10, 'alexandria': 10, 'bethesda': 15,
+  'silver spring': 15, 'tysons': 20, 'reston': 25,
+  'fairfax': 25, 'rockville': 20, 'gaithersburg': 30,
+  'columbia md': 30, 'annapolis': 35, 'falls church': 15,
+  'mclean': 15, 'herndon': 25, 'manassas': 35, 'woodbridge va': 30,
+  // Baltimore suburbs
+  'towson': 10, 'ellicott city': 20,
+  'catonsville': 10, 'dundalk': 10, 'pikesville': 15,
+  'owings mills': 20, 'hunt valley': 25, 'bel air md': 30,
+  'glen burnie': 15, 'severna park': 20, 'aberdeen md': 35,
+  // Minneapolis suburbs
+  'st paul': 15, 'bloomington mn': 15, 'plymouth mn': 20,
+  'eden prairie': 20, 'maple grove': 25, 'woodbury mn': 20,
+  'eagan': 20, 'burnsville': 25, 'lakeville mn': 30,
+  'brooklyn park': 20, 'coon rapids': 25, 'minnetonka': 20,
+  'edina': 15, 'richfield mn': 10, 'prior lake': 30, 'shakopee': 30,
+  // Charlotte suburbs
+  'huntersville': 20, 'concord nc': 25, 'gastonia': 30,
+  'rock hill': 30, 'mooresville': 30, 'matthews': 15,
+  'mint hill': 20, 'indian trail': 20, 'waxhaw': 25,
+  'fort mill': 25, 'kannapolis': 30, 'statesville': 40,
+  // Indianapolis suburbs
+  'carmel': 20, 'fishers': 20, 'greenwood in': 20,
+  'noblesville': 30, 'avon in': 20, 'plainfield in': 20,
+  'zionsville': 25, 'westfield in': 25, 'brownsburg': 25,
+  'lawrence in': 15, 'speedway': 10, 'beech grove': 10,
+  // Columbus OH suburbs
+  'dublin oh': 20, 'westerville': 15, 'grove city oh': 15,
+  'hilliard': 15, 'gahanna': 15, 'reynoldsburg': 15,
+  'pickerington': 20, 'canal winchester': 20, 'powell oh': 25,
+  'upper arlington': 10, 'worthington oh': 10, 'delaware oh': 30,
+  // Cleveland suburbs
+  'parma': 15, 'lakewood oh': 10, 'strongsville': 25,
+  'westlake': 20, 'mentor': 25, 'elyria': 30,
+  'lorain': 35, 'medina oh': 30, 'avon oh': 25,
+  'north olmsted': 20, 'solon': 20, 'hudson oh': 30,
+  // Cincinnati suburbs
+  'mason oh': 25, 'west chester oh': 25, 'fairfield oh': 20,
+  'florence ky': 15, 'covington ky': 10, 'newport ky': 10,
+  'hamilton oh': 30, 'middletown oh': 35, 'loveland oh': 25,
+  'blue ash': 15, 'sharonville': 15, 'norwood oh': 10,
+  // Pittsburgh suburbs
+  'cranberry township': 25, 'moon township': 20, 'bethel park': 15,
+  'mt lebanon': 10, 'ross township': 15, 'north hills': 15,
+  'south hills': 15, 'monroeville': 20, 'murrysville': 30,
+  'irwin': 25, 'greensburg pa': 35, 'washington pa': 35,
+  'canonsburg': 25, 'wexford': 20, 'sewickley': 20,
+  // San Jose suburbs
+  'santa clara': 10, 'milpitas': 15, 'cupertino': 10,
+  'mountain view': 15, 'palo alto': 20, 'sunnyvale': 10,
+  'campbell': 10, 'los gatos': 15, 'saratoga': 15,
+  'gilroy': 35, 'morgan hill': 25, 'menlo park': 25,
+  // Salt Lake City suburbs
+  'west jordan': 20, 'sandy ut': 15, 'provo': 45,
+  'orem': 40, 'ogden': 35, 'layton': 25,
+  'bountiful': 10, 'draper': 20, 'south jordan': 20,
+  'murray ut': 10, 'lehi': 30, 'american fork': 35,
+  'park city': 35, 'tooele': 35, 'clearfield ut': 30,
+  // Long Beach suburbs
+  'signal hill': 5, 'seal beach': 10, 'los alamitos': 10,
+  'hawaiian gardens': 10, 'lakewood ca': 10, 'carson': 10,
+  // Tucson suburbs
+  'marana': 20, 'oro valley': 20, 'sahuarita': 25,
+  'green valley': 35, 'catalina': 25,
+  // Sacramento suburbs
+  'roseville ca': 20, 'elk grove': 20, 'folsom': 25,
+  'rancho cordova': 15, 'citrus heights': 15, 'rocklin': 25,
+  'davis': 20, 'woodland ca': 20, 'west sacramento': 10,
+  // Kansas City suburbs
+  'overland park': 15, 'olathe': 25, 'lee summit': 25,
+  'independence mo': 15, 'blue springs': 25, 'lenexa': 20,
+  'shawnee ks': 20, 'liberty mo': 20, 'gladstone': 15,
+  // St Louis suburbs
+  'chesterfield': 25, 'florissant': 20,
+  'ballwin': 25, 'kirkwood': 15, 'webster groves': 10,
+  'edwardsville': 25, 'belleville il': 20, 'ofallon il': 30,
+  'ofallon mo': 35, 'maryland heights': 20,
+  // Jacksonville suburbs
+  'orange park': 15, 'fleming island': 20, 'ponte vedra': 25,
+  'st augustine': 40, 'fernandina beach': 35, 'atlantic beach': 20,
+  // Memphis suburbs
+  'germantown': 15, 'collierville': 25, 'bartlett': 15,
+  'olive branch': 20, 'southaven': 15, 'horn lake': 20,
+  // Louisville suburbs
+  'jeffersonville': 10, 'new albany in': 10, 'shepherdsville': 25,
+  'shelbyville ky': 30, 'bardstown': 40, 'elizabethtown': 45,
+  // Milwaukee suburbs
+  'waukesha': 20, 'brookfield wi': 15, 'racine': 30,
+  'kenosha': 40, 'west bend': 35, 'menomonee falls': 20,
+  'mequon': 20, 'west allis': 10, 'wauwatosa': 10,
+  // Oklahoma City suburbs
+  'edmond': 15, 'norman': 20, 'moore': 15, 'midwest city': 10,
+  'yukon': 20, 'mustang': 20, 'del city': 10, 'bethany ok': 10,
+  // Tulsa suburbs
+  'broken arrow': 15, 'owasso': 20, 'bixby': 15,
+  'jenks': 10, 'sand springs': 15, 'sapulpa': 20,
+  // Raleigh suburbs
+  'durham': 25, 'cary': 10, 'chapel hill': 30,
+  'apex': 15, 'wake forest': 20, 'holly springs': 20,
+  'morrisville': 10, 'garner': 15, 'fuquay varina': 25,
+  // Birmingham suburbs
+  'hoover': 15, 'vestavia hills': 15, 'homewood': 10,
+  'mountain brook': 10, 'trussville': 20, 'alabaster': 25,
+  'pelham': 20, 'bessemer': 20, 'leeds': 20,
+  // Richmond VA suburbs
+  'henrico': 15, 'chesterfield va': 20, 'glen allen': 15,
+  'midlothian': 20, 'short pump': 20, 'mechanicsville': 15,
+  // Virginia Beach area
+  'norfolk': 15, 'chesapeake': 20, 'hampton': 25,
+  'newport news': 30, 'suffolk': 30, 'portsmouth': 20,
   // Remote locations (1+ hour)
   'sedona': 120, 'flagstaff': 150, 'prescott': 100,
   'lake tahoe': 200, 'south lake tahoe': 200, 'mammoth lakes': 300,
