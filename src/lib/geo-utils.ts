@@ -119,7 +119,8 @@ export async function getZipCoordinates(zip: string): Promise<{ lat: number; lng
 
 export function calculateDrivingDistance(straightLineDistance: number): { miles: number; minutes: number } {
   const drivingMiles = Math.round(straightLineDistance * 1.35);
-  const drivingMinutes = Math.round(drivingMiles * 1.5);
+  const minutesPerMile = drivingMiles <= 15 ? 1.8 : drivingMiles <= 35 ? 1.3 : 1.05;
+  const drivingMinutes = Math.round(drivingMiles * minutesPerMile);
   return { miles: drivingMiles, minutes: drivingMinutes };
 }
 
