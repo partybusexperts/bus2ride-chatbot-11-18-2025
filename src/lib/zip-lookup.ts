@@ -88,7 +88,42 @@ export async function lookupZipsForCity(city: string, state?: string): Promise<s
   }
 }
 
-const COMMON_STATES = ['TX', 'AZ', 'CA', 'NY', 'NJ', 'FL', 'GA', 'IL', 'PA', 'OH', 'NC', 'VA', 'WA', 'CO', 'TN', 'NV', 'LA', 'MD', 'MA', 'IN'];
+const KNOWN_CITY_STATES: Record<string, string> = {
+  'phoenix': 'AZ', 'tucson': 'AZ', 'mesa': 'AZ', 'scottsdale': 'AZ', 'tempe': 'AZ', 'chandler': 'AZ', 'gilbert': 'AZ', 'glendale az': 'AZ', 'sedona': 'AZ', 'flagstaff': 'AZ',
+  'los angeles': 'CA', 'san francisco': 'CA', 'san diego': 'CA', 'san jose': 'CA', 'sacramento': 'CA', 'fresno': 'CA', 'long beach': 'CA', 'oakland': 'CA', 'bakersfield': 'CA', 'anaheim': 'CA', 'santa rosa': 'CA', 'napa': 'CA', 'riverside': 'CA', 'irvine': 'CA', 'visalia': 'CA', 'modesto': 'CA', 'stockton': 'CA',
+  'denver': 'CO', 'colorado springs': 'CO', 'boulder': 'CO', 'aurora co': 'CO',
+  'miami': 'FL', 'tampa': 'FL', 'orlando': 'FL', 'jacksonville': 'FL', 'fort lauderdale': 'FL', 'st petersburg': 'FL', 'sarasota': 'FL', 'naples': 'FL',
+  'atlanta': 'GA', 'savannah': 'GA', 'augusta': 'GA',
+  'chicago': 'IL', 'naperville': 'IL', 'aurora il': 'IL', 'rockford': 'IL',
+  'indianapolis': 'IN', 'fort wayne': 'IN',
+  'new orleans': 'LA', 'baton rouge': 'LA',
+  'boston': 'MA', 'cambridge': 'MA', 'worcester': 'MA',
+  'baltimore': 'MD', 'annapolis': 'MD',
+  'detroit': 'MI', 'grand rapids': 'MI', 'ann arbor': 'MI',
+  'minneapolis': 'MN', 'st paul': 'MN',
+  'kansas city': 'MO', 'st louis': 'MO',
+  'charlotte': 'NC', 'raleigh': 'NC', 'durham': 'NC',
+  'omaha': 'NE',
+  'las vegas': 'NV', 'henderson': 'NV', 'reno': 'NV',
+  'new york': 'NY', 'brooklyn': 'NY', 'buffalo': 'NY', 'rochester': 'NY', 'syracuse': 'NY', 'albany': 'NY',
+  'columbus': 'OH', 'cleveland': 'OH', 'cincinnati': 'OH',
+  'oklahoma city': 'OK', 'tulsa': 'OK',
+  'portland': 'OR',
+  'philadelphia': 'PA', 'pittsburgh': 'PA',
+  'providence': 'RI',
+  'nashville': 'TN', 'memphis': 'TN', 'knoxville': 'TN',
+  'dallas': 'TX', 'houston': 'TX', 'austin': 'TX', 'san antonio': 'TX', 'fort worth': 'TX', 'el paso': 'TX', 'plano': 'TX',
+  'salt lake city': 'UT', 'provo': 'UT', 'ogden': 'UT',
+  'richmond': 'VA', 'virginia beach': 'VA', 'norfolk': 'VA',
+  'seattle': 'WA', 'tacoma': 'WA', 'spokane': 'WA', 'bellevue': 'WA',
+  'washington': 'DC', 'washington dc': 'DC',
+  'milwaukee': 'WI', 'madison': 'WI',
+  'louisville': 'KY', 'lexington': 'KY',
+  'birmingham': 'AL', 'mobile': 'AL', 'montgomery': 'AL',
+  'albuquerque': 'NM', 'santa fe': 'NM',
+};
+
+const COMMON_STATES = ['CA', 'TX', 'AZ', 'FL', 'NY', 'NJ', 'GA', 'IL', 'PA', 'OH', 'NC', 'VA', 'WA', 'CO', 'TN', 'NV', 'LA', 'MD', 'MA', 'IN'];
 
 export async function getZipsForLocation(query: string): Promise<{ zips: string[]; city: string; state?: string }> {
   const { city, state } = parseLocationQuery(query);
@@ -98,7 +133,16 @@ export async function getZipsForLocation(query: string): Promise<{ zips: string[
     return { zips, city, state };
   }
   
+  const knownState = KNOWN_CITY_STATES[city.toLowerCase()];
+  if (knownState) {
+    const zips = await lookupZipsForCity(city, knownState);
+    if (zips.length > 0) {
+      return { zips, city, state: knownState };
+    }
+  }
+  
   for (const tryState of COMMON_STATES) {
+    if (tryState === knownState) continue;
     const zips = await lookupZipsForCity(city, tryState);
     if (zips.length > 0) {
       return { zips, city, state: tryState };
