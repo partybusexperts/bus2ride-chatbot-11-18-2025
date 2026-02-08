@@ -72,7 +72,7 @@ const CITY_ALIASES: Record<string, string[]> = {
   'new york': ['nyc', 'manhattan', 'brooklyn', 'queens', 'bronx', 'staten island', 'harlem', 'soho', 'tribeca', 'chelsea', 'midtown'],
   'las vegas': ['vegas', 'henderson', 'north las vegas', 'summerlin', 'the strip', 'downtown vegas', 'boulder city', 'paradise'],
   'san diego': ['la jolla', 'del mar', 'coronado', 'chula vista', 'oceanside', 'carlsbad', 'encinitas', 'escondido', 'national city'],
-  'san francisco': ['sf', 'oakland', 'berkeley', 'hayward', 'daly city', 'south sf', 'san mateo', 'richmond', 'walnut creek', 'concord'],
+  'san francisco': ['sf', 'oakland', 'berkeley', 'hayward', 'daly city', 'south sf', 'san mateo', 'richmond ca', 'walnut creek', 'concord'],
   'san jose': ['palo alto', 'mountain view', 'sunnyvale', 'fremont', 'santa clara', 'milpitas', 'cupertino', 'campbell', 'los gatos', 'saratoga', 'gilroy', 'morgan hill'],
   'miami': ['miami beach', 'south beach', 'fort lauderdale', 'boca raton', 'west palm beach', 'coral gables', 'hialeah', 'hollywood fl', 'pompano beach'],
   'chicago': ['evanston', 'oak park', 'naperville', 'schaumburg', 'aurora', 'joliet', 'elgin', 'waukegan', 'cicero'],
