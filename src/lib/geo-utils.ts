@@ -27,6 +27,7 @@ export const METRO_COORDS: Record<string, { lat: number; lng: number }> = {
   'Indianapolis': { lat: 39.7684, lng: -86.1581 },
   'Columbus': { lat: 39.9612, lng: -82.9988 },
   'Cleveland': { lat: 41.4993, lng: -81.6944 },
+  'Toledo': { lat: 41.6528, lng: -83.5379 },
   'Cincinnati': { lat: 39.1031, lng: -84.5120 },
   'Pittsburgh': { lat: 40.4406, lng: -79.9959 },
   'Baltimore': { lat: 39.2904, lng: -76.6122 },

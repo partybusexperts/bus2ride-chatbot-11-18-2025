@@ -89,6 +89,7 @@ const CITY_ALIASES: Record<string, string[]> = {
   'tampa': ['st petersburg', 'clearwater', 'brandon', 'lakeland', 'sarasota', 'bradenton', 'st pete beach'],
   'new orleans': ['nola', 'metairie', 'kenner', 'slidell', 'gretna', 'harvey', 'marrero', 'french quarter'],
   'san antonio': ['new braunfels', 'boerne', 'schertz', 'cibolo', 'helotes', 'alamo heights', 'live oak'],
+  'toledo': ['maumee', 'perrysburg', 'sylvania', 'oregon', 'bowling green', 'findlay', 'rossford', 'northwood', 'holland', 'waterville', 'whitehouse', 'ottawa hills'],
 };
 
 const COMMON_TYPOS: Record<string, string> = {

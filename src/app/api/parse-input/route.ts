@@ -119,6 +119,8 @@ const ZIP_TO_METRO: Record<string, string> = {
   '128': 'Albany', '129': 'Albany',
   // Cleveland OH (440-444)
   '440': 'Cleveland', '441': 'Cleveland', '442': 'Cleveland', '443': 'Cleveland', '444': 'Cleveland',
+  // Toledo OH (434-436)
+  '434': 'Toledo', '435': 'Toledo', '436': 'Toledo',
   // Columbus OH (430-433)
   '430': 'Columbus', '431': 'Columbus', '432': 'Columbus', '433': 'Columbus',
   // Cincinnati OH (450-455)
@@ -1346,6 +1348,13 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'akron': 'Cleveland', 'akron oh': 'Cleveland', 'canton oh': 'Cleveland',
   'tremont': 'Cleveland', 'ohio city': 'Cleveland', 'downtown cleveland': 'Cleveland',
   'university circle': 'Cleveland', 'little italy cleveland': 'Cleveland',
+  // Toledo metro
+  'maumee': 'Toledo', 'maumee oh': 'Toledo', 'perrysburg': 'Toledo', 'perrysburg oh': 'Toledo',
+  'sylvania': 'Toledo', 'sylvania oh': 'Toledo', 'oregon oh': 'Toledo',
+  'bowling green oh': 'Toledo', 'findlay': 'Toledo', 'findlay oh': 'Toledo',
+  'rossford': 'Toledo', 'northwood oh': 'Toledo', 'holland oh': 'Toledo',
+  'waterville': 'Toledo', 'whitehouse oh': 'Toledo', 'temperance': 'Toledo',
+  'lambertville': 'Toledo', 'ottawa hills': 'Toledo', 'point place': 'Toledo',
   // Pittsburgh metro
   'monroeville': 'Pittsburgh', 'bethel park': 'Pittsburgh', 'mount lebanon': 'Pittsburgh',
   'mt lebanon': 'Pittsburgh', 'upper st clair': 'Pittsburgh', 'south hills': 'Pittsburgh',
@@ -1508,6 +1517,12 @@ const CITY_TRAVEL_TIMES: Record<string, number> = {
   'ann arbor': 45, 'troy': 25, 'sterling heights': 25, 'dearborn': 15,
   'livonia': 25, 'warren': 20, 'farmington hills': 25, 'royal oak': 15,
   'southfield': 20, 'novi': 30, 'rochester hills': 30,
+  // Toledo suburbs
+  'maumee': 10, 'maumee oh': 10, 'perrysburg': 15, 'perrysburg oh': 15,
+  'sylvania': 12, 'sylvania oh': 12, 'oregon oh': 10,
+  'bowling green oh': 25, 'findlay': 45, 'findlay oh': 45,
+  'rossford': 10, 'northwood oh': 8, 'holland oh': 12,
+  'waterville': 15, 'whitehouse oh': 15, 'ottawa hills': 8,
   // Seattle suburbs
   'bellevue': 15, 'tacoma': 35, 'everett': 30, 'kent': 20, 'renton': 15,
   'federal way': 25, 'kirkland': 15, 'redmond': 20, 'olympia': 60,

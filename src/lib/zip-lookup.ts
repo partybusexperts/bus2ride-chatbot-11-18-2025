@@ -106,7 +106,7 @@ const KNOWN_CITY_STATES: Record<string, string> = {
   'omaha': 'NE',
   'las vegas': 'NV', 'henderson': 'NV', 'reno': 'NV',
   'new york': 'NY', 'brooklyn': 'NY', 'buffalo': 'NY', 'rochester': 'NY', 'syracuse': 'NY', 'albany': 'NY',
-  'columbus': 'OH', 'cleveland': 'OH', 'cincinnati': 'OH',
+  'columbus': 'OH', 'cleveland': 'OH', 'cincinnati': 'OH', 'toledo': 'OH', 'maumee': 'OH',
   'oklahoma city': 'OK', 'tulsa': 'OK',
   'portland': 'OR',
   'philadelphia': 'PA', 'pittsburgh': 'PA',
