@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { getZipCoordinates, findNearestMetro } from "@/lib/geo-utils";
+import { getZipCoordinates, findNearestMetro, findNearestMetroUnlimited } from "@/lib/geo-utils";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -348,7 +348,7 @@ function getMetroFromZipSync(zip: string): { searchCity: string; displayCity: st
   return null;
 }
 
-async function getMetroFromZip(zip: string): Promise<{ searchCity: string; displayCity: string } | null> {
+async function getMetroFromZip(zip: string): Promise<{ searchCity: string; displayCity: string; outOfServiceArea?: boolean; nearestMetroName?: string; nearestMetroMiles?: number; nearestMetroMinutes?: number } | null> {
   const syncResult = getMetroFromZipSync(zip);
   if (syncResult) return syncResult;
 
@@ -358,7 +358,7 @@ async function getMetroFromZip(zip: string): Promise<{ searchCity: string; displ
     try {
       const zipData = await getZipCoordinates(zip.trim());
       if (zipData) {
-        const nearest = findNearestMetro(zipData.lat, zipData.lng, 120);
+        const nearest = findNearestMetro(zipData.lat, zipData.lng, 150);
         if (nearest) {
           console.log(`[ZIP Fallback] ${zip} (${zipData.city}, ${zipData.state}) → ${nearest.metro} (${nearest.drivingMiles} mi)`);
           return {
@@ -366,6 +366,18 @@ async function getMetroFromZip(zip: string): Promise<{ searchCity: string; displ
             displayCity: CITY_DISPLAY_NAMES[nearest.metro] || nearest.metro,
           };
         }
+        
+        // Out of service area - find nearest metro anyway for messaging
+        const nearestAnyway = findNearestMetroUnlimited(zipData.lat, zipData.lng);
+        console.log(`[ZIP Out of Service] ${zip} (${zipData.city}, ${zipData.state}) → nearest is ${nearestAnyway.metro} at ${nearestAnyway.drivingMiles} mi`);
+        return {
+          searchCity: nearestAnyway.metro,
+          displayCity: CITY_DISPLAY_NAMES[nearestAnyway.metro] || nearestAnyway.metro,
+          outOfServiceArea: true,
+          nearestMetroName: nearestAnyway.metro,
+          nearestMetroMiles: nearestAnyway.drivingMiles,
+          nearestMetroMinutes: nearestAnyway.drivingMinutes,
+        };
       }
     } catch (e) {
       console.error('ZIP fallback lookup error:', e);
@@ -2760,6 +2772,10 @@ export async function POST(request: NextRequest) {
           item.normalizedCity = fallback.searchCity;
           if (fallback.displayCity !== fallback.searchCity) {
             item.displayCity = fallback.displayCity;
+          }
+          if (fallback.outOfServiceArea) {
+            item.isRemote = true;
+            item.travelMinutes = fallback.nearestMetroMinutes;
           }
         }
       }

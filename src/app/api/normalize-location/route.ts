@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { METRO_COORDS, haversineDistance, getZipCoordinates, calculateDrivingDistance, findNearestMetro } from "@/lib/geo-utils";
+import { METRO_COORDS, haversineDistance, getZipCoordinates, calculateDrivingDistance, findNearestMetro, findNearestMetroUnlimited } from "@/lib/geo-utils";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -35,11 +35,14 @@ export async function POST(request: NextRequest) {
             cityName: zipData.city,
             state: zipData.state,
             isRemote: minutes >= 60,
+            outOfServiceArea: false,
             driveMinutes: minutes,
             driveMiles: miles,
           });
         }
         
+        // No metro within service range - find nearest anyway for messaging
+        const nearestAnyway = findNearestMetroUnlimited(zipData.lat, zipData.lng);
         return NextResponse.json({
           success: true,
           location,
@@ -47,8 +50,12 @@ export async function POST(request: NextRequest) {
           cityName: zipData.city,
           state: zipData.state,
           isRemote: true,
-          driveMinutes: null,
-          driveMiles: null,
+          outOfServiceArea: true,
+          nearestMetroName: nearestAnyway.metro,
+          nearestMetroMiles: nearestAnyway.drivingMiles,
+          nearestMetroMinutes: nearestAnyway.drivingMinutes,
+          driveMinutes: nearestAnyway.drivingMinutes,
+          driveMiles: nearestAnyway.drivingMiles,
         });
       }
     }

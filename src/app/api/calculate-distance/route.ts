@@ -43,8 +43,13 @@ export async function POST(request: NextRequest) {
     const { miles: drivingMiles, minutes: drivingMinutes } = calculateDrivingDistance(straightLineDistance);
     
     const direction = getDirection(zipData.lat, zipData.lng, metroCoords.lat, metroCoords.lng);
-    const distanceDesc = drivingMiles <= 10 ? 'Close-in' : drivingMiles <= 25 ? '' : 'Far';
+    const distanceDesc = drivingMiles <= 10 ? 'Close-in' : 
+                         drivingMiles <= 25 ? '' : 
+                         drivingMiles <= 60 ? 'Far' : 'Very far';
     const description = `${distanceDesc} ${direction} suburbs`.trim().replace(/\s+/g, ' ');
+
+    // Flag if this location is unreasonably far from the metro (likely wrong metro assignment)
+    const outOfServiceArea = drivingMinutes >= 120;
 
     return NextResponse.json({
       success: true,
@@ -55,6 +60,7 @@ export async function POST(request: NextRequest) {
       description,
       cityName: zipData.city,
       state: zipData.state,
+      outOfServiceArea,
     });
 
   } catch (error) {

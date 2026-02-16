@@ -119,16 +119,30 @@ export async function getZipCoordinates(zip: string): Promise<{ lat: number; lng
 }
 
 export function calculateDrivingDistance(straightLineDistance: number): { miles: number; minutes: number } {
-  const multiplier = straightLineDistance <= 15 ? 1.4 :
-                     straightLineDistance <= 40 ? 1.3 :
-                     straightLineDistance <= 80 ? 1.25 : 1.2;
+  // Better multiplier curve: shorter distances have more winding roads
+  const multiplier = straightLineDistance <= 10 ? 1.5 :
+                     straightLineDistance <= 25 ? 1.4 :
+                     straightLineDistance <= 50 ? 1.35 :
+                     straightLineDistance <= 100 ? 1.3 :
+                     straightLineDistance <= 200 ? 1.25 : 1.2;
   const drivingMiles = Math.round(straightLineDistance * multiplier);
-  const minutesPerMile = drivingMiles <= 15 ? 1.8 : drivingMiles <= 35 ? 1.3 : drivingMiles <= 80 ? 1.05 : 0.95;
+  
+  // Minutes per mile: slower in cities, faster on highways
+  const minutesPerMile = drivingMiles <= 10 ? 2.0 :
+                         drivingMiles <= 25 ? 1.5 :
+                         drivingMiles <= 50 ? 1.2 :
+                         drivingMiles <= 100 ? 1.05 :
+                         drivingMiles <= 200 ? 0.95 : 0.9;
   const drivingMinutes = Math.round(drivingMiles * minutesPerMile);
-  return { miles: drivingMiles, minutes: drivingMinutes };
+  
+  // Sanity caps: no single metro distance should exceed reasonable bounds
+  return { 
+    miles: Math.min(drivingMiles, 3000), 
+    minutes: Math.min(drivingMinutes, 3000) 
+  };
 }
 
-export function findNearestMetro(lat: number, lng: number, maxDrivingMiles: number = 75): { metro: string; distance: number; drivingMiles: number } | null {
+export function findNearestMetro(lat: number, lng: number, maxDrivingMiles: number = 150): { metro: string; distance: number; drivingMiles: number; drivingMinutes: number } | null {
   let nearestMetro: string | null = null;
   let nearestDistance = Infinity;
   
@@ -141,11 +155,43 @@ export function findNearestMetro(lat: number, lng: number, maxDrivingMiles: numb
   }
   
   if (nearestMetro) {
-    const { miles: drivingMiles } = calculateDrivingDistance(nearestDistance);
+    const { miles: drivingMiles, minutes: drivingMinutes } = calculateDrivingDistance(nearestDistance);
     if (drivingMiles <= maxDrivingMiles) {
-      return { metro: nearestMetro, distance: nearestDistance, drivingMiles };
+      return { metro: nearestMetro, distance: nearestDistance, drivingMiles, drivingMinutes };
     }
   }
   
   return null;
+}
+
+export function findNearestMetroUnlimited(lat: number, lng: number): { metro: string; distance: number; drivingMiles: number; drivingMinutes: number } {
+  let nearestMetro = '';
+  let nearestDistance = Infinity;
+  
+  for (const [metro, coords] of Object.entries(METRO_COORDS)) {
+    const distance = haversineDistance(lat, lng, coords.lat, coords.lng);
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearestMetro = metro;
+    }
+  }
+  
+  const { miles: drivingMiles, minutes: drivingMinutes } = calculateDrivingDistance(nearestDistance);
+  return { metro: nearestMetro, distance: nearestDistance, drivingMiles, drivingMinutes };
+}
+
+export function findNearestMetros(lat: number, lng: number, count: number = 3): Array<{ metro: string; distance: number; drivingMiles: number; drivingMinutes: number }> {
+  const allMetros: Array<{ metro: string; distance: number }> = [];
+  
+  for (const [metro, coords] of Object.entries(METRO_COORDS)) {
+    const distance = haversineDistance(lat, lng, coords.lat, coords.lng);
+    allMetros.push({ metro, distance });
+  }
+  
+  allMetros.sort((a, b) => a.distance - b.distance);
+  
+  return allMetros.slice(0, count).map(m => {
+    const { miles: drivingMiles, minutes: drivingMinutes } = calculateDrivingDistance(m.distance);
+    return { metro: m.metro, distance: m.distance, drivingMiles, drivingMinutes };
+  });
 }

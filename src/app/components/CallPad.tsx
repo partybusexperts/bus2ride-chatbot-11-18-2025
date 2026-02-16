@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { getWebsitesForPhone } from "@/lib/website-phone-lookup";
 
 type DetectedType = 
   | 'phone' | 'email' | 'zip' | 'city' | 'date' | 'time' 
@@ -193,6 +194,105 @@ function parseTimeString(timeStr: string): string {
   return '';
 }
 
+// Build a flat list of all known city/suburb names for autocomplete
+const ALL_KNOWN_LOCATIONS: Array<{ name: string; metro: string }> = (() => {
+  const locations: Array<{ name: string; metro: string }> = [];
+  const AUTOCOMPLETE_ALIASES: Record<string, string[]> = {
+    'phoenix': ['mesa', 'tempe', 'scottsdale', 'chandler', 'gilbert', 'surprise', 'goodyear', 'peoria az', 'glendale az', 'avondale', 'buckeye', 'queen creek', 'maricopa', 'fountain hills'],
+    'tucson': ['oro valley', 'marana', 'sahuarita', 'green valley', 'sierra vista'],
+    'los angeles': ['hollywood', 'beverly hills', 'santa monica', 'pasadena', 'burbank', 'glendale ca', 'calabasas', 'malibu', 'west hollywood', 'santa clarita', 'palmdale', 'rancho cucamonga', 'ontario ca', 'riverside', 'corona', 'temecula', 'pomona', 'torrance', 'inglewood'],
+    'long beach': ['seal beach', 'lakewood ca', 'signal hill'],
+    'san diego': ['la jolla', 'del mar', 'coronado', 'chula vista', 'oceanside', 'carlsbad', 'encinitas', 'escondido', 'el cajon', 'poway'],
+    'san francisco': ['oakland', 'berkeley', 'hayward', 'walnut creek', 'concord', 'pleasanton', 'livermore', 'san mateo', 'redwood city', 'palo alto', 'mountain view', 'fremont', 'vallejo'],
+    'san jose': ['sunnyvale', 'santa clara', 'milpitas', 'cupertino', 'campbell', 'los gatos', 'gilroy'],
+    'sacramento': ['elk grove', 'roseville', 'folsom', 'davis', 'rocklin'],
+    'fresno': ['clovis', 'visalia', 'madera'],
+    'napa': ['yountville', 'st helena', 'calistoga', 'napa valley'],
+    'santa rosa': ['petaluma', 'sonoma', 'healdsburg'],
+    'denver': ['aurora co', 'lakewood co', 'boulder', 'centennial', 'highlands ranch', 'castle rock', 'fort collins', 'longmont', 'loveland', 'golden', 'littleton', 'parker', 'arvada'],
+    'miami': ['miami beach', 'fort lauderdale', 'boca raton', 'west palm beach', 'coral gables', 'hollywood fl', 'pompano beach', 'delray beach', 'aventura', 'weston', 'plantation', 'pembroke pines', 'coral springs', 'jupiter'],
+    'orlando': ['kissimmee', 'winter park', 'sanford', 'daytona beach', 'clermont', 'ocala'],
+    'tampa': ['st petersburg', 'clearwater', 'lakeland', 'sarasota', 'bradenton'],
+    'jacksonville': ['st augustine', 'ponte vedra', 'orange park'],
+    'atlanta': ['marietta', 'roswell', 'alpharetta', 'sandy springs', 'dunwoody', 'kennesaw', 'lawrenceville', 'suwanee', 'peachtree city', 'newnan', 'mcdonough'],
+    'chicago': ['naperville', 'glen ellyn', 'wheaton', 'downers grove', 'lombard', 'elmhurst', 'oak brook', 'hinsdale', 'schaumburg', 'evanston', 'oak park', 'skokie', 'palatine', 'arlington heights', 'des plaines', 'park ridge', 'joliet', 'bolingbrook', 'orland park', 'tinley park', 'oak lawn', 'highland park il', 'lake forest il', 'libertyville', 'glenview', 'northbrook', 'buffalo grove', 'barrington', 'crystal lake', 'gurnee', 'aurora il', 'elgin', 'waukegan', 'plainfield', 'romeoville', 'lisle', 'woodridge', 'hoffman estates'],
+    'indianapolis': ['carmel', 'fishers', 'noblesville', 'zionsville', 'greenwood in'],
+    'louisville': ['jeffersontown', 'new albany', 'elizabethtown'],
+    'lexington': ['georgetown ky', 'richmond ky', 'frankfort ky'],
+    'new orleans': ['metairie', 'kenner', 'slidell', 'mandeville'],
+    'baltimore': ['towson', 'columbia md', 'annapolis', 'ellicott city'],
+    'boston': ['cambridge', 'brookline', 'newton', 'quincy', 'worcester', 'framingham', 'lowell', 'salem ma'],
+    'detroit': ['dearborn', 'livonia', 'ann arbor', 'troy mi', 'royal oak', 'novi', 'farmington hills', 'southfield', 'sterling heights', 'rochester hills'],
+    'grand rapids': ['kalamazoo', 'holland mi', 'muskegon'],
+    'minneapolis': ['st paul', 'bloomington mn', 'eden prairie', 'maple grove', 'edina', 'minnetonka', 'woodbury mn', 'eagan', 'burnsville'],
+    'st louis': ['chesterfield mo', 'st charles mo', 'o fallon mo', 'kirkwood', 'clayton mo'],
+    'kansas city': ['overland park', 'olathe', 'lenexa', 'lees summit', 'independence mo'],
+    'las vegas': ['henderson', 'north las vegas', 'summerlin'],
+    'new york': ['manhattan', 'brooklyn', 'queens', 'bronx', 'yonkers', 'white plains', 'hoboken', 'jersey city', 'newark nj', 'garden city', 'hempstead'],
+    'charlotte': ['huntersville', 'cornelius', 'mooresville', 'concord nc', 'gastonia', 'matthews', 'rock hill', 'fort mill'],
+    'raleigh': ['durham', 'chapel hill', 'cary', 'apex'],
+    'columbus': ['dublin oh', 'westerville', 'hilliard', 'grove city oh', 'upper arlington'],
+    'cleveland': ['lakewood oh', 'parma', 'strongsville', 'akron', 'medina oh', 'mentor', 'solon'],
+    'cincinnati': ['mason oh', 'west chester oh', 'dayton', 'kettering', 'covington ky', 'florence ky'],
+    'toledo': ['maumee', 'perrysburg', 'sylvania oh', 'bowling green oh'],
+    'oklahoma city': ['edmond', 'norman', 'moore ok'],
+    'tulsa': ['broken arrow', 'owasso', 'jenks'],
+    'portland': ['beaverton', 'hillsboro', 'lake oswego', 'tigard', 'gresham', 'vancouver wa'],
+    'philadelphia': ['cherry hill', 'king of prussia', 'west chester pa', 'wilmington de', 'trenton', 'princeton'],
+    'pittsburgh': ['mount lebanon', 'cranberry township', 'monroeville'],
+    'nashville': ['franklin tn', 'murfreesboro', 'brentwood tn', 'clarksville tn', 'hendersonville tn', 'mt juliet'],
+    'memphis': ['germantown tn', 'collierville', 'bartlett tn', 'southaven'],
+    'dallas': ['fort worth', 'plano', 'frisco', 'mckinney', 'arlington tx', 'irving', 'denton tx', 'garland', 'richardson', 'flower mound', 'southlake', 'grapevine', 'grand prairie', 'mesquite', 'rockwall', 'lewisville', 'mansfield tx'],
+    'houston': ['the woodlands', 'sugar land', 'katy', 'pearland', 'cypress tx', 'spring tx', 'humble', 'conroe', 'league city', 'galveston', 'missouri city', 'tomball'],
+    'austin': ['round rock', 'cedar park', 'georgetown tx', 'pflugerville', 'san marcos', 'dripping springs', 'leander'],
+    'san antonio': ['new braunfels', 'boerne', 'schertz', 'cibolo'],
+    'salt lake city': ['sandy ut', 'draper', 'south jordan', 'provo', 'orem', 'lehi', 'ogden', 'park city', 'layton', 'west jordan'],
+    'richmond': ['henrico', 'chesterfield', 'midlothian va', 'glen allen'],
+    'virginia beach': ['norfolk', 'chesapeake', 'hampton', 'newport news', 'williamsburg'],
+    'seattle': ['bellevue', 'tacoma', 'everett', 'kirkland', 'redmond', 'renton', 'kent wa', 'federal way', 'issaquah', 'sammamish', 'olympia', 'puyallup', 'bremerton'],
+    'spokane': ['spokane valley', 'liberty lake', 'coeur d alene'],
+    'washington': ['arlington va', 'alexandria', 'bethesda', 'silver spring', 'rockville', 'fairfax', 'reston', 'ashburn', 'mclean', 'herndon', 'manassas', 'gaithersburg'],
+    'milwaukee': ['waukesha', 'brookfield wi', 'wauwatosa', 'kenosha', 'racine'],
+    'birmingham': ['hoover', 'vestavia hills', 'trussville'],
+    'mobile': ['daphne', 'fairhope'],
+    'montgomery': ['prattville'],
+    'omaha': ['bellevue ne', 'papillion', 'council bluffs'],
+    'albuquerque': ['rio rancho'],
+    'anchorage': ['wasilla', 'eagle river'],
+    'providence': ['cranston', 'warwick ri', 'newport ri'],
+  };
+  
+  // Add all metro cities themselves
+  const metroNames = [
+    'Phoenix', 'Tucson', 'Los Angeles', 'Long Beach', 'San Diego', 'San Francisco', 'San Jose',
+    'Sacramento', 'Fresno', 'Napa', 'Santa Rosa', 'Denver', 'Miami', 'Orlando', 'Tampa',
+    'Jacksonville', 'Atlanta', 'Chicago', 'Indianapolis', 'Louisville', 'Lexington',
+    'New Orleans', 'Baltimore', 'Boston', 'Detroit', 'Grand Rapids', 'Minneapolis',
+    'St Louis', 'Kansas City', 'Las Vegas', 'New York', 'Charlotte', 'Raleigh',
+    'Columbus', 'Cleveland', 'Cincinnati', 'Toledo', 'Oklahoma City', 'Tulsa',
+    'Portland', 'Philadelphia', 'Pittsburgh', 'Nashville', 'Memphis', 'Dallas', 'Houston',
+    'Austin', 'San Antonio', 'Salt Lake City', 'Richmond', 'Virginia Beach', 'Seattle',
+    'Spokane', 'Washington DC', 'Milwaukee', 'Birmingham', 'Mobile', 'Montgomery',
+    'Omaha', 'Albuquerque', 'Santa Fe', 'Anchorage', 'Providence',
+    'Toronto', 'Montreal', 'Vancouver', 'Calgary', 'Windsor', 'Winnipeg',
+  ];
+  
+  for (const name of metroNames) {
+    locations.push({ name, metro: name });
+  }
+  
+  // Add all suburbs
+  for (const [metro, suburbs] of Object.entries(AUTOCOMPLETE_ALIASES)) {
+    const metroDisplay = metro.charAt(0).toUpperCase() + metro.slice(1);
+    for (const suburb of suburbs) {
+      const suburbDisplay = suburb.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      locations.push({ name: suburbDisplay, metro: metroDisplay });
+    }
+  }
+  
+  return locations;
+})();
+
 export default function CallPad() {
   const [smartInput, setSmartInput] = useState("");
   const [chips, setChips] = useState<DetectedChip[]>([]);
@@ -200,6 +300,9 @@ export default function CallPad() {
   const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
   const [modalPriceType, setModalPriceType] = useState<'standard' | 'prom' | 'before5pm' | 'aprilmay' | 'transfer'>('standard');
   const [modalHours, setModalHours] = useState<number>(4);
+  const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<Array<{ name: string; metro: string }>>([]);
+  const [autocompleteIndex, setAutocompleteIndex] = useState(-1);
+  const autocompleteRef = useRef<HTMLDivElement>(null);
   
   const [confirmedData, setConfirmedData] = useState({
     agentName: "",
@@ -232,6 +335,7 @@ export default function CallPad() {
   const [quotedVehicles, setQuotedVehicles] = useState<QuotedVehicle[]>([]);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
   const [vehicleMessage, setVehicleMessage] = useState("");
+  const [nearbyMetroSuggestions, setNearbyMetroSuggestions] = useState<Array<{ metro: string; drivingMiles: number; drivingMinutes: number; vehicleCount: number }>>([]);
   const [leadStatus, setLeadStatus] = useState<LeadStatus>('quoted');
   const [zohoLeadUrl, setZohoLeadUrl] = useState<string | null>(null);
   const [selectedFieldsToUpdate, setSelectedFieldsToUpdate] = useState<Set<string>>(new Set());
@@ -275,6 +379,7 @@ export default function CallPad() {
   }>>([]);
   const [loadingCalls, setLoadingCalls] = useState(false);
   const [callsError, setCallsError] = useState<string | null>(null);
+  const [callerWebsites, setCallerWebsites] = useState<string[]>([]);
   
   const [zohoExistingLead, setZohoExistingLead] = useState<any>(null);
   const [zohoUpdateConfirmation, setZohoUpdateConfirmation] = useState<{
@@ -329,7 +434,10 @@ export default function CallPad() {
   const CITY_NAMES = [
     'phoenix', 'scottsdale', 'mesa', 'tempe', 'glendale', 'chandler', 'gilbert',
     'peoria', 'surprise', 'goodyear', 'avondale', 'tucson', 'las vegas', 'denver',
-    'chicago', 'dallas', 'houston', 'austin', 'san antonio', 'los angeles',
+    'chicago', 'naperville', 'glen ellyn', 'wheaton', 'downers grove', 'lombard',
+    'elmhurst', 'oak brook', 'schaumburg', 'evanston', 'oak park', 'skokie',
+    'palatine', 'arlington heights', 'joliet', 'bolingbrook', 'orland park', 'tinley park',
+    'dallas', 'houston', 'austin', 'san antonio', 'los angeles',
     'san diego', 'san francisco', 'seattle', 'portland', 'atlanta', 'miami',
     'orlando', 'tampa', 'boston', 'new york', 'philadelphia', 'detroit',
     'napa', 'sacramento', 'fresno', 'oakland', 'san jose', 'santa rosa',
@@ -340,6 +448,10 @@ export default function CallPad() {
     'little rock', 'oklahoma city', 'tulsa', 'omaha', 'des moines', 'wichita',
     'albuquerque', 'el paso', 'boise', 'spokane', 'tacoma', 'honolulu',
     'anchorage', 'jacksonville', 'richmond', 'virginia beach', 'norfolk',
+    'fort worth', 'plano', 'frisco', 'irving', 'arlington',
+    'henderson', 'boulder', 'aurora', 'bellevue',
+    'fort lauderdale', 'st petersburg', 'clearwater',
+    'grand rapids', 'toledo', 'cincinnati',
   ];
 
   const extractCityFromText = (text: string): string | null => {
@@ -499,6 +611,17 @@ export default function CallPad() {
                   pickupAddress: `${data.cityName}, ${data.state} ${locationToSearch}`
                 }));
               }
+              // Show out-of-service warning if distance calc reveals it's too far
+              if (data.outOfServiceArea && data.minutes >= 120) {
+                const hours = Math.floor(data.minutes / 60);
+                const mins = data.minutes % 60;
+                const timeStr = mins > 0 ? `${hours}h ${mins}m` : `${hours} hours`;
+                const cityDisplay = data.cityName ? `${data.cityName}, ${data.state}` : locationToSearch;
+                setRemoteLocationWarning(`We don't currently service "${cityDisplay}" — it's approximately ${timeStr} from ${metroToSearch}. Please let the customer know we can't accommodate this area.`);
+              } else if (data.minutes >= 60) {
+                const cityDisplay = data.cityName ? `${data.cityName}, ${data.state}` : locationToSearch;
+                setRemoteLocationWarning(`"${cityDisplay}" is over 1 hour from ${metroToSearch}. Confirm with manager about travel surcharge.`);
+              }
             }
           })
           .catch(err => console.error('Distance calculation error:', err))
@@ -511,7 +634,12 @@ export default function CallPad() {
         console.log(`[City Normalization] "${chip.value}" → searching vehicles for "${chip.normalizedCity}"${chip.displayCity ? ` (display: ${chip.displayCity})` : ''}`);
       }
       
-      if (chip.isRemote) {
+      if (chip.isRemote && chip.travelMinutes && chip.travelMinutes >= 120) {
+        const hours = Math.floor(chip.travelMinutes / 60);
+        const mins = chip.travelMinutes % 60;
+        const timeStr = mins > 0 ? `${hours}h ${mins}m` : `${hours} hours`;
+        setRemoteLocationWarning(`We don't currently service "${chip.value}" — it's approximately ${timeStr} from ${chip.normalizedCity || 'the nearest major city'}. Please let the customer know we can't accommodate this area.`);
+      } else if (chip.isRemote) {
         setRemoteLocationWarning(`"${chip.value}" is over 1 hour from ${chip.normalizedCity || 'the nearest major city'}. Confirm with manager about travel surcharge.`);
       } else {
         setRemoteLocationWarning(null);
@@ -682,9 +810,100 @@ export default function CallPad() {
     }
   }, [applyChipToData, confirmedData.cityOrZip]);
 
+  // Autocomplete: filter suggestions as user types
+  useEffect(() => {
+    const text = smartInput.trim().toLowerCase();
+    if (text.length < 2) {
+      setAutocompleteSuggestions([]);
+      setAutocompleteIndex(-1);
+      return;
+    }
+    
+    // Don't show autocomplete for things that look like phone numbers, emails, dates, or ZIP codes
+    if (/^\d{3,}/.test(text) || text.includes('@') || text.includes('/') || /^\d+[ap]/.test(text)) {
+      setAutocompleteSuggestions([]);
+      return;
+    }
+    
+    const matches = ALL_KNOWN_LOCATIONS.filter(loc => 
+      loc.name.toLowerCase().startsWith(text) || 
+      loc.name.toLowerCase().includes(text)
+    );
+    
+    // Sort: exact prefix matches first, then contains matches
+    matches.sort((a, b) => {
+      const aStarts = a.name.toLowerCase().startsWith(text) ? 0 : 1;
+      const bStarts = b.name.toLowerCase().startsWith(text) ? 0 : 1;
+      if (aStarts !== bStarts) return aStarts - bStarts;
+      return a.name.localeCompare(b.name);
+    });
+    
+    // Remove duplicates by name
+    const seen = new Set<string>();
+    const unique = matches.filter(m => {
+      const key = m.name.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    
+    setAutocompleteSuggestions(unique.slice(0, 8));
+    setAutocompleteIndex(-1);
+  }, [smartInput]);
+
+  const selectAutocompleteSuggestion = useCallback((suggestion: { name: string; metro: string }) => {
+    setAutocompleteSuggestions([]);
+    setAutocompleteIndex(-1);
+    setSmartInput('');
+    
+    // Create a city chip and apply it
+    const isMetro = suggestion.name === suggestion.metro;
+    const chip: DetectedChip = {
+      id: generateId(),
+      type: 'city',
+      value: suggestion.name,
+      confidence: 1.0,
+      original: suggestion.name,
+      confirmed: true,
+      autoPopulated: true,
+      ...((!isMetro) && { normalizedCity: suggestion.metro }),
+    };
+    
+    applyChipToData(chip);
+    setChips(prev => [...prev, chip]);
+  }, [applyChipToData]);
+
   const handleInputKeyDown = (e: React.KeyboardEvent) => {
+    // Autocomplete keyboard navigation
+    if (autocompleteSuggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setAutocompleteIndex(prev => Math.min(prev + 1, autocompleteSuggestions.length - 1));
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setAutocompleteIndex(prev => Math.max(prev - 1, -1));
+        return;
+      }
+      if (e.key === 'Tab' || (e.key === 'Enter' && autocompleteIndex >= 0)) {
+        e.preventDefault();
+        const selected = autocompleteSuggestions[autocompleteIndex >= 0 ? autocompleteIndex : 0];
+        if (selected) {
+          selectAutocompleteSuggestion(selected);
+        }
+        return;
+      }
+      if (e.key === 'Escape') {
+        setAutocompleteSuggestions([]);
+        setAutocompleteIndex(-1);
+        return;
+      }
+    }
+    
     if (e.key === 'Enter' && smartInput.trim()) {
       e.preventDefault();
+      setAutocompleteSuggestions([]);
       parseInput(smartInput);
     }
   };
@@ -730,6 +949,8 @@ export default function CallPad() {
     setCityDisambiguation(null);
     setSelectedVehicle(null);
     setCalculatedDistance(null);
+    setNearbyMetroSuggestions([]);
+    setCallerWebsites([]);
   }, []);
 
 
@@ -850,6 +1071,7 @@ export default function CallPad() {
       console.log('[Vehicle Search Response]', cityOrZip, 'returned', data.vehicles?.length || 0, 'vehicles');
       setVehicles(data.vehicles || []);
       setVehicleMessage(data.message || "");
+      setNearbyMetroSuggestions(data.nearbyMetros || []);
     } catch (err: any) {
       if (err.name !== 'AbortError') {
         console.error(err);
@@ -1655,7 +1877,7 @@ export default function CallPad() {
   };
 
   return (
-    <div style={{ background: '#f3f4f6', padding: '16px', borderRadius: '12px', paddingTop: '110px' }}>
+    <div className="callpad-container" style={{ background: '#f3f4f6', padding: '16px', borderRadius: '12px', paddingTop: '110px' }}>
       <div style={{ 
         background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #2d5a87 100%)',
         padding: '16px 20px',
@@ -1688,23 +1910,96 @@ export default function CallPad() {
           >
             NEW CALL
           </button>
-          <input
-            ref={inputRef}
-            type="text"
-            value={smartInput}
-            onChange={(e) => setSmartInput(e.target.value)}
-            onKeyDown={handleInputKeyDown}
-            placeholder="Type: chicago, may 25th, wedding, pu at 9pm, 30 passengers... (comma-separated)"
-            style={{
-              flex: 1,
-              padding: '14px 18px',
-              fontSize: '16px',
-              border: 'none',
-              borderRadius: '8px',
-              outline: 'none',
-              background: '#fff',
-            }}
-          />
+          <div style={{ flex: 1, position: 'relative' }}>
+            <input
+              ref={inputRef}
+              type="text"
+              value={smartInput}
+              onChange={(e) => setSmartInput(e.target.value)}
+              onKeyDown={handleInputKeyDown}
+              onBlur={() => setTimeout(() => setAutocompleteSuggestions([]), 200)}
+              placeholder="Type: chicago, may 25th, wedding, pu at 9pm, 30 passengers... (comma-separated)"
+              style={{
+                width: '100%',
+                padding: '14px 18px',
+                fontSize: '16px',
+                border: 'none',
+                borderRadius: '8px',
+                outline: 'none',
+                background: '#fff',
+              }}
+              autoComplete="off"
+            />
+            {autocompleteSuggestions.length > 0 && (
+              <div
+                ref={autocompleteRef}
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  background: '#1e293b',
+                  border: '1px solid #475569',
+                  borderRadius: '0 0 8px 8px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                  zIndex: 1000,
+                  maxHeight: '300px',
+                  overflowY: 'auto',
+                }}
+              >
+                {autocompleteSuggestions.map((suggestion, idx) => {
+                  const isMetro = suggestion.name === suggestion.metro;
+                  return (
+                    <div
+                      key={`${suggestion.name}-${suggestion.metro}`}
+                      onClick={() => selectAutocompleteSuggestion(suggestion)}
+                      style={{
+                        padding: '10px 16px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        background: idx === autocompleteIndex ? '#334155' : 'transparent',
+                        borderBottom: idx < autocompleteSuggestions.length - 1 ? '1px solid #334155' : 'none',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#334155';
+                        setAutocompleteIndex(idx);
+                      }}
+                      onMouseLeave={(e) => {
+                        if (idx !== autocompleteIndex) {
+                          e.currentTarget.style.background = 'transparent';
+                        }
+                      }}
+                    >
+                      <div>
+                        <span style={{ color: '#fff', fontWeight: 600, fontSize: '14px' }}>
+                          {suggestion.name}
+                        </span>
+                        {!isMetro && (
+                          <span style={{ color: '#94a3b8', fontSize: '12px', marginLeft: '8px' }}>
+                            ({suggestion.metro} area)
+                          </span>
+                        )}
+                      </div>
+                      {isMetro && (
+                        <span style={{ 
+                          background: '#16a34a', 
+                          color: '#fff', 
+                          fontSize: '10px', 
+                          padding: '2px 6px', 
+                          borderRadius: '4px',
+                          fontWeight: 600,
+                        }}>
+                          METRO
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
           {parsingInput && (
             <div style={{ color: '#fff', fontSize: '14px' }}>Parsing...</div>
           )}
@@ -1956,8 +2251,8 @@ export default function CallPad() {
         )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '300px 280px 1fr', gap: '16px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div className="callpad-grid">
+        <div className="callpad-column">
           <div style={{ background: SECTION_STYLES.agentCustomer.bg, padding: '14px', borderRadius: '10px', border: `2px solid ${SECTION_STYLES.agentCustomer.border}` }}>
             <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '12px', color: SECTION_STYLES.agentCustomer.title }}>Agent & Customer</h3>
             <div style={{ display: 'grid', gap: '8px' }}>
@@ -2017,6 +2312,51 @@ export default function CallPad() {
                     📞 From Call
                   </button>
                 </div>
+                {callerWebsites.length > 0 && (
+                  <div style={{
+                    marginTop: '8px',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                    border: '2px solid #3b82f6',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '16px' }}>🌐</span>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#1e3a5f' }}>
+                        Caller dialed {callerWebsites.length === 1 ? 'this website' : `one of ${callerWebsites.length} websites`}:
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {callerWebsites.map((site, i) => (
+                        <button
+                          key={site}
+                          onClick={() => setConfirmedData(prev => ({ ...prev, websiteUrl: site }))}
+                          style={{
+                            fontSize: '12px',
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            border: confirmedData.websiteUrl === site ? '2px solid #2563eb' : '1px solid #93c5fd',
+                            background: confirmedData.websiteUrl === site ? '#2563eb' : '#fff',
+                            color: confirmedData.websiteUrl === site ? '#fff' : '#1e40af',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          {site}
+                        </button>
+                      ))}
+                    </div>
+                    {callerWebsites.length > 1 && (
+                      <span style={{ fontSize: '11px', color: '#6b7280', fontStyle: 'italic' }}>
+                        Click a website to set it as the lead source. First one is auto-selected.
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
               <div>
                 <label style={labelStyle}>Email</label>
@@ -2072,7 +2412,7 @@ export default function CallPad() {
                   </div>
                 )}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div className="two-col-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <div>
                   <label style={labelStyle}>Passengers</label>
                   <input style={getInputStyle(confirmedData.passengers)} type="number" placeholder="#" value={confirmedData.passengers} onChange={(e) => setConfirmedData(prev => ({ ...prev, passengers: e.target.value }))} />
@@ -2090,7 +2430,7 @@ export default function CallPad() {
                   )}
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div className="two-col-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <div>
                   <label style={labelStyle}>Event Type</label>
                   <input style={getInputStyle(confirmedData.eventType)} placeholder="Prom, Wedding..." value={confirmedData.eventType} onChange={(e) => setConfirmedData(prev => ({ ...prev, eventType: e.target.value }))} />
@@ -2100,7 +2440,7 @@ export default function CallPad() {
                   <input style={getInputStyle(confirmedData.vehicleType)} placeholder="Party Bus, Limo..." value={confirmedData.vehicleType} onChange={(e) => setConfirmedData(prev => ({ ...prev, vehicleType: e.target.value }))} />
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div className="two-col-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <div>
                   <label style={labelStyle}>Date</label>
                   <input style={getInputStyle(confirmedData.date)} type="date" value={confirmedData.date} onChange={(e) => setConfirmedData(prev => ({ ...prev, date: e.target.value }))} />
@@ -2117,40 +2457,44 @@ export default function CallPad() {
             </div>
           </div>
 
-          {remoteLocationWarning && (
-            <div style={{ 
-              background: '#fef3c7', 
-              border: '2px solid #f59e0b', 
-              borderRadius: '10px', 
-              padding: '12px 14px',
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '10px',
-            }}>
-              <span style={{ fontSize: '20px' }}>⚠️</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, color: '#92400e', fontSize: '13px', marginBottom: '4px' }}>
-                  REMOTE LOCATION - 1+ HOUR AWAY
+          {remoteLocationWarning && (() => {
+            const isOutOfService = remoteLocationWarning.startsWith("We don't currently service");
+            return (
+              <div style={{ 
+                background: isOutOfService ? '#fef2f2' : '#fef3c7', 
+                border: `2px solid ${isOutOfService ? '#ef4444' : '#f59e0b'}`, 
+                borderRadius: '10px', 
+                padding: '12px 14px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+                ...(isOutOfService ? { animation: 'pulseAlert 2s ease-in-out infinite' } : {}),
+              }}>
+                <span style={{ fontSize: '20px' }}>{isOutOfService ? '🚫' : '⚠️'}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, color: isOutOfService ? '#991b1b' : '#92400e', fontSize: '13px', marginBottom: '4px' }}>
+                    {isOutOfService ? 'OUT OF SERVICE AREA' : 'REMOTE LOCATION - 1+ HOUR AWAY'}
+                  </div>
+                  <div style={{ fontSize: '12px', color: isOutOfService ? '#b91c1c' : '#78350f' }}>
+                    {remoteLocationWarning}
+                  </div>
                 </div>
-                <div style={{ fontSize: '12px', color: '#78350f' }}>
-                  {remoteLocationWarning}
-                </div>
+                <button
+                  onClick={() => setRemoteLocationWarning(null)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    color: isOutOfService ? '#991b1b' : '#92400e',
+                    padding: '0',
+                  }}
+                >
+                  ×
+                </button>
               </div>
-              <button
-                onClick={() => setRemoteLocationWarning(null)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  color: '#92400e',
-                  padding: '0',
-                }}
-              >
-                ×
-              </button>
-            </div>
-          )}
+            );
+          })()}
 
           <div style={{ background: SECTION_STYLES.locations.bg, padding: '14px', borderRadius: '10px', border: `2px solid ${SECTION_STYLES.locations.border}` }}>
             <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '12px', color: SECTION_STYLES.locations.title }}>Locations</h3>
@@ -2182,7 +2526,7 @@ export default function CallPad() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div className="callpad-column">
           <div style={{ background: SECTION_STYLES.quotedSummary.bg, padding: '14px', borderRadius: '10px', border: `2px solid ${SECTION_STYLES.quotedSummary.border}` }}>
             <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '12px', color: SECTION_STYLES.quotedSummary.title }}>
               Quoted Summary
@@ -2394,7 +2738,7 @@ export default function CallPad() {
           )}
         </div>
 
-        <div style={{ background: '#1e293b', borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column' }}>
+        <div className="callpad-column" style={{ background: '#1e293b', borderRadius: '10px', padding: '16px' }}>
           {/* Prominent City Banner */}
           {confirmedData.cityOrZip && (
             <div style={{
@@ -2569,7 +2913,7 @@ export default function CallPad() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px', alignItems: 'center' }}>
+          <div className="vehicle-filters-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px', alignItems: 'center' }}>
             <select
               style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #475569', background: '#334155', color: '#fff', fontSize: '12px' }}
               value={sortBy}
@@ -2612,7 +2956,7 @@ export default function CallPad() {
               ))}
             </select>
             
-            <div style={{ display: 'flex', gap: '10px', marginLeft: '8px' }}>
+            <div className="vehicle-filter-checkboxes" style={{ display: 'flex', gap: '10px', marginLeft: '8px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#94a3b8', fontSize: '11px', cursor: 'pointer' }}>
                 <input 
                   type="checkbox" 
@@ -2685,14 +3029,86 @@ export default function CallPad() {
             <div style={{ 
               flex: 1, 
               display: 'flex', 
+              flexDirection: 'column',
               alignItems: 'center', 
               justifyContent: 'center',
               color: '#94a3b8',
               fontSize: '14px',
+              gap: '16px',
+              padding: '20px',
             }}>
-              {confirmedData.cityOrZip.trim() 
-                ? (loadingVehicles ? "Searching..." : "No vehicles found")
-                : "Enter a city or ZIP to see vehicles"}
+              <div>
+                {confirmedData.cityOrZip.trim() 
+                  ? (loadingVehicles ? "Searching..." : "No vehicles found for this area")
+                  : "Enter a city or ZIP to see vehicles"}
+              </div>
+              {nearbyMetroSuggestions.length > 0 && !loadingVehicles && (
+                <div style={{ 
+                  width: '100%', 
+                  maxWidth: '400px',
+                  background: 'rgba(59,130,246,0.1)', 
+                  borderRadius: '10px', 
+                  padding: '16px',
+                  border: '1px solid rgba(59,130,246,0.3)',
+                }}>
+                  <div style={{ color: '#60a5fa', fontWeight: 600, fontSize: '13px', marginBottom: '12px', textAlign: 'center' }}>
+                    Nearest service areas with vehicles:
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {nearbyMetroSuggestions.map((metro) => {
+                      const timeStr = metro.drivingMinutes >= 60
+                        ? `${Math.floor(metro.drivingMinutes / 60)}h ${metro.drivingMinutes % 60}m`
+                        : `${metro.drivingMinutes} min`;
+                      return (
+                        <button
+                          key={metro.metro}
+                          onClick={() => {
+                            setConfirmedData(prev => ({
+                              ...prev,
+                              cityOrZip: metro.metro,
+                              searchCity: '',
+                              searchedCity: prev.cityOrZip,
+                              displayCityOrZip: metro.metro,
+                            }));
+                            setNearbyMetroSuggestions([]);
+                          }}
+                          style={{
+                            background: '#1e3a5f',
+                            border: '1px solid #3b82f6',
+                            borderRadius: '8px',
+                            padding: '10px 14px',
+                            color: '#fff',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            fontSize: '13px',
+                            transition: 'all 0.2s',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#2d5a87';
+                            e.currentTarget.style.borderColor = '#60a5fa';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = '#1e3a5f';
+                            e.currentTarget.style.borderColor = '#3b82f6';
+                          }}
+                        >
+                          <div>
+                            <span style={{ fontWeight: 600 }}>{metro.metro}</span>
+                            <span style={{ color: '#94a3b8', marginLeft: '8px', fontSize: '11px' }}>
+                              {metro.vehicleCount} vehicle{metro.vehicleCount !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                          <div style={{ color: '#fbbf24', fontSize: '12px', fontWeight: 500 }}>
+                            ~{metro.drivingMiles} mi / {timeStr}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (() => {
             // Categorize vehicles - TRUST the Supabase categories field first
@@ -4151,6 +4567,20 @@ export default function CallPad() {
                         if (call.fromPhoneNumber) {
                           setConfirmedData(prev => ({ ...prev, phone: call.fromPhoneNumber || '' }));
                         }
+                        // Look up websites associated with the dialed number
+                        if (call.toPhoneNumber) {
+                          const websites = getWebsitesForPhone(call.toPhoneNumber);
+                          setCallerWebsites(websites);
+                          if (websites.length > 0) {
+                            setConfirmedData(prev => ({
+                              ...prev,
+                              websiteUrl: websites[0],
+                              leadSource: prev.leadSource || 'Organic Call',
+                            }));
+                          }
+                        } else {
+                          setCallerWebsites([]);
+                        }
                         setShowCallPicker(false);
                       }}
                       style={{
@@ -4212,6 +4642,41 @@ export default function CallPad() {
                           {call.fromName}
                         </div>
                       )}
+                      {(() => {
+                        const sites = call.toPhoneNumber ? getWebsitesForPhone(call.toPhoneNumber) : [];
+                        if (sites.length === 0) return null;
+                        return (
+                          <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                            {sites.slice(0, 3).map((site, i) => (
+                              <span key={i} style={{
+                                fontSize: '11px',
+                                padding: '2px 8px',
+                                borderRadius: '10px',
+                                background: isRinging ? '#bbf7d0' : '#dbeafe',
+                                color: isRinging ? '#14532d' : '#1e3a5f',
+                                fontWeight: 600,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                              }}>
+                                🌐 {site}
+                              </span>
+                            ))}
+                            {sites.length > 3 && (
+                              <span style={{
+                                fontSize: '11px',
+                                padding: '2px 8px',
+                                borderRadius: '10px',
+                                background: '#f3f4f6',
+                                color: '#6b7280',
+                                fontWeight: 500,
+                              }}>
+                                +{sites.length - 3} more
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </button>
                   );
                 })}

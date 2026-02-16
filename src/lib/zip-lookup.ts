@@ -89,38 +89,213 @@ export async function lookupZipsForCity(city: string, state?: string): Promise<s
 }
 
 const KNOWN_CITY_STATES: Record<string, string> = {
-  'phoenix': 'AZ', 'tucson': 'AZ', 'mesa': 'AZ', 'scottsdale': 'AZ', 'tempe': 'AZ', 'chandler': 'AZ', 'gilbert': 'AZ', 'glendale az': 'AZ', 'sedona': 'AZ', 'flagstaff': 'AZ',
-  'los angeles': 'CA', 'san francisco': 'CA', 'san diego': 'CA', 'san jose': 'CA', 'sacramento': 'CA', 'fresno': 'CA', 'long beach': 'CA', 'oakland': 'CA', 'bakersfield': 'CA', 'anaheim': 'CA', 'santa rosa': 'CA', 'napa': 'CA', 'riverside': 'CA', 'irvine': 'CA', 'visalia': 'CA', 'modesto': 'CA', 'stockton': 'CA',
+  // === ALABAMA ===
+  'birmingham': 'AL', 'hoover': 'AL', 'vestavia hills': 'AL', 'mountain brook': 'AL', 'trussville': 'AL',
+  'mobile': 'AL', 'daphne': 'AL', 'fairhope': 'AL', 'montgomery': 'AL', 'prattville': 'AL', 'huntsville': 'AL', 'tuscaloosa': 'AL',
+
+  // === ALASKA ===
+  'anchorage': 'AK', 'wasilla': 'AK', 'eagle river': 'AK',
+
+  // === ARIZONA ===
+  'phoenix': 'AZ', 'tucson': 'AZ', 'mesa': 'AZ', 'scottsdale': 'AZ', 'tempe': 'AZ', 'chandler': 'AZ',
+  'gilbert': 'AZ', 'glendale az': 'AZ', 'sedona': 'AZ', 'flagstaff': 'AZ', 'surprise': 'AZ',
+  'peoria az': 'AZ', 'goodyear': 'AZ', 'avondale': 'AZ', 'buckeye': 'AZ', 'queen creek': 'AZ',
+  'maricopa': 'AZ', 'casa grande': 'AZ', 'oro valley': 'AZ',
+
+  // === CALIFORNIA ===
+  'los angeles': 'CA', 'san francisco': 'CA', 'san diego': 'CA', 'san jose': 'CA', 'sacramento': 'CA',
+  'fresno': 'CA', 'long beach': 'CA', 'oakland': 'CA', 'bakersfield': 'CA', 'anaheim': 'CA',
+  'santa rosa': 'CA', 'napa': 'CA', 'riverside': 'CA', 'irvine': 'CA', 'visalia': 'CA',
+  'modesto': 'CA', 'stockton': 'CA', 'santa monica': 'CA', 'pasadena': 'CA', 'burbank': 'CA',
+  'torrance': 'CA', 'pomona': 'CA', 'ontario ca': 'CA', 'rancho cucamonga': 'CA',
+  'fontana': 'CA', 'san bernardino': 'CA', 'corona': 'CA', 'temecula': 'CA', 'murrieta': 'CA',
+  'santa clarita': 'CA', 'palmdale': 'CA', 'lancaster ca': 'CA', 'el cajon': 'CA',
+  'chula vista': 'CA', 'oceanside': 'CA', 'carlsbad': 'CA', 'escondido': 'CA',
+  'berkeley': 'CA', 'hayward': 'CA', 'sunnyvale': 'CA', 'santa clara': 'CA', 'fremont': 'CA',
+  'concord': 'CA', 'walnut creek': 'CA', 'san mateo': 'CA', 'redwood city': 'CA',
+  'palo alto': 'CA', 'mountain view': 'CA', 'cupertino': 'CA', 'milpitas': 'CA',
+  'elk grove': 'CA', 'roseville': 'CA', 'folsom': 'CA', 'davis': 'CA', 'clovis': 'CA',
+  'calabasas': 'CA', 'beverly hills': 'CA', 'malibu': 'CA', 'west hollywood': 'CA',
+
+  // === COLORADO ===
   'denver': 'CO', 'colorado springs': 'CO', 'boulder': 'CO', 'aurora co': 'CO',
-  'miami': 'FL', 'tampa': 'FL', 'orlando': 'FL', 'jacksonville': 'FL', 'fort lauderdale': 'FL', 'st petersburg': 'FL', 'sarasota': 'FL', 'naples': 'FL',
-  'atlanta': 'GA', 'savannah': 'GA', 'augusta': 'GA',
+  'lakewood co': 'CO', 'arvada': 'CO', 'westminster co': 'CO', 'thornton': 'CO',
+  'centennial': 'CO', 'highlands ranch': 'CO', 'littleton': 'CO', 'parker': 'CO',
+  'castle rock': 'CO', 'broomfield': 'CO', 'golden': 'CO', 'longmont': 'CO',
+  'loveland': 'CO', 'fort collins': 'CO', 'greeley': 'CO',
+
+  // === FLORIDA ===
+  'miami': 'FL', 'tampa': 'FL', 'orlando': 'FL', 'jacksonville': 'FL', 'fort lauderdale': 'FL',
+  'st petersburg': 'FL', 'sarasota': 'FL', 'naples': 'FL', 'clearwater': 'FL',
+  'boca raton': 'FL', 'west palm beach': 'FL', 'coral gables': 'FL', 'hialeah': 'FL',
+  'pembroke pines': 'FL', 'hollywood fl': 'FL', 'coral springs': 'FL', 'davie': 'FL',
+  'kissimmee': 'FL', 'winter park': 'FL', 'altamonte springs': 'FL', 'sanford': 'FL',
+  'daytona beach': 'FL', 'lakeland': 'FL', 'bradenton': 'FL', 'delray beach': 'FL',
+  'boynton beach': 'FL', 'deerfield beach': 'FL', 'pompano beach': 'FL',
+  'aventura': 'FL', 'weston': 'FL', 'plantation': 'FL', 'sunrise fl': 'FL',
+  'jupiter': 'FL', 'palm beach gardens': 'FL', 'wellington fl': 'FL',
+  'ocala': 'FL', 'gainesville fl': 'FL', 'tallahassee': 'FL', 'pensacola': 'FL',
+
+  // === GEORGIA ===
+  'atlanta': 'GA', 'savannah': 'GA', 'augusta': 'GA', 'marietta': 'GA', 'roswell': 'GA',
+  'sandy springs': 'GA', 'alpharetta': 'GA', 'johns creek': 'GA', 'dunwoody': 'GA',
+  'kennesaw': 'GA', 'lawrenceville': 'GA', 'duluth ga': 'GA', 'suwanee': 'GA',
+  'cumming': 'GA', 'woodstock ga': 'GA', 'peachtree city': 'GA', 'newnan': 'GA',
+  'mcdonough': 'GA', 'stockbridge': 'GA', 'conyers': 'GA', 'snellville': 'GA',
+
+  // === ILLINOIS ===
   'chicago': 'IL', 'naperville': 'IL', 'aurora il': 'IL', 'rockford': 'IL',
-  'indianapolis': 'IN', 'fort wayne': 'IN',
-  'new orleans': 'LA', 'baton rouge': 'LA',
-  'boston': 'MA', 'cambridge': 'MA', 'worcester': 'MA',
-  'baltimore': 'MD', 'annapolis': 'MD',
-  'detroit': 'MI', 'grand rapids': 'MI', 'ann arbor': 'MI',
-  'minneapolis': 'MN', 'st paul': 'MN',
-  'kansas city': 'MO', 'st louis': 'MO',
-  'charlotte': 'NC', 'raleigh': 'NC', 'durham': 'NC',
-  'omaha': 'NE',
-  'las vegas': 'NV', 'henderson': 'NV', 'reno': 'NV',
+  'glen ellyn': 'IL', 'wheaton': 'IL', 'downers grove': 'IL', 'lombard': 'IL', 'elmhurst': 'IL',
+  'oak brook': 'IL', 'hinsdale': 'IL', 'clarendon hills': 'IL', 'western springs': 'IL',
+  'la grange': 'IL', 'villa park': 'IL', 'addison': 'IL', 'carol stream': 'IL',
+  'bloomingdale': 'IL', 'glendale heights': 'IL', 'hanover park': 'IL', 'bartlett': 'IL',
+  'plainfield': 'IL', 'bolingbrook': 'IL', 'romeoville': 'IL', 'lockport': 'IL',
+  'orland park': 'IL', 'tinley park': 'IL', 'oak lawn': 'IL', 'oak park': 'IL',
+  'evanston': 'IL', 'skokie': 'IL', 'schaumburg': 'IL', 'joliet': 'IL', 'elgin': 'IL',
+  'palatine': 'IL', 'arlington heights': 'IL', 'des plaines': 'IL', 'park ridge': 'IL',
+  'mount prospect': 'IL', 'buffalo grove': 'IL', 'libertyville': 'IL', 'highland park il': 'IL',
+  'lake forest il': 'IL', 'glenview': 'IL', 'northbrook': 'IL', 'deerfield il': 'IL',
+  'hoffman estates': 'IL', 'streamwood': 'IL', 'crystal lake': 'IL', 'barrington': 'IL',
+  'waukegan': 'IL', 'gurnee': 'IL', 'mundelein': 'IL', 'vernon hills': 'IL',
+  'lisle': 'IL', 'woodridge': 'IL', 'darien': 'IL', 'westmont': 'IL', 'lemont': 'IL',
+  'new lenox': 'IL', 'mokena': 'IL', 'frankfort': 'IL', 'matteson': 'IL',
+  'homewood': 'IL', 'flossmoor': 'IL', 'calumet city': 'IL', 'berwyn': 'IL', 'cicero': 'IL',
+  'wilmette': 'IL', 'winnetka': 'IL', 'glencoe': 'IL', 'kenilworth': 'IL',
+  'niles il': 'IL', 'morton grove': 'IL', 'lincolnwood': 'IL', 'rolling meadows': 'IL',
+  'carpentersville': 'IL', 'mchenry': 'IL', 'woodstock il': 'IL', 'lake zurich': 'IL',
+  'st charles il': 'IL', 'geneva il': 'IL', 'batavia il': 'IL', 'warrenville': 'IL',
+  'oswego': 'IL', 'yorkville': 'IL',
+
+  // === INDIANA ===
+  'indianapolis': 'IN', 'fort wayne': 'IN', 'carmel': 'IN', 'fishers': 'IN',
+  'noblesville': 'IN', 'greenwood in': 'IN', 'zionsville': 'IN', 'brownsburg': 'IN',
+
+  // === KENTUCKY ===
+  'louisville': 'KY', 'lexington': 'KY', 'bowling green': 'KY', 'covington ky': 'KY',
+  'florence ky': 'KY', 'newport ky': 'KY',
+
+  // === LOUISIANA ===
+  'new orleans': 'LA', 'baton rouge': 'LA', 'metairie': 'LA', 'kenner': 'LA',
+  'slidell': 'LA', 'covington la': 'LA', 'mandeville': 'LA',
+
+  // === MARYLAND ===
+  'baltimore': 'MD', 'annapolis': 'MD', 'towson': 'MD', 'columbia md': 'MD',
+  'rockville': 'MD', 'bethesda': 'MD', 'silver spring': 'MD', 'gaithersburg': 'MD',
+  'germantown md': 'MD', 'frederick md': 'MD', 'bowie': 'MD', 'laurel md': 'MD',
+
+  // === MASSACHUSETTS ===
+  'boston': 'MA', 'cambridge': 'MA', 'worcester': 'MA', 'newton': 'MA', 'brookline': 'MA',
+  'quincy': 'MA', 'somerville': 'MA', 'waltham': 'MA', 'framingham': 'MA', 'brockton': 'MA',
+  'lowell': 'MA', 'salem ma': 'MA', 'lexington ma': 'MA',
+
+  // === MICHIGAN ===
+  'detroit': 'MI', 'grand rapids': 'MI', 'ann arbor': 'MI', 'dearborn': 'MI',
+  'livonia': 'MI', 'troy mi': 'MI', 'royal oak': 'MI', 'novi': 'MI',
+  'farmington hills': 'MI', 'southfield': 'MI', 'sterling heights': 'MI',
+  'rochester hills': 'MI', 'canton mi': 'MI', 'kalamazoo': 'MI', 'muskegon': 'MI',
+
+  // === MINNESOTA ===
+  'minneapolis': 'MN', 'st paul': 'MN', 'bloomington mn': 'MN', 'eden prairie': 'MN',
+  'plymouth mn': 'MN', 'maple grove': 'MN', 'eagan': 'MN', 'burnsville': 'MN',
+  'woodbury mn': 'MN', 'edina': 'MN', 'minnetonka': 'MN',
+
+  // === MISSOURI ===
+  'kansas city': 'MO', 'st louis': 'MO', 'independence mo': 'MO', 'lees summit': 'MO',
+  'springfield mo': 'MO', 'columbia mo': 'MO', 'st charles mo': 'MO', 'o fallon mo': 'MO',
+  'chesterfield mo': 'MO', 'overland park': 'KS', 'olathe': 'KS', 'lenexa': 'KS',
+
+  // === NEBRASKA ===
+  'omaha': 'NE', 'bellevue ne': 'NE', 'papillion': 'NE', 'la vista': 'NE',
+  'council bluffs': 'IA',
+
+  // === NEVADA ===
+  'las vegas': 'NV', 'henderson': 'NV', 'reno': 'NV', 'north las vegas': 'NV',
+
+  // === NEW JERSEY ===
+  'newark nj': 'NJ', 'jersey city': 'NJ', 'hoboken': 'NJ', 'elizabeth nj': 'NJ',
+  'paterson nj': 'NJ', 'clifton nj': 'NJ', 'hackensack': 'NJ', 'paramus': 'NJ',
+  'cherry hill': 'NJ', 'camden': 'NJ', 'princeton': 'NJ', 'trenton': 'NJ',
+
+  // === NEW MEXICO ===
+  'albuquerque': 'NM', 'santa fe': 'NM', 'rio rancho': 'NM', 'las cruces': 'NM',
+
+  // === NEW YORK ===
   'new york': 'NY', 'brooklyn': 'NY', 'buffalo': 'NY', 'rochester': 'NY', 'syracuse': 'NY', 'albany': 'NY',
+  'yonkers': 'NY', 'white plains': 'NY', 'new rochelle': 'NY', 'scarsdale': 'NY',
+  'hempstead': 'NY', 'garden city': 'NY', 'great neck': 'NY',
+
+  // === NORTH CAROLINA ===
+  'charlotte': 'NC', 'raleigh': 'NC', 'durham': 'NC', 'greensboro': 'NC', 'winston salem': 'NC',
+  'cary': 'NC', 'chapel hill': 'NC', 'apex': 'NC', 'huntersville': 'NC', 'cornelius': 'NC',
+  'concord nc': 'NC', 'gastonia': 'NC', 'mooresville': 'NC', 'matthews': 'NC',
+
+  // === OHIO ===
   'columbus': 'OH', 'cleveland': 'OH', 'cincinnati': 'OH', 'toledo': 'OH', 'maumee': 'OH',
-  'oklahoma city': 'OK', 'tulsa': 'OK',
-  'portland': 'OR',
-  'philadelphia': 'PA', 'pittsburgh': 'PA',
-  'providence': 'RI',
-  'nashville': 'TN', 'memphis': 'TN', 'knoxville': 'TN',
-  'dallas': 'TX', 'houston': 'TX', 'austin': 'TX', 'san antonio': 'TX', 'fort worth': 'TX', 'el paso': 'TX', 'plano': 'TX',
-  'salt lake city': 'UT', 'provo': 'UT', 'ogden': 'UT',
-  'richmond': 'VA', 'virginia beach': 'VA', 'norfolk': 'VA',
+  'dayton': 'OH', 'akron': 'OH', 'dublin oh': 'OH', 'westerville': 'OH', 'hilliard': 'OH',
+  'mason oh': 'OH', 'west chester oh': 'OH', 'lakewood oh': 'OH', 'strongsville': 'OH',
+  'solon': 'OH', 'hudson oh': 'OH', 'medina oh': 'OH', 'perrysburg': 'OH', 'sylvania oh': 'OH',
+
+  // === OKLAHOMA ===
+  'oklahoma city': 'OK', 'tulsa': 'OK', 'edmond': 'OK', 'norman': 'OK',
+  'broken arrow': 'OK', 'owasso': 'OK',
+
+  // === OREGON ===
+  'portland': 'OR', 'beaverton': 'OR', 'hillsboro': 'OR', 'tigard': 'OR',
+  'lake oswego': 'OR', 'gresham': 'OR', 'oregon city': 'OR',
+
+  // === PENNSYLVANIA ===
+  'philadelphia': 'PA', 'pittsburgh': 'PA', 'king of prussia': 'PA', 'west chester pa': 'PA',
+  'doylestown': 'PA', 'media pa': 'PA', 'norristown': 'PA', 'mount lebanon': 'PA',
+  'cranberry township': 'PA', 'monroeville': 'PA',
+
+  // === RHODE ISLAND ===
+  'providence': 'RI', 'cranston': 'RI', 'warwick ri': 'RI', 'newport ri': 'RI',
+
+  // === TENNESSEE ===
+  'nashville': 'TN', 'memphis': 'TN', 'knoxville': 'TN', 'chattanooga': 'TN',
+  'franklin tn': 'TN', 'murfreesboro': 'TN', 'brentwood tn': 'TN', 'clarksville tn': 'TN',
+  'germantown tn': 'TN', 'collierville': 'TN',
+
+  // === TEXAS ===
+  'dallas': 'TX', 'houston': 'TX', 'austin': 'TX', 'san antonio': 'TX', 'fort worth': 'TX',
+  'el paso': 'TX', 'plano': 'TX', 'frisco': 'TX', 'mckinney': 'TX', 'arlington tx': 'TX',
+  'irving': 'TX', 'garland': 'TX', 'denton tx': 'TX', 'richardson': 'TX', 'carrollton': 'TX',
+  'flower mound': 'TX', 'southlake': 'TX', 'grapevine': 'TX', 'coppell': 'TX',
+  'the woodlands': 'TX', 'sugar land': 'TX', 'katy': 'TX', 'pearland': 'TX',
+  'league city': 'TX', 'cypress tx': 'TX', 'spring tx': 'TX', 'humble': 'TX', 'conroe': 'TX',
+  'round rock': 'TX', 'cedar park': 'TX', 'georgetown tx': 'TX', 'pflugerville': 'TX',
+  'new braunfels': 'TX', 'san marcos': 'TX', 'boerne': 'TX', 'schertz': 'TX',
+  'grand prairie': 'TX', 'mesquite': 'TX', 'rowlett': 'TX', 'rockwall': 'TX',
+  'lewisville': 'TX', 'mansfield tx': 'TX', 'midland tx': 'TX', 'odessa tx': 'TX',
+  'corpus christi': 'TX', 'lubbock': 'TX', 'amarillo': 'TX', 'waco': 'TX',
+
+  // === UTAH ===
+  'salt lake city': 'UT', 'provo': 'UT', 'ogden': 'UT', 'orem': 'UT', 'lehi': 'UT',
+  'sandy ut': 'UT', 'draper': 'UT', 'south jordan': 'UT', 'west jordan': 'UT',
+  'layton': 'UT', 'park city': 'UT', 'st george ut': 'UT',
+
+  // === VIRGINIA ===
+  'richmond': 'VA', 'virginia beach': 'VA', 'norfolk': 'VA', 'chesapeake': 'VA',
+  'arlington va': 'VA', 'alexandria': 'VA', 'fairfax': 'VA', 'reston': 'VA',
+  'mclean': 'VA', 'ashburn': 'VA', 'herndon': 'VA', 'manassas': 'VA',
+  'newport news': 'VA', 'hampton': 'VA', 'williamsburg': 'VA',
+
+  // === WASHINGTON ===
   'seattle': 'WA', 'tacoma': 'WA', 'spokane': 'WA', 'bellevue': 'WA',
+  'kirkland': 'WA', 'redmond': 'WA', 'everett': 'WA', 'renton': 'WA',
+  'kent wa': 'WA', 'federal way': 'WA', 'auburn wa': 'WA', 'olympia': 'WA',
+  'bothell': 'WA', 'lynnwood': 'WA', 'issaquah': 'WA', 'sammamish': 'WA',
+  'puyallup': 'WA', 'lakewood wa': 'WA', 'bremerton': 'WA',
+
+  // === WASHINGTON DC ===
   'washington': 'DC', 'washington dc': 'DC',
-  'milwaukee': 'WI', 'madison': 'WI',
-  'louisville': 'KY', 'lexington': 'KY',
-  'birmingham': 'AL', 'mobile': 'AL', 'montgomery': 'AL',
-  'albuquerque': 'NM', 'santa fe': 'NM',
+
+  // === WISCONSIN ===
+  'milwaukee': 'WI', 'madison': 'WI', 'waukesha': 'WI', 'brookfield wi': 'WI',
+  'wauwatosa': 'WI', 'kenosha': 'WI', 'racine': 'WI', 'green bay': 'WI',
+
+  // === DELAWARE ===
+  'wilmington de': 'DE', 'newark de': 'DE', 'dover': 'DE',
 };
 
 const COMMON_STATES = ['CA', 'TX', 'AZ', 'FL', 'NY', 'NJ', 'GA', 'IL', 'PA', 'OH', 'NC', 'VA', 'WA', 'CO', 'TN', 'NV', 'LA', 'MD', 'MA', 'IN'];
