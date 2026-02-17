@@ -2288,7 +2288,11 @@ export default function CallPad() {
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                   <input style={{ ...getInputStyle(confirmedData.phone), flex: 1 }} placeholder="Phone number" value={confirmedData.phone} onChange={(e) => setConfirmedData(prev => ({ ...prev, phone: e.target.value }))} />
                   <button
-                    onClick={() => {
+                    type="button"
+                    onClick={(e) => {
+                      // Defensive: avoid any parent/default click behavior immediately closing the modal.
+                      e.preventDefault();
+                      e.stopPropagation();
                       setShowCallPicker(true);
                       setLoadingCalls(true);
                       setCallsError(null);

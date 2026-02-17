@@ -4,16 +4,13 @@ function getSupabaseKey(): string | undefined {
   return (
     process.env.SUPABASE_SERVICE_ROLE_KEY ??
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+    // Some setups name this "publishable". Support it as an alias.
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
   );
 }
 
-function getSupabaseUrl(): string | undefined {
-  return process.env.NEXT_PUBLIC_SUPABASE_URL;
-}
-
-export function getSupabaseClient() {
-  const supabaseUrl = getSupabaseUrl();
+export function getSupabaseServerClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = getSupabaseKey();
 
   if (!supabaseUrl || !supabaseKey) {
@@ -25,18 +22,3 @@ export function getSupabaseClient() {
   return createClient(supabaseUrl, supabaseKey);
 }
 
-export async function getVehiclesByZip(zip: string) {
-  const supabase = getSupabaseClient();
-  // This database has no ZIP associations — return all vehicles
-  const { data, error } = await supabase
-    .from('vehicles11_with_images')
-    .select('*')
-    .order('capacity', { ascending: true });
-
-  if (error) {
-    console.error('Supabase error:', error);
-    throw error;
-  }
-
-  return data || [];
-}

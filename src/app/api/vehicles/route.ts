@@ -1,228 +1,46 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseServerClient } from '@/lib/supabase-server';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const STORAGE_BUCKET = 'vehicles1';
 
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-type VehicleRecord = {
-  id: string;
-  vehicle_title: string;
-  short_description: string | null;
-  capacity: number | null;
-  city: string | null;
-  zips_raw: string | null;
-  custom_instructions: string | null;
-  price_3hr: number | null;
-  price_4hr: number | null;
-  price_5hr: number | null;
-  price_6hr: number | null;
-  price_7hr: number | null;
-  price_8hr: number | null;
-  price_9hr: number | null;
-  price_10hr: number | null;
-  prom_price_6hr: number | null;
-  prom_price_7hr: number | null;
-  prom_price_8hr: number | null;
-  prom_price_9hr: number | null;
-  prom_price_10hr: number | null;
-  before5pm_3hr: number | null;
-  before5pm_4hr: number | null;
-  before5pm_5hr: number | null;
-  before5pm_6hr: number | null;
-  before5pm_7hr: number | null;
-  april_may_weekend_5hr: number | null;
-  april_may_weekend_6hr: number | null;
-  april_may_weekend_7hr: number | null;
-  april_may_weekend_8hr: number | null;
-  april_may_weekend_9hr: number | null;
-  transfer_price: number | null;
-  categories: string | null;
-  category_slugs: string | null;
-  tags: string | null;
-  tag_slugs: string | null;
-  image_main: string | null;
-  image_2: string | null;
-  image_3: string | null;
-  gallery_all: string | null;
-  is_transfer: boolean | null;
-  active: boolean | null;
-};
-
-type VehicleZipRelation = VehicleRecord | VehicleRecord[] | null;
-
-type VehicleZipRow = {
-  vehicle_id: string;
-  zip: string;
-  vehicles_for_chatbot: VehicleZipRelation;
-};
-
-function extractVehicle(rel: VehicleZipRelation): VehicleRecord | null {
-  if (!rel) return null;
-  if (Array.isArray(rel)) {
-    return rel[0] ?? null;
-  }
-  return rel;
-}
-
-function normalizeCityQuery(value: string): string {
-  return value.replace(/\s+/g, ' ').trim();
-}
-
-function escapeForIlike(value: string): string {
-  return value.replace(/[%_\\]/g, '\\$&');
+function getImageUrl(key: string | null): string | null {
+  if (!key || !SUPABASE_URL) return null;
+  return `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${encodeURIComponent(key)}`;
 }
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get('q') ?? '').trim();
 
-  if (!q) {
-    return NextResponse.json({ vehicles: [] });
-  }
-
-  const hasDigit = /\d/.test(q);
-
   try {
-    let vehicles: VehicleRecord[] = [];
+    const supabase = getSupabaseServerClient();
 
-    if (hasDigit) {
-      const postal = q.toUpperCase().replace(/\s+/g, '');
+    // This database has no city/ZIP data — return all vehicles
+    const { data, error } = await supabase
+      .from('vehicles11_with_images')
+      .select('*')
+      .order('capacity', { ascending: true });
 
-      const { data, error } = await supabase
-        .from('vehicle_zips')
-        .select(
-          `
-          vehicle_id,
-          zip,
-          vehicles_for_chatbot (
-            id,
-            vehicle_title,
-            short_description,
-            capacity,
-            city,
-            zips_raw,
-            custom_instructions,
-            price_3hr,
-            price_4hr,
-            price_5hr,
-            price_6hr,
-            price_7hr,
-            price_8hr,
-            price_9hr,
-            price_10hr,
-            prom_price_6hr,
-            prom_price_7hr,
-            prom_price_8hr,
-            prom_price_9hr,
-            prom_price_10hr,
-            before5pm_3hr,
-            before5pm_4hr,
-            before5pm_5hr,
-            before5pm_6hr,
-            before5pm_7hr,
-            april_may_weekend_5hr,
-            april_may_weekend_6hr,
-            april_may_weekend_7hr,
-            april_may_weekend_8hr,
-            april_may_weekend_9hr,
-            transfer_price,
-            categories,
-            category_slugs,
-            tags,
-            tag_slugs,
-            image_main,
-            image_2,
-            image_3,
-            gallery_all,
-            is_transfer,
-            active
-          )
-        `
-        )
-        .eq('zip', postal);
-
-      if (error) {
-        console.error('Supabase ZIP/postal search error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
-      }
-
-      vehicles =
-        data
-          ?.map((row: VehicleZipRow) => extractVehicle(row.vehicles_for_chatbot))
-          .filter((v): v is VehicleRecord => {
-            if (!v) return false;
-            return v.active !== false;
-          }) ?? [];
-    } else {
-      const normalizedCity = normalizeCityQuery(q);
-      if (!normalizedCity) {
-        return NextResponse.json({ vehicles: [] });
-      }
-      const cityPattern = `%${escapeForIlike(normalizedCity)}%`;
-
-      const { data, error } = await supabase
-        .from('vehicles_for_chatbot')
-        .select(
-          `
-          id,
-          vehicle_title,
-          short_description,
-          capacity,
-          city,
-          zips_raw,
-          custom_instructions,
-          price_3hr,
-          price_4hr,
-          price_5hr,
-          price_6hr,
-          price_7hr,
-          price_8hr,
-          price_9hr,
-          price_10hr,
-          prom_price_6hr,
-          prom_price_7hr,
-          prom_price_8hr,
-          prom_price_9hr,
-          prom_price_10hr,
-          before5pm_3hr,
-          before5pm_4hr,
-          before5pm_5hr,
-          before5pm_6hr,
-          before5pm_7hr,
-          april_may_weekend_5hr,
-          april_may_weekend_6hr,
-          april_may_weekend_7hr,
-          april_may_weekend_8hr,
-          april_may_weekend_9hr,
-          transfer_price,
-          categories,
-          category_slugs,
-          tags,
-          tag_slugs,
-          image_main,
-          image_2,
-          image_3,
-          gallery_all,
-          is_transfer,
-          active
-        `
-        )
-        .ilike('city', cityPattern);
-
-      if (error) {
-        console.error('Supabase city search error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
-      }
-
-      vehicles = data?.filter((v) => v.active !== false) ?? [];
+    if (error) {
+      console.error('Supabase error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    const vehicles = (data || []).map((v: any) => ({
+      id: v.id,
+      vehicle_title: v.name,
+      name: v.name,
+      capacity: v.capacity,
+      type: v.type,
+      amenities: v.amenities || [],
+      image_main: getImageUrl(v.exterior_key),
+      image_2: getImageUrl(v.interior_key),
+      image_3: null,
+      gallery_all: null,
+      city: null,
+      active: true,
+    }));
 
     return NextResponse.json({ vehicles });
   } catch (err) {
