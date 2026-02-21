@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   const clientId = process.env.RINGCENTRAL_CLIENT_ID;
+  // Auto-detect the callback URL from the incoming request so it always matches
+  // what RingCentral will redirect back to, regardless of env var config.
+  const origin = new URL(request.url).origin;
   const redirectUri =
     process.env.RINGCENTRAL_REDIRECT_URI ||
-    "https://newchatbot.replit.app/api/ringcentral/callback";
+    `${origin}/api/ringcentral/callback`;
   const baseUrl =
     process.env.RINGCENTRAL_BASE_URL || "https://platform.ringcentral.com";
 
