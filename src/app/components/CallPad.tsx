@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { getWebsitesForPhone, getCityForWebsite } from "@/lib/website-phone-lookup";
+import { getCityForWebsite } from "@/lib/website-phone-lookup";
 
 type DetectedType = 
   | 'phone' | 'email' | 'zip' | 'city' | 'date' | 'time' 
@@ -360,7 +360,7 @@ export default function CallPad() {
   const [lookingUpPlace, setLookingUpPlace] = useState(false);
   const [cityDisambiguation, setCityDisambiguation] = useState<{ city: string; options: string[] } | null>(null);
   const [remoteLocationWarning, setRemoteLocationWarning] = useState<string | null>(null);
-  const [calculatedDistance, setCalculatedDistance] = useState<{ miles: number | null; minutes: number | null; description: string | null; cityName: string | null; state: string | null } | null>(null);
+  const [calculatedDistance, setCalculatedDistance] = useState<{ miles: number | null; minutes: number | null; description: string | null; cityName: string | null; state: string | null; nearbyMetros?: Array<{ metro: string; drivingMiles: number; drivingMinutes: number }> } | null>(null);
   const [calculatingDistance, setCalculatingDistance] = useState(false);
   
   const [showCallPicker, setShowCallPicker] = useState(false);
@@ -603,7 +603,7 @@ export default function CallPad() {
           .then(res => res.json())
           .then(data => {
             if (data.success && (data.miles || data.minutes)) {
-              setCalculatedDistance({ miles: data.miles, minutes: data.minutes, description: data.description, cityName: data.cityName, state: data.state });
+              setCalculatedDistance({ miles: data.miles, minutes: data.minutes, description: data.description, cityName: data.cityName, state: data.state, nearbyMetros: data.nearbyMetros });
               console.log(`[Distance Calculated] ${locationToSearch}${data.cityName ? ` (${data.cityName}, ${data.state})` : ''} → ${metroToSearch}: ${data.miles} miles, ${data.minutes} min`);
               if (isZipCode && data.cityName && data.state) {
                 setConfirmedData(prev => ({
@@ -2732,83 +2732,116 @@ export default function CallPad() {
                 const zipCityDisplay = calculatedDistance?.cityName 
                   ? `${calculatedDistance.cityName}${calculatedDistance.state ? `, ${calculatedDistance.state}` : ''}`
                   : null;
+                const nearbyList = (calculatedDistance?.nearbyMetros || []).filter(m => m.metro !== displayMetro);
                 return (
-                  <>
-                    <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: 500 }}>SEARCHED:</span>
-                    <span style={{ fontSize: '16px', fontWeight: 600, color: '#bfdbfe', letterSpacing: '0.5px' }}>
-                      {confirmedData.searchedCity.toUpperCase()}
-                      {zipCityDisplay && (
-                        <span style={{ fontSize: '14px', color: '#fcd34d', marginLeft: '6px' }}>
-                          ({zipCityDisplay})
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: 500 }}>SEARCHED:</span>
+                      <span style={{ fontSize: '16px', fontWeight: 600, color: '#bfdbfe', letterSpacing: '0.5px' }}>
+                        {confirmedData.searchedCity.toUpperCase()}
+                        {zipCityDisplay && (
+                          <span style={{ fontSize: '14px', color: '#fcd34d', marginLeft: '6px' }}>
+                            ({zipCityDisplay})
+                          </span>
+                        )}
+                      </span>
+                      {calculatingDistance ? (
+                        <span style={{ fontSize: '12px', color: '#fcd34d', fontStyle: 'italic' }}>calculating...</span>
+                      ) : (distanceDisplay || milesDisplay) && (
+                        <span style={{ 
+                          fontSize: '13px', 
+                          fontWeight: 700, 
+                          color: '#fff', 
+                          background: 'linear-gradient(135deg, #f59e0b 0%, #dc2626 100%)',
+                          padding: '4px 10px', 
+                          borderRadius: '12px',
+                          animation: 'pulseAlert 1.5s ease-in-out infinite',
+                          boxShadow: '0 0 10px rgba(245,158,11,0.5)',
+                        }}>
+                          🚗 ~{distanceDisplay}{milesDisplay ? ` (${milesDisplay})` : ''} from {displayMetro}
                         </span>
                       )}
-                    </span>
-                    {calculatingDistance ? (
-                      <span style={{ fontSize: '12px', color: '#fcd34d', fontStyle: 'italic' }}>calculating...</span>
-                    ) : (distanceDisplay || milesDisplay) && (
-                      <span style={{ 
-                        fontSize: '13px', 
-                        fontWeight: 700, 
-                        color: '#fff', 
-                        background: 'linear-gradient(135deg, #f59e0b 0%, #dc2626 100%)',
-                        padding: '4px 10px', 
-                        borderRadius: '12px',
-                        animation: 'pulseAlert 1.5s ease-in-out infinite',
-                        boxShadow: '0 0 10px rgba(245,158,11,0.5)',
-                      }}>
-                        🚗 ~{distanceDisplay}{milesDisplay ? ` (${milesDisplay})` : ''} from {displayMetro}
-                      </span>
-                    )}
-                    <span style={{ fontSize: '16px', color: '#93c5fd', fontWeight: 500 }}>→</span>
-                    {hasServiceArea ? (
-                      <>
-                        <span style={{ fontSize: '14px', fontWeight: 600, color: '#fff', letterSpacing: '0.5px' }}>
-                          {displayMetro.toUpperCase()}
+                      <span style={{ fontSize: '16px', color: '#93c5fd', fontWeight: 500 }}>→</span>
+                      {hasServiceArea ? (
+                        <>
+                          <span style={{ fontSize: '14px', fontWeight: 600, color: '#fff', letterSpacing: '0.5px' }}>
+                            {displayMetro.toUpperCase()}
+                          </span>
+                          <span style={{ fontSize: '11px', color: '#fcd34d', fontWeight: 500, marginLeft: '4px' }}>RATES</span>
+                        </>
+                      ) : (
+                        <span style={{ fontSize: '18px', fontWeight: 700, color: '#fca5a5', letterSpacing: '0.5px' }}>
+                          NO SERVICE AREA
                         </span>
-                        <span style={{ fontSize: '11px', color: '#fcd34d', fontWeight: 500, marginLeft: '4px' }}>RATES</span>
-                      </>
-                    ) : (
-                      <span style={{ fontSize: '18px', fontWeight: 700, color: '#fca5a5', letterSpacing: '0.5px' }}>
-                        NO SERVICE AREA
-                      </span>
+                      )}
+                    </div>
+                    {nearbyList.length > 0 && (
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                        {nearbyList.map(m => {
+                          const t = m.drivingMinutes >= 60
+                            ? `${Math.floor(m.drivingMinutes / 60)}h ${m.drivingMinutes % 60}m`
+                            : `${m.drivingMinutes} min`;
+                          return (
+                            <span key={m.metro} style={{ fontSize: '11px', color: '#bfdbfe', background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '10px' }}>
+                              {m.metro}: ~{t} ({m.drivingMiles} mi)
+                            </span>
+                          );
+                        })}
+                      </div>
                     )}
-                  </>
+                  </div>
                 );
               } else if (confirmedData.searchedCity && confirmedData.searchedCity.toLowerCase() !== confirmedData.cityOrZip.toLowerCase()) {
-                // Use AI-calculated distance if available, otherwise fall back to static travelMinutes
                 const travelTime = calculatedDistance?.minutes || confirmedData.travelMinutes;
                 const travelDisplay = travelTime >= 60 
                   ? `${Math.floor(travelTime / 60)}h ${travelTime % 60}m` 
                   : travelTime > 0 ? `${travelTime} min` : '';
                 const milesDisplay = calculatedDistance?.miles ? `${calculatedDistance.miles} mi` : '';
+                const nearbyList = (calculatedDistance?.nearbyMetros || []).filter(m => m.metro !== (confirmedData.displayCityOrZip || confirmedData.cityOrZip));
                 return (
-                  <>
-                    <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: 500 }}>SEARCHED:</span>
-                    <span style={{ fontSize: '16px', fontWeight: 600, color: '#bfdbfe', letterSpacing: '0.5px' }}>
-                      {confirmedData.searchedCity.toUpperCase()}
-                    </span>
-                    {calculatingDistance ? (
-                      <span style={{ fontSize: '12px', color: '#fcd34d', fontStyle: 'italic' }}>calculating...</span>
-                    ) : (travelDisplay || milesDisplay) && (
-                      <span style={{ 
-                        fontSize: '13px', 
-                        fontWeight: 700, 
-                        color: '#fff', 
-                        background: 'linear-gradient(135deg, #f59e0b 0%, #dc2626 100%)',
-                        padding: '4px 10px', 
-                        borderRadius: '12px',
-                        animation: 'pulseAlert 1.5s ease-in-out infinite',
-                        boxShadow: '0 0 10px rgba(245,158,11,0.5)',
-                      }}>
-                        🚗 ~{travelDisplay}{milesDisplay ? ` (${milesDisplay})` : ''} from {confirmedData.displayCityOrZip || confirmedData.cityOrZip}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '11px', color: '#93c5fd', fontWeight: 500 }}>SEARCHED:</span>
+                      <span style={{ fontSize: '16px', fontWeight: 600, color: '#bfdbfe', letterSpacing: '0.5px' }}>
+                        {confirmedData.searchedCity.toUpperCase()}
                       </span>
+                      {calculatingDistance ? (
+                        <span style={{ fontSize: '12px', color: '#fcd34d', fontStyle: 'italic' }}>calculating...</span>
+                      ) : (travelDisplay || milesDisplay) && (
+                        <span style={{ 
+                          fontSize: '13px', 
+                          fontWeight: 700, 
+                          color: '#fff', 
+                          background: 'linear-gradient(135deg, #f59e0b 0%, #dc2626 100%)',
+                          padding: '4px 10px', 
+                          borderRadius: '12px',
+                          animation: 'pulseAlert 1.5s ease-in-out infinite',
+                          boxShadow: '0 0 10px rgba(245,158,11,0.5)',
+                        }}>
+                          🚗 ~{travelDisplay}{milesDisplay ? ` (${milesDisplay})` : ''} from {confirmedData.displayCityOrZip || confirmedData.cityOrZip}
+                        </span>
+                      )}
+                      <span style={{ fontSize: '16px', color: '#93c5fd', fontWeight: 500 }}>→</span>
+                      <span style={{ fontSize: '14px', fontWeight: 600, color: '#fff', letterSpacing: '0.5px' }}>
+                        {(confirmedData.displayCityOrZip || confirmedData.cityOrZip).toUpperCase()}
+                      </span>
+                      <span style={{ fontSize: '11px', color: '#fcd34d', fontWeight: 500, marginLeft: '4px' }}>RATES</span>
+                    </div>
+                    {nearbyList.length > 0 && (
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                        {nearbyList.map(m => {
+                          const t = m.drivingMinutes >= 60
+                            ? `${Math.floor(m.drivingMinutes / 60)}h ${m.drivingMinutes % 60}m`
+                            : `${m.drivingMinutes} min`;
+                          return (
+                            <span key={m.metro} style={{ fontSize: '11px', color: '#bfdbfe', background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '10px' }}>
+                              {m.metro}: ~{t} ({m.drivingMiles} mi)
+                            </span>
+                          );
+                        })}
+                      </div>
                     )}
-                    <span style={{ fontSize: '16px', color: '#93c5fd', fontWeight: 500 }}>→</span>
-                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#fff', letterSpacing: '0.5px' }}>
-                      {(confirmedData.displayCityOrZip || confirmedData.cityOrZip).toUpperCase()}
-                    </span>
-                    <span style={{ fontSize: '11px', color: '#fcd34d', fontWeight: 500, marginLeft: '4px' }}>RATES</span>
-                  </>
+                  </div>
                 );
               } else {
                 return (
@@ -3204,6 +3237,11 @@ export default function CallPad() {
                         </span>
                       )}
                     </div>
+                    {v.short_description && (
+                      <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '6px', lineHeight: 1.4 }}>
+                        {v.short_description.length > 80 ? v.short_description.substring(0, 80) + '...' : v.short_description}
+                      </div>
+                    )}
                     <div style={{ fontSize: '15px', fontWeight: 700, color: '#34d399', marginBottom: '4px' }}>
                       {v.priceDisplay}
                     </div>
@@ -4530,21 +4568,7 @@ export default function CallPad() {
                         if (call.fromPhoneNumber) {
                           setConfirmedData(prev => ({ ...prev, phone: call.fromPhoneNumber || '' }));
                         }
-                        if (call.toPhoneNumber) {
-                          const websites = getWebsitesForPhone(call.toPhoneNumber);
-                          setCallerWebsites(websites);
-                          if (websites.length > 0) {
-                            const city = getCityForWebsite(websites[0]);
-                            setConfirmedData(prev => ({
-                              ...prev,
-                              websiteUrl: websites[0],
-                              leadSource: prev.leadSource || 'Organic Call',
-                              ...(city && !prev.cityOrZip ? { cityOrZip: city } : {}),
-                            }));
-                          }
-                        } else {
-                          setCallerWebsites([]);
-                        }
+                        setCallerWebsites([]);
                         setShowCallPicker(false);
                       }}
                       style={{
@@ -4606,41 +4630,6 @@ export default function CallPad() {
                           {call.fromName}
                         </div>
                       )}
-                      {(() => {
-                        const sites = call.toPhoneNumber ? getWebsitesForPhone(call.toPhoneNumber) : [];
-                        if (sites.length === 0) return null;
-                        return (
-                          <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                            {sites.slice(0, 3).map((site, i) => (
-                              <span key={i} style={{
-                                fontSize: '11px',
-                                padding: '2px 8px',
-                                borderRadius: '10px',
-                                background: isRinging ? '#bbf7d0' : '#dbeafe',
-                                color: isRinging ? '#14532d' : '#1e3a5f',
-                                fontWeight: 600,
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '3px',
-                              }}>
-                                🌐 {site}
-                              </span>
-                            ))}
-                            {sites.length > 3 && (
-                              <span style={{
-                                fontSize: '11px',
-                                padding: '2px 8px',
-                                borderRadius: '10px',
-                                background: '#f3f4f6',
-                                color: '#6b7280',
-                                fontWeight: 500,
-                              }}>
-                                +{sites.length - 3} more
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })()}
                     </button>
                   );
                 })}

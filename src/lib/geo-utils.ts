@@ -57,6 +57,33 @@ export const METRO_COORDS: Record<string, { lat: number; lng: number }> = {
   'Long Beach': { lat: 33.7701, lng: -118.1937 },
   'Napa': { lat: 38.2975, lng: -122.2869 },
   'Santa Rosa': { lat: 38.4404, lng: -122.7141 },
+  'Madison': { lat: 43.0731, lng: -89.4012 },
+  'Baton Rouge': { lat: 30.4515, lng: -91.1871 },
+  'Fort Worth': { lat: 32.7555, lng: -97.3308 },
+  'Akron': { lat: 41.0814, lng: -81.5190 },
+  'Salem': { lat: 44.9429, lng: -123.0351 },
+  'Daytona Beach': { lat: 29.2108, lng: -81.0228 },
+  'Savannah': { lat: 32.0809, lng: -81.0912 },
+  'Chattanooga': { lat: 35.0456, lng: -85.3097 },
+  'Charleston': { lat: 32.7765, lng: -79.9311 },
+  'Columbia SC': { lat: 34.0007, lng: -81.0348 },
+  'Knoxville': { lat: 35.9606, lng: -83.9207 },
+  'Greenville SC': { lat: 34.8526, lng: -82.3940 },
+  'Colorado Springs': { lat: 38.8339, lng: -104.8214 },
+  'Wichita': { lat: 37.6872, lng: -97.3301 },
+  'Des Moines': { lat: 41.5868, lng: -93.6250 },
+  'Little Rock': { lat: 34.7465, lng: -92.2896 },
+  'Bakersfield': { lat: 35.3733, lng: -119.0187 },
+  'El Paso': { lat: 31.7619, lng: -106.4850 },
+  'Honolulu': { lat: 21.3069, lng: -157.8583 },
+  'Boise': { lat: 43.6150, lng: -116.2023 },
+  'Lansing': { lat: 42.7325, lng: -84.5555 },
+  'Ann Arbor': { lat: 42.2808, lng: -83.7430 },
+  'Flint': { lat: 43.0125, lng: -83.6875 },
+  'Kalamazoo': { lat: 42.2917, lng: -85.5872 },
+  'Cedar Rapids': { lat: 41.9779, lng: -91.6656 },
+  'Lincoln': { lat: 40.8136, lng: -96.7026 },
+  'Wilmington DE': { lat: 39.7391, lng: -75.5398 },
   'Spokane': { lat: 47.6588, lng: -117.4260 },
   'Anchorage': { lat: 61.2181, lng: -149.9003 },
   'Grand Rapids': { lat: 42.9634, lng: -85.6681 },
@@ -194,4 +221,23 @@ export function findNearestMetros(lat: number, lng: number, count: number = 3): 
     const { miles: drivingMiles, minutes: drivingMinutes } = calculateDrivingDistance(m.distance);
     return { metro: m.metro, distance: m.distance, drivingMiles, drivingMinutes };
   });
+}
+
+/**
+ * Return all metros within maxMinutes driving time, sorted closest first.
+ * Useful for showing agents every nearby service area (capped at 105 min = ~1h45m).
+ */
+export function findMetrosWithinTime(lat: number, lng: number, maxMinutes: number = 105): Array<{ metro: string; drivingMiles: number; drivingMinutes: number }> {
+  const results: Array<{ metro: string; distance: number; drivingMiles: number; drivingMinutes: number }> = [];
+
+  for (const [metro, coords] of Object.entries(METRO_COORDS)) {
+    const distance = haversineDistance(lat, lng, coords.lat, coords.lng);
+    const { miles: drivingMiles, minutes: drivingMinutes } = calculateDrivingDistance(distance);
+    if (drivingMinutes <= maxMinutes) {
+      results.push({ metro, distance, drivingMiles, drivingMinutes });
+    }
+  }
+
+  results.sort((a, b) => a.distance - b.distance);
+  return results.map(({ metro, drivingMiles, drivingMinutes }) => ({ metro, drivingMiles, drivingMinutes }));
 }

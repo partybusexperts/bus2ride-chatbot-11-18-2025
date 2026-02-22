@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { METRO_COORDS, haversineDistance, getDirection, getZipCoordinates, calculateDrivingDistance } from "@/lib/geo-utils";
+import { METRO_COORDS, haversineDistance, getDirection, getZipCoordinates, calculateDrivingDistance, findMetrosWithinTime } from "@/lib/geo-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,6 +51,8 @@ export async function POST(request: NextRequest) {
     // Flag if this location is unreasonably far from the metro (likely wrong metro assignment)
     const outOfServiceArea = drivingMinutes >= 120;
 
+    const nearbyMetros = findMetrosWithinTime(zipData.lat, zipData.lng, 105);
+
     return NextResponse.json({
       success: true,
       zipCode,
@@ -61,6 +63,7 @@ export async function POST(request: NextRequest) {
       cityName: zipData.city,
       state: zipData.state,
       outOfServiceArea,
+      nearbyMetros,
     });
 
   } catch (error) {

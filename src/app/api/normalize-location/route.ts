@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { METRO_COORDS, haversineDistance, getZipCoordinates, calculateDrivingDistance, findNearestMetro, findNearestMetroUnlimited } from "@/lib/geo-utils";
+import { METRO_COORDS, haversineDistance, getZipCoordinates, calculateDrivingDistance, findNearestMetro, findNearestMetroUnlimited, findMetrosWithinTime } from "@/lib/geo-utils";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -23,6 +23,8 @@ export async function POST(request: NextRequest) {
       const zipData = await getZipCoordinates(location.trim());
       if (zipData) {
         const nearest = findNearestMetro(zipData.lat, zipData.lng);
+        const nearbyMetros = findMetrosWithinTime(zipData.lat, zipData.lng, 105);
+
         if (nearest) {
           const metroCoords = METRO_COORDS[nearest.metro];
           const straightLine = haversineDistance(zipData.lat, zipData.lng, metroCoords.lat, metroCoords.lng);
@@ -38,10 +40,10 @@ export async function POST(request: NextRequest) {
             outOfServiceArea: false,
             driveMinutes: minutes,
             driveMiles: miles,
+            nearbyMetros,
           });
         }
         
-        // No metro within service range - find nearest anyway for messaging
         const nearestAnyway = findNearestMetroUnlimited(zipData.lat, zipData.lng);
         return NextResponse.json({
           success: true,
@@ -56,6 +58,7 @@ export async function POST(request: NextRequest) {
           nearestMetroMinutes: nearestAnyway.drivingMinutes,
           driveMinutes: nearestAnyway.drivingMinutes,
           driveMiles: nearestAnyway.drivingMiles,
+          nearbyMetros,
         });
       }
     }
@@ -100,6 +103,8 @@ Rules:
         let driveMiles: number | null = null;
         let isRemote = false;
         
+        let nearbyMetros: Array<{ metro: string; drivingMiles: number; drivingMinutes: number }> = [];
+
         if (data.metro && METRO_COORDS[data.metro] && data.lat && data.lng) {
           const metroCoords = METRO_COORDS[data.metro];
           const straightLine = haversineDistance(data.lat, data.lng, metroCoords.lat, metroCoords.lng);
@@ -107,6 +112,7 @@ Rules:
           driveMinutes = driving.minutes;
           driveMiles = driving.miles;
           isRemote = driveMinutes >= 60;
+          nearbyMetros = findMetrosWithinTime(data.lat, data.lng, 105);
         }
         
         return NextResponse.json({
@@ -118,6 +124,7 @@ Rules:
           isRemote,
           driveMinutes,
           driveMiles,
+          nearbyMetros,
         });
       }
     } catch (parseError) {

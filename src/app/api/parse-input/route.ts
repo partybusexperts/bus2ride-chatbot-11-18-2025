@@ -915,9 +915,9 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'broomfield': 'Denver', 'littleton': 'Denver', 'parker': 'Denver', 'castle rock': 'Denver', 
   'golden': 'Denver', 'englewood': 'Denver', 'commerce city': 'Denver', 
   'lone tree': 'Denver', 'greenwood village': 'Denver', 'fort collins': 'Denver',
-  'colorado springs': 'Denver', 'vail': 'Denver', 'breckenridge': 'Denver', 'aspen': 'Denver',
+  'vail': 'Denver', 'breckenridge': 'Denver', 'aspen': 'Denver',
   // Dallas-Fort Worth metro
-  'fort worth': 'Dallas', 'arlington tx': 'Dallas', 'plano': 'Dallas', 
+  'arlington tx': 'Dallas', 'plano': 'Dallas', 
   'irving': 'Dallas', 'garland': 'Dallas', 'frisco': 'Dallas', 'mckinney': 'Dallas', 
   'denton': 'Dallas', 'carrollton': 'Dallas', 'richardson': 'Dallas', 'lewisville': 'Dallas', 
   'allen': 'Dallas', 'flower mound': 'Dallas', 'grapevine': 'Dallas', 'mesquite': 'Dallas', 
@@ -1357,7 +1357,7 @@ const CITY_NORMALIZATION: Record<string, string> = {
   'independence oh': 'Cleveland', 'brooklyn oh': 'Cleveland', 'brook park': 'Cleveland',
   'garfield heights': 'Cleveland', 'maple heights': 'Cleveland', 'bedford oh': 'Cleveland',
   'twinsburg': 'Cleveland', 'hudson oh': 'Cleveland', 'stow oh': 'Cleveland',
-  'akron': 'Cleveland', 'akron oh': 'Cleveland', 'canton oh': 'Cleveland',
+  'canton oh': 'Cleveland',
   'tremont': 'Cleveland', 'ohio city': 'Cleveland', 'downtown cleveland': 'Cleveland',
   'university circle': 'Cleveland', 'little italy cleveland': 'Cleveland',
   // Toledo metro
@@ -1480,7 +1480,7 @@ const CITY_TRAVEL_TIMES: Record<string, number> = {
   'crystal lake': 55, 'libertyville': 40, 'gurnee': 45, 'st charles': 45,
   'geneva': 45, 'batavia': 40, 'west chicago': 40, 'carol stream': 35,
   // Dallas-Fort Worth suburbs
-  'fort worth': 35, 'arlington tx': 25, 'plano': 25, 'frisco': 35,
+  'arlington tx': 25, 'plano': 25, 'frisco': 35,
   'irving': 15, 'garland': 20, 'mckinney': 40, 'denton': 45,
   'carrollton': 20, 'richardson': 15, 'lewisville': 25, 'grapevine': 25,
   'southlake': 30, 'keller': 35, 'flower mound': 30, 'allen': 30,

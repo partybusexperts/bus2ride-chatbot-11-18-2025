@@ -275,7 +275,7 @@ const CITY_ALIASES: Record<string, string[]> = {
   'cleveland': [
     'lakewood oh', 'parma', 'strongsville', 'westlake oh', 'avon oh', 'avon lake', 'north olmsted',
     'rocky river', 'bay village', 'north royalton', 'broadview heights', 'brecksville', 'independence oh',
-    'solon', 'aurora oh', 'hudson oh', 'twinsburg', 'macedonia oh', 'akron', 'kent oh', 'medina oh',
+    'solon', 'aurora oh', 'hudson oh', 'twinsburg', 'macedonia oh', 'kent oh', 'medina oh',
     'elyria', 'lorain', 'mentor', 'willoughby', 'eastlake', 'euclid', 'lyndhurst oh', 'beachwood',
     'shaker heights', 'cleveland heights', 'university heights oh', 'south euclid',
   ],
@@ -330,7 +330,7 @@ const CITY_ALIASES: Record<string, string[]> = {
 
   // === TEXAS ===
   'dallas': [
-    'fort worth', 'arlington tx', 'plano', 'irving', 'garland', 'frisco', 'mckinney', 'denton tx',
+    'arlington tx', 'plano', 'irving', 'garland', 'frisco', 'mckinney', 'denton tx',
     'richardson', 'carrollton', 'lewisville', 'flower mound', 'coppell', 'grapevine', 'southlake',
     'keller', 'colleyville', 'bedford', 'euless', 'hurst', 'north richland hills', 'mansfield tx',
     'grand prairie', 'cedar hill tx', 'desoto', 'duncanville', 'lancaster tx', 'mesquite',
@@ -541,31 +541,31 @@ export async function POST(req: Request) {
           .filter((v: any) => v && v.active !== false);
       }
     } else {
-      console.log('Searching for city:', query);
-      const { data: cityData, error: cityError } = await supabase
+      // Search original input first (e.g. "akron"), then fall back to alias (e.g. "cleveland")
+      console.log('Searching for original city:', rawQuery);
+      const { data: rawData, error: rawError } = await supabase
         .from('vehicles_for_chatbot')
         .select('*')
-        .ilike('city', `%${query}%`)
+        .ilike('city', `%${rawQuery}%`)
         .eq('active', true);
 
-      if (cityError) {
-        console.error('Supabase error:', cityError);
-      }
-      console.log('Found vehicles:', cityData?.length || 0, 'for city:', query);
-      if (cityData && cityData.length > 0) {
-        console.log('Sample cities in results:', cityData.slice(0, 3).map((v: any) => v.city));
+      if (rawError) {
+        console.error('Supabase error:', rawError);
       }
 
-      vehicles = cityData || [];
-      
+      vehicles = rawData || [];
+      console.log('Found vehicles:', vehicles.length, 'for original city:', rawQuery);
+
       if (vehicles.length === 0 && isAlias) {
+        console.log('No vehicles for original, trying alias:', query);
         const { data: aliasData } = await supabase
           .from('vehicles_for_chatbot')
           .select('*')
-          .ilike('city', `%${rawQuery}%`)
+          .ilike('city', `%${query}%`)
           .eq('active', true);
-        
+
         vehicles = aliasData || [];
+        console.log('Found vehicles:', vehicles.length, 'for alias city:', query);
       }
       
       if (vehicles.length === 0) {
