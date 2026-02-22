@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getValidAccessToken, getStoredTokens } from "@/lib/ringcentral-tokens";
+import { getValidAccessToken, getStoredTokensAsync } from "@/lib/ringcentral-tokens";
 import { getRecentCalls, getSubscriptionInfo, formatPhoneNumber } from "@/lib/ringcentral-calls-store";
 
 interface CallLogRecord {
@@ -42,7 +42,7 @@ const CACHE_TTL_MS = 10000;
 
 export async function GET(request: NextRequest) {
   try {
-    const tokens = getStoredTokens();
+    const tokens = await getStoredTokensAsync();
     console.log('recent-calls: tokens present?', !!tokens, tokens ? `expires: ${new Date(tokens.expiresAt).toISOString()}` : 'no tokens');
     if (!tokens) {
       return NextResponse.json({

@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
 
     const data = await response.json();
 
-    storeTokens(data.access_token, data.refresh_token, data.expires_in);
+    await storeTokens(data.access_token, data.refresh_token, data.expires_in);
 
     console.log("RingCentral OAuth successful, tokens stored");
 

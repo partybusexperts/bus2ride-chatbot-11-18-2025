@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getValidAccessToken, getStoredTokens } from "@/lib/ringcentral-tokens";
+import { getValidAccessToken, getStoredTokensAsync } from "@/lib/ringcentral-tokens";
 import { setSubscriptionInfo, getSubscriptionInfo, clearSubscription } from "@/lib/ringcentral-calls-store";
 
 function getWebhookUrl(): string {
@@ -12,7 +12,7 @@ function getWebhookUrl(): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const tokens = getStoredTokens();
+    const tokens = await getStoredTokensAsync();
     if (!tokens) {
       return NextResponse.json({
         success: false,

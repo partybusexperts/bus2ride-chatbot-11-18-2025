@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getValidAccessToken, getStoredTokens } from "@/lib/ringcentral-tokens";
+import { getValidAccessToken, getStoredTokensAsync } from "@/lib/ringcentral-tokens";
 import { addOrUpdateCall, getRecentCalls, formatPhoneNumber } from "@/lib/ringcentral-calls-store";
 
 interface ActiveCallParty {
@@ -33,7 +33,7 @@ const CACHE_TTL_MS = 3000;
 
 export async function GET(request: NextRequest) {
   try {
-    const tokens = getStoredTokens();
+    const tokens = await getStoredTokensAsync();
     if (!tokens) {
       return NextResponse.json({
         success: false,

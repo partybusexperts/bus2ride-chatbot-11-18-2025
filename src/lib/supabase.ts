@@ -1,36 +1,19 @@
 import { createClient } from '@supabase/supabase-js';
 
-function getSupabaseKey(): string | undefined {
-  return (
-    process.env.SUPABASE_SERVICE_ROLE_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-  );
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!; // server-side only
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('Missing Supabase environment variables');
 }
 
-function getSupabaseUrl(): string | undefined {
-  return process.env.NEXT_PUBLIC_SUPABASE_URL;
-}
-
-export function getSupabaseClient() {
-  const supabaseUrl = getSupabaseUrl();
-  const supabaseKey = getSupabaseKey();
-
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error(
-      'Missing Supabase environment variables. Set NEXT_PUBLIC_SUPABASE_URL and one of: SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY (or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY alias).'
-    );
-  }
-
-  return createClient(supabaseUrl, supabaseKey);
-}
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
 export async function getVehiclesByZip(zip: string) {
-  const supabase = getSupabaseClient();
-  // This database has no ZIP associations — return all vehicles
   const { data, error } = await supabase
-    .from('vehicles11_with_images')
+    .from('vehicles_for_chatbot')
     .select('*')
+    .eq('zip', zip)
     .order('capacity', { ascending: true });
 
   if (error) {

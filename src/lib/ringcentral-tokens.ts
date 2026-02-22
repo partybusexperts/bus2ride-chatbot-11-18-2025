@@ -1,5 +1,4 @@
-import fs from 'fs';
-import path from 'path';
+import { createClient } from '@supabase/supabase-js';
 
 interface StoredTokens {
   accessToken: string;
@@ -7,113 +6,165 @@ interface StoredTokens {
   expiresAt: number;
 }
 
-const TOKEN_FILE = path.join(process.cwd(), '.ringcentral-tokens.json');
+const TOKENS_KEY = 'ringcentral_tokens';
 
-function loadTokensFromFile(): StoredTokens | null {
+function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key);
+}
+
+// In-memory cache so we don't hit Supabase on every request within the same
+// serverless invocation. On cold starts this will be null and we'll read from DB.
+let cachedTokens: StoredTokens | null = null;
+
+export async function getStoredTokensAsync(): Promise<StoredTokens | null> {
+  if (cachedTokens) return cachedTokens;
+
+  const sb = getSupabase();
+  if (!sb) return null;
+
   try {
-    if (fs.existsSync(TOKEN_FILE)) {
-      const data = fs.readFileSync(TOKEN_FILE, 'utf-8');
-      return JSON.parse(data);
+    const { data } = await sb
+      .from('app_settings')
+      .select('value')
+      .eq('key', TOKENS_KEY)
+      .single();
+
+    if (data?.value) {
+      cachedTokens = data.value as StoredTokens;
+      return cachedTokens;
     }
-  } catch (error) {
-    console.error('Error loading tokens from file:', error);
+  } catch (e) {
+    console.error('[RC Tokens] Error reading from Supabase:', e);
   }
   return null;
 }
 
-function saveTokensToFile(tokens: StoredTokens | null): void {
-  try {
-    if (tokens) {
-      fs.writeFileSync(TOKEN_FILE, JSON.stringify(tokens, null, 2));
-    } else {
-      if (fs.existsSync(TOKEN_FILE)) {
-        fs.unlinkSync(TOKEN_FILE);
-      }
-    }
-  } catch (error) {
-    console.error('Error saving tokens to file:', error);
-  }
-}
-
-let tokens: StoredTokens | null = loadTokensFromFile();
-
+// Synchronous getter that returns the in-memory cache only.
+// Call getStoredTokensAsync() first if you need a fresh read.
 export function getStoredTokens(): StoredTokens | null {
-  if (!tokens) {
-    tokens = loadTokensFromFile();
-  }
-  return tokens;
+  return cachedTokens;
 }
 
-export function storeTokens(accessToken: string, refreshToken: string, expiresIn: number): void {
-  tokens = {
+export async function storeTokens(
+  accessToken: string,
+  refreshToken: string,
+  expiresIn: number,
+): Promise<void> {
+  const tokens: StoredTokens = {
     accessToken,
     refreshToken,
-    expiresAt: Date.now() + (expiresIn * 1000),
+    expiresAt: Date.now() + expiresIn * 1000,
   };
-  saveTokensToFile(tokens);
-  console.log('RingCentral tokens stored, expires at:', new Date(tokens.expiresAt).toISOString());
+
+  cachedTokens = tokens;
+
+  const sb = getSupabase();
+  if (!sb) {
+    console.warn('[RC Tokens] No Supabase client — tokens cached in memory only');
+    return;
+  }
+
+  try {
+    const { error } = await sb.from('app_settings').upsert({
+      key: TOKENS_KEY,
+      value: tokens,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) {
+      console.error('[RC Tokens] Supabase upsert error:', error.message);
+    } else {
+      console.log(
+        '[RC Tokens] Stored in Supabase, expires:',
+        new Date(tokens.expiresAt).toISOString(),
+      );
+    }
+  } catch (e) {
+    console.error('[RC Tokens] Error writing to Supabase:', e);
+  }
 }
 
-export function clearTokens(): void {
-  tokens = null;
-  saveTokensToFile(null);
+export async function clearTokens(): Promise<void> {
+  cachedTokens = null;
+
+  const sb = getSupabase();
+  if (!sb) return;
+
+  try {
+    await sb.from('app_settings').delete().eq('key', TOKENS_KEY);
+  } catch (e) {
+    console.error('[RC Tokens] Error clearing tokens:', e);
+  }
 }
 
 export function isTokenExpired(): boolean {
-  const storedTokens = getStoredTokens();
-  if (!storedTokens) return true;
-  return storedTokens.expiresAt < Date.now() + 60000;
+  if (!cachedTokens) return true;
+  return cachedTokens.expiresAt < Date.now() + 60000;
 }
 
 export async function refreshAccessToken(): Promise<string | null> {
-  const storedTokens = getStoredTokens();
+  // Always read from DB in case another serverless instance refreshed
+  const storedTokens = await getStoredTokensAsync();
   if (!storedTokens?.refreshToken) return null;
+
+  // If the stored token is still valid (maybe refreshed by another instance), use it
+  if (storedTokens.expiresAt > Date.now() + 60000) {
+    cachedTokens = storedTokens;
+    return storedTokens.accessToken;
+  }
 
   const clientId = process.env.RINGCENTRAL_CLIENT_ID;
   const clientSecret = process.env.RINGCENTRAL_CLIENT_SECRET;
-  const baseUrl = process.env.RINGCENTRAL_BASE_URL || "https://platform.ringcentral.com";
+  const baseUrl =
+    process.env.RINGCENTRAL_BASE_URL || 'https://platform.ringcentral.com';
 
   if (!clientId || !clientSecret) return null;
 
   try {
     const params = new URLSearchParams();
-    params.append("grant_type", "refresh_token");
-    params.append("refresh_token", storedTokens.refreshToken);
+    params.append('grant_type', 'refresh_token');
+    params.append('refresh_token', storedTokens.refreshToken);
 
     const response = await fetch(`${baseUrl}/restapi/oauth/token`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Authorization": `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
       },
       body: params.toString(),
     });
 
     if (!response.ok) {
-      console.error("Token refresh failed:", await response.text());
-      clearTokens();
+      console.error('[RC Tokens] Refresh failed:', await response.text());
+      await clearTokens();
       return null;
     }
 
     const data = await response.json();
-    storeTokens(data.access_token, data.refresh_token, data.expires_in);
-    console.log('RingCentral tokens refreshed successfully');
+    await storeTokens(data.access_token, data.refresh_token, data.expires_in);
+    console.log('[RC Tokens] Refreshed successfully');
     return data.access_token;
   } catch (error) {
-    console.error("Token refresh error:", error);
-    clearTokens();
+    console.error('[RC Tokens] Refresh error:', error);
+    await clearTokens();
     return null;
   }
 }
 
 export async function getValidAccessToken(): Promise<string | null> {
-  const storedTokens = getStoredTokens();
+  // Always try DB first in case memory cache is stale (cold start)
+  const storedTokens = await getStoredTokensAsync();
   if (!storedTokens) return null;
-  
+
   if (isTokenExpired()) {
-    console.log('Token expired, refreshing...');
+    console.log('[RC Tokens] Token expired, refreshing...');
     return await refreshAccessToken();
   }
-  
+
   return storedTokens.accessToken;
 }

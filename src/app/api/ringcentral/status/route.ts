@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { getStoredTokens, isTokenExpired } from "@/lib/ringcentral-tokens";
+import { getStoredTokensAsync, isTokenExpired } from "@/lib/ringcentral-tokens";
 
 export async function GET() {
-  const tokens = getStoredTokens();
+  const tokens = await getStoredTokensAsync();
 
   if (!tokens) {
     return NextResponse.json({
