@@ -8,6 +8,14 @@ function getOrigin(request: NextRequest): string {
   return new URL(request.url).origin;
 }
 
+/** Use env redirect URI only if it's a full https URL (production). Must match login. */
+function getRedirectUri(request: NextRequest): string {
+  const env = process.env.RINGCENTRAL_REDIRECT_URI?.trim();
+  if (env && env.startsWith("https://")) return env;
+  const origin = getOrigin(request);
+  return `${origin}/api/ringcentral/callback`;
+}
+
 function errorPage(message: string): NextResponse {
   return new NextResponse(
     `<!DOCTYPE html>
@@ -61,8 +69,8 @@ export async function GET(request: NextRequest) {
   const clientId = process.env.RINGCENTRAL_CLIENT_ID;
   const clientSecret = process.env.RINGCENTRAL_CLIENT_SECRET;
   const origin = getOrigin(request);
-  const redirectUri = `${origin}/api/ringcentral/callback`;
-  console.log("OAuth Callback - detected origin:", origin, "redirectUri:", redirectUri);
+  const redirectUri = getRedirectUri(request);
+  console.log("OAuth Callback - origin:", origin, "redirectUri:", redirectUri);
   const rcApiBaseUrl =
     process.env.RINGCENTRAL_BASE_URL || "https://platform.ringcentral.com";
 

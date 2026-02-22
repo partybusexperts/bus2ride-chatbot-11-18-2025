@@ -7,10 +7,18 @@ function getOrigin(request: NextRequest): string {
   return new URL(request.url).origin;
 }
 
+/** Use env redirect URI only if it's a full https URL (production). Otherwise build from request. */
+function getRedirectUri(request: NextRequest): string {
+  const env = process.env.RINGCENTRAL_REDIRECT_URI?.trim();
+  if (env && env.startsWith("https://")) return env;
+  const origin = getOrigin(request);
+  return `${origin}/api/ringcentral/callback`;
+}
+
 export async function GET(request: NextRequest) {
   const clientId = process.env.RINGCENTRAL_CLIENT_ID;
+  const redirectUri = getRedirectUri(request);
   const origin = getOrigin(request);
-  const redirectUri = `${origin}/api/ringcentral/callback`;
   const baseUrl =
     process.env.RINGCENTRAL_BASE_URL || "https://platform.ringcentral.com";
 
@@ -41,7 +49,8 @@ export async function GET(request: NextRequest) {
       <body>
         <h2>RingCentral Login Debug</h2>
         <p><strong>Detected origin:</strong><br><code>${origin}</code></p>
-        <p><strong>redirect_uri being sent:</strong><br><code>${redirectUri}</code></p>
+        <p><strong>redirect_uri being sent (must match RingCentral app exactly):</strong><br><code>${redirectUri}</code></p>
+        <p><strong>Using RINGCENTRAL_REDIRECT_URI env?</strong><br><code>${process.env.RINGCENTRAL_REDIRECT_URI?.startsWith("https://") ? "Yes: " + process.env.RINGCENTRAL_REDIRECT_URI : "No (using detected origin)"}</code></p>
         <p><strong>client_id:</strong><br><code>${clientId}</code></p>
         <p><strong>RC base URL:</strong><br><code>${baseUrl}</code></p>
         <p><strong>Full auth URL:</strong></p>
