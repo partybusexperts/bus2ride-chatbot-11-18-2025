@@ -1177,7 +1177,7 @@ export default function CallPad() {
         } else if (recentData.needsAuth) {
           setCallsError('Not connected to RingCentral. Please connect first.');
         } else {
-          setCallsError('No recent inbound calls. Waiting for incoming calls...');
+          setCallsError(null);
         }
 
         setLoadingCalls(false);
@@ -4501,8 +4501,8 @@ export default function CallPad() {
                 {callsError}
               </div>
             ) : recentCalls.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-                No recent calls found.
+              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280', fontSize: '14px' }}>
+                No recent calls in the last 24 hours. If you expect to see calls, try reconnecting via &quot;From Call&quot; and open this again.
               </div>
             ) : (
               <>

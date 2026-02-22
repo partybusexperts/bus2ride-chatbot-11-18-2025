@@ -55,13 +55,13 @@ export async function GET(request: NextRequest) {
 
     const baseUrl = process.env.RINGCENTRAL_BASE_URL || "https://platform.ringcentral.com";
     const now = Date.now();
+    const twentyFourHoursAgo = new Date(now - 24 * 60 * 60 * 1000);
 
-    const twoHoursAgo = new Date(now - 2 * 60 * 60 * 1000);
     const callLogUrl = new URL(`${baseUrl}/restapi/v1.0/account/~/extension/~/call-log`);
     callLogUrl.searchParams.set("direction", "Inbound");
-    callLogUrl.searchParams.set("perPage", "10");
+    callLogUrl.searchParams.set("perPage", "25");
     callLogUrl.searchParams.set("view", "Simple");
-    callLogUrl.searchParams.set("dateFrom", twoHoursAgo.toISOString());
+    callLogUrl.searchParams.set("dateFrom", twentyFourHoursAgo.toISOString());
 
     const response = await fetch(callLogUrl.toString(), {
       headers: {
