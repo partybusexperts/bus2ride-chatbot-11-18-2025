@@ -53,11 +53,8 @@ export async function GET(request: NextRequest) {
 
   const clientId = process.env.RINGCENTRAL_CLIENT_ID;
   const clientSecret = process.env.RINGCENTRAL_CLIENT_SECRET;
-  // Must match exactly what the login route sent to RingCentral
   const origin = new URL(request.url).origin;
-  const redirectUri =
-    process.env.RINGCENTRAL_REDIRECT_URI ||
-    `${origin}/api/ringcentral/callback`;
+  const redirectUri = `${origin}/api/ringcentral/callback`;
   const rcApiBaseUrl =
     process.env.RINGCENTRAL_BASE_URL || "https://platform.ringcentral.com";
 
