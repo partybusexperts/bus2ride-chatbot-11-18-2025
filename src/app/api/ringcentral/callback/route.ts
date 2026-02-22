@@ -89,7 +89,32 @@ export async function GET(request: NextRequest) {
       const errorText = await response.text();
       console.error("Token exchange failed:", errorText);
       console.error("redirect_uri used:", redirectUri);
-      return errorPage(`Token exchange failed. redirect_uri=${redirectUri} | RC response: ${errorText}`);
+      return new NextResponse(
+        `<!DOCTYPE html><html><head><title>Debug Error</title>
+        <style>body{font-family:monospace;max-width:800px;margin:40px auto;padding:20px;background:#1e1e1e;color:#d4d4d4}
+        h2{color:#f87171}pre{background:#2d2d2d;padding:12px;border-radius:8px;overflow-x:auto;white-space:pre-wrap}
+        .label{color:#60a5fa;font-weight:bold}</style></head>
+        <body>
+          <h2>Token Exchange Failed</h2>
+          <p class="label">redirect_uri sent to RC token endpoint:</p>
+          <pre>${redirectUri}</pre>
+          <p class="label">Origin detected by callback:</p>
+          <pre>${origin}</pre>
+          <p class="label">Request URL:</p>
+          <pre>${request.url}</pre>
+          <p class="label">x-forwarded-host:</p>
+          <pre>${request.headers.get("x-forwarded-host") || "NOT SET"}</pre>
+          <p class="label">x-forwarded-proto:</p>
+          <pre>${request.headers.get("x-forwarded-proto") || "NOT SET"}</pre>
+          <p class="label">host header:</p>
+          <pre>${request.headers.get("host") || "NOT SET"}</pre>
+          <p class="label">RingCentral response:</p>
+          <pre>${errorText}</pre>
+          <p class="label">Code received:</p>
+          <pre>${code}</pre>
+        </body></html>`,
+        { headers: { "Content-Type": "text/html" } }
+      );
     }
 
     const data = await response.json();
