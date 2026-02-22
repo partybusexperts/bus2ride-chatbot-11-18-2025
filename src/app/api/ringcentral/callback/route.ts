@@ -88,7 +88,8 @@ export async function GET(request: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Token exchange failed:", errorText);
-      return errorPage("Token exchange failed. Please try again.");
+      console.error("redirect_uri used:", redirectUri);
+      return errorPage(`Token exchange failed. redirect_uri=${redirectUri} | RC response: ${errorText}`);
     }
 
     const data = await response.json();
