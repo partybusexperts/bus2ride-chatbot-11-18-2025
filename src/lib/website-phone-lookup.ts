@@ -1029,36 +1029,16 @@ export function getCityForWebsite(domain: string): string | null {
 // Public API
 // ---------------------------------------------------------------------------
 
-/** Main number all inbound calls show as "to" when DIDs forward to it (RingCentral). */
-export const MAIN_FORWARDING_NUMBER = "7204145465";
-
-/** Sorted list of all unique website domains we have in the lookup (for "pick one" when DID is unknown). */
-const _allWebsitesCache: string[] = [];
-function buildAllWebsites(): string[] {
-  if (_allWebsitesCache.length > 0) return _allWebsitesCache;
-  const set = new Set<string>();
-  for (const sites of phoneToWebsites.values()) {
-    for (const s of sites) set.add(s);
-  }
-  _allWebsitesCache.push(...Array.from(set).sort());
-  return _allWebsitesCache;
-}
-
-export function getAllWebsites(): string[] {
-  return buildAllWebsites();
-}
-
 /**
  * Return every website that shares the given phone number.
- * When the number is the main forwarding number (all DIDs forward here), returns all websites
- * so the agent can pick one, since the original DID is not in the call log.
+ * The input phone is normalised automatically (strips non-digits, trims
+ * leading country-code "1" for 11-digit US numbers).
+ * Note: When all DIDs forward to one number, the call log only shows that number,
+ * so we cannot know which DID was dialed — in that case this returns [].
  */
 export function getWebsitesForPhone(phone: string): string[] {
   const norm = normalizePhone(phone);
-  const sites = phoneToWebsites.get(norm) ?? [];
-  if (sites.length > 0) return sites;
-  if (norm === MAIN_FORWARDING_NUMBER) return getAllWebsites();
-  return [];
+  return phoneToWebsites.get(norm) ?? [];
 }
 
 /**
