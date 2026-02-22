@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { getWebsitesForPhone, getCityForWebsite } from "@/lib/website-phone-lookup";
+import { getWebsitesForPhone, getCityForWebsite, getAllWebsites, MAIN_FORWARDING_NUMBER, normalizePhone } from "@/lib/website-phone-lookup";
 
 type DetectedType = 
   | 'phone' | 'email' | 'zip' | 'city' | 'date' | 'time' 
@@ -4531,7 +4531,10 @@ export default function CallPad() {
                           setConfirmedData(prev => ({ ...prev, phone: call.fromPhoneNumber || '' }));
                         }
                         if (call.toPhoneNumber) {
-                          const websites = getWebsitesForPhone(call.toPhoneNumber);
+                          let websites = getWebsitesForPhone(call.toPhoneNumber);
+                          if (websites.length === 0 && normalizePhone(call.toPhoneNumber) === MAIN_FORWARDING_NUMBER) {
+                            websites = getAllWebsites();
+                          }
                           setCallerWebsites(websites);
                           if (websites.length > 0) {
                             const city = getCityForWebsite(websites[0]);
