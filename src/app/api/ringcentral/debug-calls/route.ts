@@ -13,41 +13,47 @@ export async function GET(request: NextRequest) {
   }
 
   const baseUrl = process.env.RINGCENTRAL_BASE_URL || "https://platform.ringcentral.com";
-  const now = Date.now();
-  const twoHoursAgo = new Date(now - 2 * 60 * 60 * 1000);
+  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  const headers = { Authorization: `Bearer ${accessToken}`, Accept: "application/json" };
 
-  const callLogUrl = new URL(`${baseUrl}/restapi/v1.0/account/~/extension/~/call-log`);
-  callLogUrl.searchParams.set("direction", "Inbound");
-  callLogUrl.searchParams.set("perPage", "3");
-  callLogUrl.searchParams.set("view", "Detailed");
-  callLogUrl.searchParams.set("dateFrom", twoHoursAgo.toISOString());
+  // Try ACCOUNT-level call log (might show original DIDs)
+  const acctUrl = new URL(`${baseUrl}/restapi/v1.0/account/~/call-log`);
+  acctUrl.searchParams.set("direction", "Inbound");
+  acctUrl.searchParams.set("perPage", "3");
+  acctUrl.searchParams.set("view", "Detailed");
+  acctUrl.searchParams.set("dateFrom", twoHoursAgo.toISOString());
 
-  const response = await fetch(callLogUrl.toString(), {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      Accept: "application/json",
-    },
+  // Try extension-level call log for comparison
+  const extUrl = new URL(`${baseUrl}/restapi/v1.0/account/~/extension/~/call-log`);
+  extUrl.searchParams.set("direction", "Inbound");
+  extUrl.searchParams.set("perPage", "3");
+  extUrl.searchParams.set("view", "Detailed");
+  extUrl.searchParams.set("dateFrom", twoHoursAgo.toISOString());
+
+  // Also get the list of phone numbers on the account
+  const phoneNumUrl = `${baseUrl}/restapi/v1.0/account/~/phone-number?perPage=100`;
+
+  const [acctRes, extRes, phoneRes] = await Promise.all([
+    fetch(acctUrl.toString(), { headers }).catch(() => null),
+    fetch(extUrl.toString(), { headers }).catch(() => null),
+    fetch(phoneNumUrl, { headers }).catch(() => null),
+  ]);
+
+  const strip = (r: any) => ({
+    id: r.id, direction: r.direction, result: r.result,
+    from: r.from, to: r.to, startTime: r.startTime,
+    legs: r.legs?.map((l: any) => ({ direction: l.direction, legType: l.legType, from: l.from, to: l.to })),
   });
 
-  if (!response.ok) {
-    return NextResponse.json(
-      { error: `RC API error: ${response.status}`, body: await response.text() },
-      { status: 500 },
-    );
-  }
-
-  const data = await response.json();
+  const acctData = acctRes?.ok ? await acctRes.json() : { error: acctRes ? `${acctRes.status}` : "failed" };
+  const extData = extRes?.ok ? await extRes.json() : { error: extRes ? `${extRes.status}` : "failed" };
+  const phoneData = phoneRes?.ok ? await phoneRes.json() : { error: phoneRes ? `${phoneRes.status}` : "failed" };
 
   return NextResponse.json({
-    recordCount: data.records?.length || 0,
-    records: (data.records || []).map((r: any) => ({
-      id: r.id,
-      direction: r.direction,
-      result: r.result,
-      from: r.from,
-      to: r.to,
-      startTime: r.startTime,
-      legs: r.legs,
-    })),
+    accountLevelCalls: acctData.records ? acctData.records.map(strip) : acctData,
+    extensionLevelCalls: extData.records ? extData.records.map(strip) : extData,
+    accountPhoneNumbers: phoneData.records
+      ? phoneData.records.map((p: any) => ({ phoneNumber: p.phoneNumber, usageType: p.usageType, label: p.label }))
+      : phoneData,
   });
 }

@@ -1,14 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getValidAccessToken, getStoredTokensAsync } from "@/lib/ringcentral-tokens";
 
-interface CallLeg {
-  direction?: string;
-  action?: string;
-  from?: { phoneNumber?: string; name?: string };
-  to?: { phoneNumber?: string; name?: string };
-  type?: string;
-}
-
 interface CallLogRecord {
   id: string;
   uri: string;
@@ -19,9 +11,8 @@ interface CallLogRecord {
   direction: string;
   action: string;
   result: string;
-  from: { phoneNumber?: string; name?: string };
+  from: { phoneNumber?: string; name?: string; location?: string };
   to: { phoneNumber?: string; name?: string };
-  legs?: CallLeg[];
 }
 
 interface CallLogResponse {
@@ -38,21 +29,6 @@ function formatPhone(phone: string | undefined | null): string {
     return `(${cleaned.slice(1, 4)}) ${cleaned.slice(4, 7)}-${cleaned.slice(7)}`;
   }
   return phone;
-}
-
-function getOriginalDialedNumber(call: CallLogRecord): string | null {
-  // In Detailed view, legs[0] has the original DID before forwarding.
-  // The first leg with direction=Inbound and action=Phone Call shows the
-  // original number the customer dialed (before it got forwarded).
-  if (call.legs && call.legs.length > 0) {
-    const inboundLeg = call.legs.find(
-      (l) => l.direction === "Inbound" && l.type === "Voice"
-    ) || call.legs[0];
-    if (inboundLeg?.to?.phoneNumber) {
-      return inboundLeg.to.phoneNumber;
-    }
-  }
-  return call.to?.phoneNumber || null;
 }
 
 export async function GET(request: NextRequest) {
@@ -84,7 +60,7 @@ export async function GET(request: NextRequest) {
     const callLogUrl = new URL(`${baseUrl}/restapi/v1.0/account/~/extension/~/call-log`);
     callLogUrl.searchParams.set("direction", "Inbound");
     callLogUrl.searchParams.set("perPage", "10");
-    callLogUrl.searchParams.set("view", "Detailed");
+    callLogUrl.searchParams.set("view", "Simple");
     callLogUrl.searchParams.set("dateFrom", twoHoursAgo.toISOString());
 
     const response = await fetch(callLogUrl.toString(), {
@@ -126,22 +102,20 @@ export async function GET(request: NextRequest) {
         (call.result === "Accepted" || call.result === "Missed" || call.result === "Voicemail" || call.result === "InProgress" || call.result === "Ringing")
       )
       .slice(0, 5)
-      .map(call => {
-        const dialedNumber = getOriginalDialedNumber(call);
-        return {
-          id: call.id,
-          sessionId: call.sessionId,
-          fromPhoneNumber: call.from?.phoneNumber || null,
-          fromPhoneNumberFormatted: formatPhone(call.from?.phoneNumber),
-          fromName: call.from?.name || null,
-          toPhoneNumber: dialedNumber,
-          toPhoneNumberFormatted: formatPhone(dialedNumber),
-          startTime: call.startTime,
-          status: call.result,
-          direction: call.direction,
-          duration: call.duration,
-        };
-      });
+      .map(call => ({
+        id: call.id,
+        sessionId: call.sessionId,
+        fromPhoneNumber: call.from?.phoneNumber || null,
+        fromPhoneNumberFormatted: formatPhone(call.from?.phoneNumber),
+        fromName: call.from?.name || null,
+        toPhoneNumber: call.to?.phoneNumber || null,
+        toPhoneNumberFormatted: formatPhone(call.to?.phoneNumber),
+        callerLocation: call.from?.location || null,
+        startTime: call.startTime,
+        status: call.result,
+        direction: call.direction,
+        duration: call.duration,
+      }));
 
     return NextResponse.json({
       success: true,
