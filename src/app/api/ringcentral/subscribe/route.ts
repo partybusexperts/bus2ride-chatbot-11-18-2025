@@ -2,12 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getValidAccessToken, getStoredTokensAsync } from "@/lib/ringcentral-tokens";
 import { setSubscriptionInfo, getSubscriptionInfo, clearSubscription } from "@/lib/ringcentral-calls-store";
 
-function getWebhookUrl(): string {
-  const replitDomain = process.env.REPLIT_DOMAINS?.split(',')[0];
-  if (replitDomain) {
-    return `https://${replitDomain}/api/ringcentral/webhook`;
-  }
-  return 'https://newchatbot.replit.app/api/ringcentral/webhook';
+function getOrigin(request: NextRequest): string {
+  const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
+  const proto = request.headers.get("x-forwarded-proto") || "https";
+  if (host) return `${proto}://${host}`;
+  return new URL(request.url).origin;
 }
 
 export async function POST(request: NextRequest) {
@@ -31,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     const baseUrl = process.env.RINGCENTRAL_BASE_URL || "https://platform.ringcentral.com";
-    const webhookUrl = getWebhookUrl();
+    const webhookUrl = `${getOrigin(request)}/api/ringcentral/webhook`;
 
     const subscriptionBody = {
       eventFilters: [
