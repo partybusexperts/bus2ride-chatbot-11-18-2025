@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { storeTokens } from "@/lib/ringcentral-tokens";
 
+function getOrigin(request: NextRequest): string {
+  const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
+  const proto = request.headers.get("x-forwarded-proto") || "https";
+  if (host) return `${proto}://${host}`;
+  return new URL(request.url).origin;
+}
+
 function errorPage(message: string): NextResponse {
   return new NextResponse(
     `<!DOCTYPE html>
@@ -53,8 +60,9 @@ export async function GET(request: NextRequest) {
 
   const clientId = process.env.RINGCENTRAL_CLIENT_ID;
   const clientSecret = process.env.RINGCENTRAL_CLIENT_SECRET;
-  const origin = new URL(request.url).origin;
+  const origin = getOrigin(request);
   const redirectUri = `${origin}/api/ringcentral/callback`;
+  console.log("OAuth Callback - detected origin:", origin, "redirectUri:", redirectUri);
   const rcApiBaseUrl =
     process.env.RINGCENTRAL_BASE_URL || "https://platform.ringcentral.com";
 
