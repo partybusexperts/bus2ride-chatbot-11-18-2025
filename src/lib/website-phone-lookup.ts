@@ -1026,49 +1026,17 @@ export function getCityForWebsite(domain: string): string | null {
 }
 
 // ---------------------------------------------------------------------------
-// Main forwarding number (all DIDs forward here — call log only shows this)
-// ---------------------------------------------------------------------------
-
-/** Number that appears as "to" for all inbound calls when DIDs forward to it. */
-const MAIN_FORWARDING_NUMBER = "7204145465";
-
-/**
- * Short list of likely websites when the call is to the main line (we don't know
- * which DID was dialed). Edit this to match your main tracking sites (~10–15).
- */
-const MAIN_LINE_WEBSITES: string[] = [
-  "chicagopartybuses.com",
-  "partybusdallas.net",
-  "stlouispartybus.net",
-  "nycpartybus.net",
-  "partybusorlando.com",
-  "partybushouston.com",
-  "bostonlimobus.net",
-  "atlpartybus.com",
-  "partybusphoenix.com",
-  "partybusvegas.com",
-  "partybuslosangeles.com",
-  "partybusmilwaukee.com",
-  "partybuswashington.com",
-  "phillypartybus.com",
-  "partybustampa.com",
-];
-
-// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
 /**
  * Return every website that shares the given phone number.
- * When the number is the main forwarding number (we can't know which DID was
- * dialed), returns a short curated list so the agent can pick one.
+ * When all DIDs forward to one number, the call log only shows that number —
+ * we cannot know which DID was dialed, so we return [] and the agent picks the site manually.
  */
 export function getWebsitesForPhone(phone: string): string[] {
   const norm = normalizePhone(phone);
-  const sites = phoneToWebsites.get(norm);
-  if (sites && sites.length > 0) return sites;
-  if (norm === MAIN_FORWARDING_NUMBER) return MAIN_LINE_WEBSITES;
-  return [];
+  return phoneToWebsites.get(norm) ?? [];
 }
 
 /**
