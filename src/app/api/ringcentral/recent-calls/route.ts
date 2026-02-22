@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
       if (response.status === 429) {
         return NextResponse.json({
           success: false,
-          error: "Rate limited by RingCentral. Please try again in a few seconds.",
+          error: "Rate limited by RingCentral. Wait 30–60 seconds, then open the call list again.",
           calls: [],
         });
       }

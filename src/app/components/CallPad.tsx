@@ -1188,7 +1188,7 @@ export default function CallPad() {
     };
 
     fetchRecentCalls();
-    const pollInterval = setInterval(fetchRecentCalls, 3000);
+    const pollInterval = setInterval(fetchRecentCalls, 15000);
 
     return () => {
       cancelled = true;
