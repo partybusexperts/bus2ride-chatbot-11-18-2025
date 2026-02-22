@@ -748,6 +748,284 @@ for (const [website, rawPhone] of RAW_PAIRS) {
 }
 
 // ---------------------------------------------------------------------------
+// Website → City mapping
+// ---------------------------------------------------------------------------
+
+const MANUAL_WEBSITE_CITY: Record<string, string> = {
+  "mvplimo.com": "Detroit",
+  "pinkcruiser.com": "Detroit",
+  "nopartybus.com": "New Orleans",
+  "vapartybus.com": "Virginia",
+  "tikipartybus.com": "Detroit",
+  "blackhornbuses.com": "Austin",
+  "shpartybus.com": "Shelby Township",
+  "ropartybus.com": "Royal Oak",
+  "dgslimoservice.com": "Detroit",
+  "sflimos.com": "San Francisco",
+  "chitownlimo.com": "Chicago",
+  "pinkpartybuses.com": "Detroit",
+  "razzlimo.com": "Detroit",
+  "a2limos.com": "Ann Arbor",
+  "a2limousine.com": "Ann Arbor",
+  "grpartybus.com": "Grand Rapids",
+  "usapartybus.com": "",
+  "findmypartybus.com": "",
+  "partybusprices.com": "",
+  "partybustrips.com": "",
+  "superbowllimousine.com": "",
+  "walimos.com": "",
+  "limo312.com": "Chicago",
+  "pbchicago.com": "Chicago",
+  "nolimos.com": "New Orleans",
+  "lalimos.com": "Los Angeles",
+  "htownlimos.com": "Houston",
+  "htownlimobus.com": "Houston",
+  "htownpartybus.com": "Houston",
+  "dfwlimo.net": "Dallas",
+  "kclimobus.com": "Kansas City",
+  "kclimoservice.com": "Kansas City",
+  "bmorepartybus.com": "Baltimore",
+  "phlpartybus.com": "Philadelphia",
+  "detpartybus.com": "Detroit",
+  "detlimousine.com": "Detroit",
+  "sacpartybus.com": "Sacramento",
+  "sacpartybus.net": "Sacramento",
+  "partybussac.com": "Sacramento",
+  "partybusmi.com": "Michigan",
+  "limousineac.com": "Atlantic City",
+  "partybusac.com": "Atlantic City",
+  "acpartybuses.com": "Atlantic City",
+  "aclimousine.com": "Atlantic City",
+  "topartybus.com": "Toronto",
+  "limousinedc.net": "Washington DC",
+  "dcpartybus.com": "Washington DC",
+  "partybusdc.com": "Washington DC",
+  "partybuswdc.com": "Washington DC",
+  "wdcpartybus.com": "Washington DC",
+  "dclimousine.net": "Washington DC",
+  "limobusdc.com": "Washington DC",
+  "limousinebuschicago.com": "Chicago",
+  "temeculawinetours.info": "Temecula",
+  "temeculalimousines.com": "Temecula",
+  "rooftopsofwrigley.com": "Chicago",
+  "visitingdetroit.com": "Detroit",
+  "dtwairporttransportation.com": "Detroit",
+  "transportationdetroit.com": "Detroit",
+  "detroitgranite.com": "Detroit",
+  "granitedetroit.com": "Detroit",
+  "michigangranitetops.com": "Detroit",
+  "chicagoweddinglimousines.com": "Chicago",
+  "chicagohummerlimousines.com": "Chicago",
+  "chicagoslimousines.com": "Chicago",
+  "chicagocarservice.com": "Chicago",
+  "detroitcarservice.com": "Detroit",
+  "seattlepaintingservice.com": "Seattle",
+  "moversdallas.com": "Dallas",
+  "moverspittsburgh.com": "Pittsburgh",
+  "prpartybus.com": "Puerto Rico",
+  "limousineto.com": "Toronto",
+  "novilimo.com": "Detroit",
+  "limosdetroit.net": "Detroit",
+  "limoservicesdetroit.com": "Detroit",
+  "limosmichigan.com": "Michigan",
+  "michiganlimo.net": "Michigan",
+  "partybusindetroit.com": "Detroit",
+  "partybusesdetroit.com": "Detroit",
+  "detroit-party-bus.com": "Detroit",
+  "party-bus-detroit.com": "Detroit",
+  "detroit-limo-service.com": "Detroit",
+  "detroit-limos.com": "Detroit",
+  "limousinelincoln.com": "Lincoln",
+  "limousinesaintpaul.com": "Saint Paul",
+  "phillylimousineservice.com": "Philadelphia",
+  "phillylimousinebus.com": "Philadelphia",
+  "phillylimos.net": "Philadelphia",
+  "phillylimos.com": "Philadelphia",
+  "phillylimoservice.com": "Philadelphia",
+  "virginalimousine.net": "Virginia",
+  "jerseylimobus.com": "New Jersey",
+  "jerseylimo.net": "New Jersey",
+  "newjerseylimo.com": "New Jersey",
+  "seattletourbus.com": "Seattle",
+  "seattlecharterbus.net": "Seattle",
+  "seattlecoachbus.com": "Seattle",
+  "limousinefortwayne.com": "Fort Wayne",
+  "limousinefortlauderdale.com": "Fort Lauderdale",
+  "limousinefortmyers.com": "Fort Myers",
+  "limoftmyers.com": "Fort Myers",
+  "lexington-party-bus.com": "Lexington",
+  "battlecreeklimo.com": "Battle Creek",
+  "royaloaklimousine.com": "Royal Oak",
+  "grossepointepartybus.com": "Detroit",
+  "westbloomfieldlimos.com": "Detroit",
+  "southfieldpartybus.com": "Detroit",
+  "southfieldlimo.com": "Detroit",
+  "auburnhillslimo.com": "Detroit",
+  "farmingtonhillslimo.com": "Detroit",
+  "farmingtonlimousine.com": "Detroit",
+  "macombpartybus.com": "Detroit",
+  "clintontownshiplimo.com": "Detroit",
+  "nyclimoservices.net": "New York",
+  "partybusinnyc.com": "New York",
+  "nyclimobus.com": "New York",
+  "nycpartybus.net": "New York",
+  "nypartybuses.com": "New York",
+  "partybusny.net": "New York",
+  "limousinesiouxfalls.com": "Sioux Falls",
+  "limousinegalveston.com": "Galveston",
+  "limogalveston.com": "Galveston",
+  "limobusgalveston.com": "Galveston",
+  "limousineanaheim.com": "Anaheim",
+  "limoanaheim.com": "Anaheim",
+  "limousineindy.com": "Indianapolis",
+  "stlouispartybus.net": "St. Louis",
+  "stlouispartybus.com": "St. Louis",
+  "stlouislimousines.net": "St. Louis",
+  "partybusstl.com": "St. Louis",
+  "partybusstlouis.com": "St. Louis",
+  "saintlouislimobus.com": "St. Louis",
+  "limobusstl.com": "St. Louis",
+  "limosaltlakecity.com": "Salt Lake City",
+  "saltlakecitylimobus.com": "Salt Lake City",
+  "laketahoelimousine.com": "Lake Tahoe",
+  "santabarbarapartybus.com": "Santa Barbara",
+  "sanmarcospartybus.com": "San Marcos",
+  "daytonabeachpartybus.com": "Daytona Beach",
+  "limousineservicedaytona.com": "Daytona Beach",
+  "myrtlebeachlimousine.com": "Myrtle Beach",
+  "partybusesmyrtlebeach.com": "Myrtle Beach",
+  "limousinemyrtlebeach.com": "Myrtle Beach",
+  "limousinestpetersburg.com": "St. Petersburg",
+  "stpetersburglimobus.com": "St. Petersburg",
+  "limobusstpetersburg.com": "St. Petersburg",
+  "stpetersburgpartybus.com": "St. Petersburg",
+  "stpetepartybus.com": "St. Petersburg",
+  "limostpetersburg.com": "St. Petersburg",
+  "limousinestpete.com": "St. Petersburg",
+  "stpetelimousine.com": "St. Petersburg",
+  "stpaulpartybuses.com": "Saint Paul",
+  "limostpaul.com": "Saint Paul",
+  "partybussaintpaul.com": "Saint Paul",
+  "limousinechattanooga.com": "Chattanooga",
+  "limochattanooga.com": "Chattanooga",
+  "limoanchorage.com": "Anchorage",
+  "limooakland.com": "Oakland",
+  "limonorfolk.com": "Norfolk",
+  "limodelaware.com": "Delaware",
+  "fortlauderdalelimo.net": "Fort Lauderdale",
+  "fortlauderdalepartybuses.com": "Fort Lauderdale",
+  "ftlauderdalepartybus.net": "Fort Lauderdale",
+  "limobusclearwater.com": "Clearwater",
+  "clearwaterlimousine.com": "Clearwater",
+  "limousineclearwater.com": "Clearwater",
+  "davenportlimo.com": "Davenport",
+};
+
+const MULTI_WORD_CITIES: Record<string, string> = {
+  "lasvegas": "Las Vegas",
+  "newyork": "New York",
+  "newyorkcity": "New York",
+  "sanfrancisco": "San Francisco",
+  "losangeles": "Los Angeles",
+  "sanjose": "San Jose",
+  "sandiego": "San Diego",
+  "sanantonio": "San Antonio",
+  "sanluis": "San Luis",
+  "santabarbara": "Santa Barbara",
+  "sanmarcos": "San Marcos",
+  "kansascity": "Kansas City",
+  "atlanticcity": "Atlantic City",
+  "cedarrapids": "Cedar Rapids",
+  "grandrapids": "Grand Rapids",
+  "batonrouge": "Baton Rouge",
+  "saltlakecity": "Salt Lake City",
+  "annarbor": "Ann Arbor",
+  "stlouis": "St. Louis",
+  "saintlouis": "St. Louis",
+  "stpaul": "Saint Paul",
+  "saintpaul": "Saint Paul",
+  "stpetersburg": "St. Petersburg",
+  "stpete": "St. Petersburg",
+  "fortworth": "Fort Worth",
+  "ftworth": "Fort Worth",
+  "fortmyers": "Fort Myers",
+  "ftmyers": "Fort Myers",
+  "fortlauderdale": "Fort Lauderdale",
+  "ftlauderdale": "Fort Lauderdale",
+  "fortwayne": "Fort Wayne",
+  "bocaraton": "Boca Raton",
+  "puertorico": "Puerto Rico",
+  "daytonabeach": "Daytona Beach",
+  "myrtlebeach": "Myrtle Beach",
+  "niagarafalls": "Niagara Falls",
+  "laketahoe": "Lake Tahoe",
+  "porthuron": "Port Huron",
+  "battlecreek": "Battle Creek",
+  "royaloak": "Royal Oak",
+  "clintontownship": "Clinton Township",
+  "farmingtonhills": "Farmington Hills",
+  "bloomfieldhills": "Bloomfield Hills",
+  "auburnhills": "Auburn Hills",
+  "grossepointe": "Grosse Pointe",
+  "westbloomfield": "West Bloomfield",
+  "metrodetroit": "Detroit",
+  "newjersey": "New Jersey",
+  "neworleans": "New Orleans",
+  "elpaso": "El Paso",
+  "sioux falls": "Sioux Falls",
+  "siouxfalls": "Sioux Falls",
+};
+
+const DOMAIN_SUFFIXES = [
+  "partybusservice", "partybuses", "partybus", "partyride",
+  "limousineservice", "limousinebus", "limousines", "limousine",
+  "limoservice", "limoservices", "limobuses", "limobus", "limos", "limo",
+  "charterbus", "coachbus", "tourbus", "shuttles",
+  "stripclubguide", "bacheloretteparty", "bachelorparty",
+  "hummerlimousines", "hummerlimo", "weddinglimousines",
+  "trolley", "transportation",
+  "winetours", "partybusesfor",
+];
+
+function extractCityFromDomain(domain: string): string | null {
+  const base = domain.replace(/\.(com|net|org|info|cc)$/, "").replace(/-/g, "");
+
+  for (const suffix of DOMAIN_SUFFIXES) {
+    if (base.endsWith(suffix) && base.length > suffix.length) {
+      const city = base.slice(0, base.length - suffix.length);
+      if (city.length < 2) continue;
+      if (MULTI_WORD_CITIES[city]) return MULTI_WORD_CITIES[city];
+      return city.charAt(0).toUpperCase() + city.slice(1);
+    }
+    if (base.startsWith(suffix) && base.length > suffix.length) {
+      const city = base.slice(suffix.length);
+      if (city.length < 2) continue;
+      if (MULTI_WORD_CITIES[city]) return MULTI_WORD_CITIES[city];
+      return city.charAt(0).toUpperCase() + city.slice(1);
+    }
+  }
+  return null;
+}
+
+const websiteCityCache = new Map<string, string | null>();
+
+export function getCityForWebsite(domain: string): string | null {
+  const d = domain.toLowerCase().trim();
+  if (websiteCityCache.has(d)) return websiteCityCache.get(d)!;
+
+  // Check manual overrides first
+  if (d in MANUAL_WEBSITE_CITY) {
+    const city = MANUAL_WEBSITE_CITY[d] || null;
+    websiteCityCache.set(d, city);
+    return city;
+  }
+
+  const city = extractCityFromDomain(d);
+  websiteCityCache.set(d, city);
+  return city;
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 

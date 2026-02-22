@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { getWebsitesForPhone } from "@/lib/website-phone-lookup";
+import { getWebsitesForPhone, getCityForWebsite } from "@/lib/website-phone-lookup";
 
 type DetectedType = 
   | 'phone' | 'email' | 'zip' | 'city' | 'date' | 'time' 
@@ -1143,14 +1143,12 @@ export default function CallPad() {
     }
   }, [confirmedData.hours]);
 
-  // Real-time call updates via SSE when call picker modal is open
+  // Poll for call updates when call picker modal is open
   useEffect(() => {
     if (!showCallPicker) return;
-    
-    let eventSource: EventSource | null = null;
-    let reconnectTimeout: NodeJS.Timeout | null = null;
-    let closed = false;
-    
+
+    let cancelled = false;
+
     const sortCalls = (callList: typeof recentCalls) => {
       return [...callList].sort((a, b) => {
         const statusOrder: Record<string, number> = {
@@ -1166,79 +1164,35 @@ export default function CallPad() {
     };
 
     const fetchRecentCalls = async () => {
+      if (cancelled) return;
       try {
         const recentRes = await fetch('/api/ringcentral/recent-calls');
         const recentData = await recentRes.json();
-        
+
+        if (cancelled) return;
+
         if (recentData.success && recentData.calls?.length > 0) {
-          setRecentCalls(sortCalls(recentData.calls).slice(0, 15));
+          setRecentCalls(sortCalls(recentData.calls).slice(0, 5));
           setCallsError(null);
         } else if (recentData.needsAuth) {
           setCallsError('Not connected to RingCentral. Please connect first.');
         } else {
           setCallsError('No recent inbound calls. Waiting for incoming calls...');
         }
-        
+
         setLoadingCalls(false);
       } catch (e) {
         console.error('API fetch error:', e);
-        setLoadingCalls(false);
+        if (!cancelled) setLoadingCalls(false);
       }
     };
 
     fetchRecentCalls();
-    
-    const connect = () => {
-      if (closed) return;
-      
-      eventSource = new EventSource('/api/call-events');
-      
-      eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          
-          if (data.type === 'connected') {
-            console.log('[SSE] Connected to call events stream');
-            setLoadingCalls(false);
-          } else if (data.type === 'incoming_call') {
-            const call = data.call;
-            console.log('[SSE] Incoming call:', call.fromPhoneNumberFormatted);
-            setRecentCalls(prev => {
-              const existing = prev.findIndex(c => c.id === call.id);
-              let updated: typeof prev;
-              if (existing >= 0) {
-                updated = [...prev];
-                updated[existing] = { ...updated[existing], ...call };
-              } else {
-                updated = [call, ...prev].slice(0, 15);
-              }
-              return sortCalls(updated);
-            });
-            setCallsError(null);
-          } else if (data.type === 'call_removed') {
-            const removedId = data.id;
-            console.log('[SSE] Call removed:', removedId);
-            setRecentCalls(prev => prev.filter(c => c.id !== removedId));
-          }
-        } catch (e) {
-          console.error('SSE parse error:', e);
-        }
-      };
-      
-      eventSource.onerror = () => {
-        eventSource?.close();
-        if (!closed) {
-          reconnectTimeout = setTimeout(connect, 2000);
-        }
-      };
-    };
-    
-    connect();
-    
+    const pollInterval = setInterval(fetchRecentCalls, 8000);
+
     return () => {
-      closed = true;
-      eventSource?.close();
-      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      cancelled = true;
+      clearInterval(pollInterval);
     };
   }, [showCallPicker]);
 
@@ -2375,6 +2329,11 @@ export default function CallPad() {
               <div>
                 <label style={labelStyle}>City / ZIP</label>
                 <input style={getInputStyle(confirmedData.cityOrZip)} placeholder="Service area" value={confirmedData.cityOrZip} onChange={(e) => setConfirmedData(prev => ({ ...prev, cityOrZip: e.target.value }))} />
+                {callerWebsites.length > 0 && confirmedData.cityOrZip && getCityForWebsite(callerWebsites[0]) === confirmedData.cityOrZip && (
+                  <span style={{ fontSize: '11px', color: '#3b82f6', marginTop: '2px', display: 'block' }}>
+                    Auto-filled from {callerWebsites[0]}
+                  </span>
+                )}
                 {historyCities.filter(c => !c.active).length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
                     {historyCities.filter(c => !c.active).map((city) => (
@@ -4571,15 +4530,16 @@ export default function CallPad() {
                         if (call.fromPhoneNumber) {
                           setConfirmedData(prev => ({ ...prev, phone: call.fromPhoneNumber || '' }));
                         }
-                        // Look up websites associated with the dialed number
                         if (call.toPhoneNumber) {
                           const websites = getWebsitesForPhone(call.toPhoneNumber);
                           setCallerWebsites(websites);
                           if (websites.length > 0) {
+                            const city = getCityForWebsite(websites[0]);
                             setConfirmedData(prev => ({
                               ...prev,
                               websiteUrl: websites[0],
                               leadSource: prev.leadSource || 'Organic Call',
+                              ...(city && !prev.cityOrZip ? { cityOrZip: city } : {}),
                             }));
                           }
                         } else {

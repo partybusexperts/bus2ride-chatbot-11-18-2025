@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
         call.direction === "Inbound" &&
         (call.result === "Accepted" || call.result === "Missed" || call.result === "Voicemail" || call.result === "InProgress" || call.result === "Ringing")
       )
-      .slice(0, 15)
+      .slice(0, 5)
       .map(call => ({
         id: call.id,
         sessionId: call.sessionId,
